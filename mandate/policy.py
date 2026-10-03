@@ -177,6 +177,22 @@ def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def roundtrip_edit(text: str, mutate) -> str:
+    """Apply `mutate(dict)` to YAML text while keeping comments and layout (ruamel round-trip)."""
+    import io
+
+    from ruamel.yaml import YAML
+
+    rt = YAML()
+    rt.preserve_quotes = True
+    rt.indent(mapping=2, sequence=4, offset=2)
+    data = rt.load(text) or {}
+    mutate(data)
+    buf = io.StringIO()
+    rt.dump(data, buf)
+    return buf.getvalue()
+
+
 def atomic_write(path: Path, text: str) -> None:
     """tmp in the same dir -> fsync -> os.replace: readers never see a half-written file."""
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -286,9 +302,7 @@ class PolicyStore:
 
     async def apply_mutation(self, mutate, actor: str) -> str:
         """Load YAML, let `mutate(raw_dict)` edit it, re-serialise and apply."""
-        raw = yaml.safe_load(self.text)
-        mutate(raw)
-        return await self.apply_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), actor)
+        return await self.apply_text(roundtrip_edit(self.text, mutate), actor)
 
     async def rollback(self, seq: int, actor: str) -> str:
         row = await self.pool.fetchrow(

@@ -1,132 +1,94 @@
+# MANDATE central policy. Single source of truth: the dashboard/admin API rewrites THIS file
+# (validated, versioned, atomic write). Edit it by hand and the gateway hot-reloads within ~1 s.
+# An invalid edit is rejected and the last-known-good version stays active.
 version: 1
+
+# strict | balanced | permissive. A profile supplies DEFAULTS for `controls`;
+# a field set explicitly under `controls` wins over the profile.
 profile: balanced
+
 models:
   allow:
-  - ollama/qwen2.5:3b
-  - ollama/llama3.2:3b
-  - mock/echo
+    - ollama/qwen2.5:3b
+    - ollama/llama3.2:3b
+    - mock/echo            # deterministic local model used by tests and the simulator
   default: ollama/qwen2.5:3b
+
+# Mail to these domains counts as the internal sink `mail.send:internal`.
 internal_domains:
-- lawfirm.example
+  - lawfirm.example
+
+# Data-flow clearance per sink: highest classification allowed to reach it.
+# A task that has read data above a sink's clearance cannot write to it. Missing sink => PUBLIC.
 sinks:
-  llm:local: SECRET
+  llm:local: SECRET              # local Ollama: data never leaves the machine
   notes.write: CONFIDENTIAL
   memory.write: CONFIDENTIAL
   mail.send:internal: CONFIDENTIAL
   mail.send:external: PUBLIC
   http.post: PUBLIC
-  legal_db.search: INTERNAL
+  legal_db.search: INTERNAL      # internal case-law index
   code.run: INTERNAL
+
 controls:
-  mandate:
-    enabled: true
-  ifc_taint:
-    enabled: true
-  model_allowlist:
-    enabled: true
+  mandate: {enabled: true}           # task-scoped capabilities (tools, resources, recipients, TTL)
+  ifc_taint: {enabled: true}         # task inherits the highest classification it has read
+  model_allowlist: {enabled: true}
   pii:
     enabled: true
-    entities:
-    - PESEL
-    - CREDIT_CARD
-    - IBAN
-    - EMAIL
-    - PHONE
-  secrets:
-    enabled: true
-    mode: block
-  attack_signatures:
-    enabled: true
-    mode: block
-  injection_heuristics:
-    enabled: true
+    entities: [PESEL, CREDIT_CARD, IBAN, EMAIL, PHONE]
+  secrets: {enabled: true, mode: block}
+  attack_signatures: {enabled: true, mode: block}   # rules live in feeds/attacks.yaml
+  injection_heuristics: {enabled: true}   # mode comes from the profile (strict = block)
   semantic:
     enabled: true
-    backend: auto
+    backend: auto          # auto = Ollama if reachable, otherwise local heuristic scorer
     model: qwen2.5:3b
-    on_error: block
+    on_error: block        # fail-closed
     timeout_ms: 1500
+
 budgets:
-  default_max_tokens: 1024
-  per_principal:
-    tokens: 200000
-    calls: 2000
-    concurrency: 20
-  global:
-    tokens: 2000000
-    calls: 20000
-    concurrency: 100
-  guard:
-    tokens: 200000
-    calls: 5000
-  usd_per_1k_tokens: 0.002
+  default_max_tokens: 1024     # injected when a request has no max_tokens, so every reservation is bounded
+  per_principal: {tokens: 200000, calls: 2000, concurrency: 20}
+  global: {tokens: 2000000, calls: 20000, concurrency: 100}
+  guard: {tokens: 200000, calls: 5000}   # cost of the protection itself (semantic checks)
+  usd_per_1k_tokens: 0.002     # ESTIMATE for reporting; local models cost nothing per token
+
+# Mandate templates. An authenticated app creates tasks from these, never from model output.
 task_profiles:
   contract_review:
     description: Analyse a client contract and write an internal risk memo
-    resources:
-    - /clients/{client}/*
-    - /public/*
-    tools:
-    - doc.read
-    - legal_db.search
-    - notes.write
-    - memory.read
-    - memory.write
-    - mail.send
-    recipients_allow:
-    - '*@lawfirm.example'
-    - '*@client-{client}.example'
-    budget:
-      tokens: 20000
-      calls: 30
-      concurrency: 3
+    resources: ["/clients/{client}/*", "/public/*"]
+    tools: [doc.read, legal_db.search, notes.write, memory.read, memory.write, mail.send]
+    recipients_allow: ["*@lawfirm.example", "*@client-{client}.example"]
+    budget: {tokens: 20000, calls: 30, concurrency: 3}
     ttl_seconds: 900
   research:
     description: Public legal research, no client data
-    resources:
-    - /public/*
-    tools:
-    - legal_db.search
-    - http.post
-    - notes.write
-    budget:
-      tokens: 10000
-      calls: 20
-      concurrency: 2
+    resources: ["/public/*"]
+    tools: [legal_db.search, http.post, notes.write]
+    budget: {tokens: 10000, calls: 20, concurrency: 2}
     ttl_seconds: 600
   simulation:
     description: Load test for the budget escrow (mock model)
     resources: []
     tools: []
-    models:
-    - mock/echo
-    budget:
-      tokens: 1000000
-      calls: 1000
-      concurrency: 100
+    models: [mock/echo]
+    budget: {tokens: 1000000, calls: 1000, concurrency: 100}
     ttl_seconds: 300
+
+# Severity presets. block_at_risk: semantic risk score at which a request is BLOCKED.
+# Lower threshold = stricter. Adherence = 1 - block_at_risk.
 profiles:
   strict:
-    semantic:
-      block_at_risk: 0.4
-      redact_at_risk: 0.25
-    pii:
-      mode: block
-    injection_heuristics:
-      mode: block
+    semantic: {block_at_risk: 0.4, redact_at_risk: 0.25}
+    pii: {mode: block}
+    injection_heuristics: {mode: block}
   balanced:
-    semantic:
-      block_at_risk: 0.7
-      redact_at_risk: 0.5
-    pii:
-      mode: redact
-    injection_heuristics:
-      mode: redact
+    semantic: {block_at_risk: 0.7, redact_at_risk: 0.5}
+    pii: {mode: redact}
+    injection_heuristics: {mode: redact}
   permissive:
-    semantic:
-      block_at_risk: 0.9
-      redact_at_risk: 0.75
-    pii:
-      mode: redact
-    injection_heuristics:
-      mode: redact
+    semantic: {block_at_risk: 0.9, redact_at_risk: 0.75}
+    pii: {mode: redact}
+    injection_heuristics: {mode: redact}

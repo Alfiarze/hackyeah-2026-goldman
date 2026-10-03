@@ -16,7 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, field_validator
 
 from mandate.models import Finding
-from mandate.policy import atomic_write, content_hash
+from mandate.policy import atomic_write, content_hash, roundtrip_edit
 
 if TYPE_CHECKING:
     from mandate.audit import Audit
@@ -232,9 +232,10 @@ class FeedStore:
             return self.version
 
     async def mutate(self, fn, actor: str) -> str:
-        raw = yaml.safe_load(self.text) or {"version": 1, "signatures": []}
-        fn(raw)
-        return await self.apply_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=True), actor)
+        def guarded(raw):
+            raw.setdefault("signatures", [])
+            fn(raw)
+        return await self.apply_text(roundtrip_edit(self.text or "version: 1\nsignatures: []\n", guarded), actor)
 
     async def watch(self, interval: float) -> None:
         while True:

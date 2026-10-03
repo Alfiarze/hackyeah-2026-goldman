@@ -1,27 +1,26 @@
 ---
-// The guilloche rosette from the dashboard, precomputed as static SVG paths.
+// The Aegis mark: a guilloche rosette drawn as fine intaglio lines, like the engraved brand artwork.
+// Precomputed SVG paths (no JS at runtime). Several phase-shifted rings interfere the way banknote
+// line-work does, so it stays crisp from favicon size to the hero.
 interface Props { size?: number; class?: string }
 const { size = 30, class: className } = Astro.props;
 
 const ring = (base: number, amp: number, lobes: number, phase: number) => {
   const pts: string[] = [];
-  for (let i = 0; i <= 720; i++) {
-    const a = (i / 720) * Math.PI * 2;
+  for (let i = 0; i <= 900; i++) {
+    const a = (i / 900) * Math.PI * 2;
     const rad = base + amp * Math.sin(lobes * a + phase);
-    pts.push(`${(16 + rad * Math.cos(a)).toFixed(2)},${(16 + rad * Math.sin(a)).toFixed(2)}`);
+    pts.push(`${(32 + rad * Math.cos(a)).toFixed(2)},${(32 + rad * Math.sin(a)).toFixed(2)}`);
   }
   return `M${pts.join("L")}Z`;
 };
 
-const paths = [
-  ring(11.5, 1.6, 18, 0),
-  ring(11.5, 1.6, 18, Math.PI),
-  ring(7, 2.2, 12, 0),
-  ring(7, 2.2, 12, Math.PI),
-  ring(3.2, 0.9, 8, 0),
-];
+const outer = [0, 1, 2, 3].map((k) => ring(26, 3.4, 12, (k * Math.PI) / 6));
+const middle = [0, 1, 2].map((k) => ring(17, 4.2, 9, (k * Math.PI) / 4.5));
+const inner = [0, 1].map((k) => ring(8, 2.6, 7, k * Math.PI));
 ---
-<svg class:list={["rosette", className]} width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-  <circle cx="16" cy="16" r="15.5" />
-  {paths.map((d) => <path d={d} />)}
+<svg class:list={["rosette", className]} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+  <g class="r-outer">{outer.map((d) => <path d={d} />)}</g>
+  <g class="r-middle">{middle.map((d) => <path d={d} />)}</g>
+  <g class="r-inner">{inner.map((d) => <path d={d} />)}</g>
 </svg>

@@ -1,82 +1,60 @@
 ---
 import { dashboardUrl } from "../config";
 import L from "./L.astro";
-import Rosette from "./Rosette.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+
+const pillars = [
+  { en: ["Policy enforcement", "One policy file decides what every task may do. Changes apply within a second."],
+    pl: ["Egzekwowanie polityki", "Jeden plik polityki decyduje, co wolno każdemu zadaniu. Zmiany działają w sekundę."] },
+  { en: ["Data boundaries", "Confidential data read by a task cannot leave for a less trusted place."],
+    pl: ["Granice danych", "Poufne dane przeczytane przez zadanie nie wyjdą w mniej zaufane miejsce."] },
+  { en: ["Audit trail", "Every decision is recorded with its rule and reason. Nobody can edit the record."],
+    pl: ["Ślad audytowy", "Każda decyzja jest zapisana z regułą i powodem. Nikt nie może zmienić zapisu."] },
+  { en: ["Tool controls", "Tools, recipients and code execution are granted per task, never by default."],
+    pl: ["Kontrola narzędzi", "Narzędzia, odbiorcy i uruchamianie kodu są przyznawane per zadanie, nigdy domyślnie."] },
+];
 ---
-<section class="hero section">
-  <div class="wrap">
-    <div>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
       <h1>
-        <L
-          en="Zero-trust execution contracts for AI agents."
-          pl="Kontrakty wykonawcze zero-trust dla agentów AI."
-        />
+        <span class="hero-name">Aegis</span>
+        <span class="hero-tag"><L en="Control gateway for AI agents." pl="Bramka kontroli dla agentów AI." /></span>
       </h1>
+      <p class="hero-claim">
+        <L en="Define what an agent may do. Enforce it on every call." pl="Określ, co agent może zrobić. Egzekwuj to przy każdym wywołaniu." />
+      </p>
       <p class="lede">
         <L
-          en="Other guardrails ask whether an action looks dangerous. Aegis asks whether this agent was ever authorized to do it, with this data, for this task. Every call passes a short-lived mandate before it runs."
-          pl="Inne zabezpieczenia pytają, czy akcja wygląda na niebezpieczną. Aegis pyta, czy ten agent w ogóle był upoważniony do tego kroku, z tymi danymi i w tym zadaniu. Każde wywołanie przechodzi przez krótkotrwały mandat, zanim się wykona."
+          en="Aegis sits between AI agents and everything they touch: models, tools, MCP servers, documents and other agents. Before anything runs, it checks whether this agent was authorized to do it, with this data, for this task."
+          pl="Aegis stoi między agentami AI a wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, dokumentami i innymi agentami. Zanim cokolwiek się wykona, sprawdza, czy ten agent był do tego upoważniony, z tymi danymi i w tym zadaniu."
         />
       </p>
       <div class="hero-ctas">
         <a class="console-btn big" href={`${dashboardUrl}`} data-dashboard=""><L en="Open the dashboard" pl="Otwórz dashboard" /></a>
-        <a class="ghost-btn" href="#scenarios"><L en="See the scenarios" pl="Zobacz scenariusze" /></a>
+        <a class="ghost-btn" href="#scenarios"><L en="Run the attacks yourself" pl="Sprawdź ataki sam" /></a>
       </div>
-      <p class="hero-note">
-        <L
-          en="Built at HackYeah 2026 for the Goldman Sachs AI Control Layer challenge."
-          pl="Zbudowane na HackYeah 2026 na wyzwanie Goldman Sachs AI Control Layer."
-        />
-      </p>
     </div>
+    <figure class="hero-art">
+      <img
+        src={`${base}art/engraving-hero.jpg`}
+        width="780" height="740"
+        alt=""
+        decoding="async"
+        fetchpriority="high"
+      />
+    </figure>
+  </div>
 
-    <aside class="contract" aria-label="Example execution contract">
-      <header class="contract-head">
-        <Rosette size={40} />
-        <div>
-          <h2><L en="Execution contract" pl="Kontrakt wykonawczy" /></h2>
-          <p class="muted"><L en="Profile" pl="Profil" /> <span class="id">contract_review</span> <span class="id">HY26-0347</span></p>
-        </div>
-      </header>
-      <dl class="facts">
-        <dt>Principal</dt><dd><span class="id">lawyer_anna</span></dd>
-        <dt><L en="Agent" pl="Agent" /></dt><dd><span class="id">demo-agent</span></dd>
-        <dt><L en="Task" pl="Zadanie" /></dt>
-        <dd><L en="Summarize client A's contract before the call" pl="Podsumuj umowę klienta A przed rozmową" /></dd>
-        <dt><L en="Tools" pl="Narzędzia" /></dt>
-        <dd><span class="id">doc.read</span> <span class="id">notes.write</span> <span class="id">mail.send</span></dd>
-        <dt><L en="Recipients" pl="Odbiorcy" /></dt>
-        <dd><span class="id">*@lawfirm.example</span> <span class="id">*@client-A.example</span></dd>
-        <dt><L en="Limits" pl="Limity" /></dt>
-        <dd><L en="15 min, 20,000 tokens" pl="15 min, 20 000 tokenów" /></dd>
-        <dt><L en="Data read" pl="Odczytane dane" /></dt>
-        <dd><span class="level level-2"><i style="--n: 3"></i><L en="Confidential" pl="Poufne" /></span></dd>
-      </dl>
-      <div class="step">
-        <div class="step-body">
-          <h3><L en="The agent mails the contract out" pl="Agent wysyła umowę na zewnątrz" /></h3>
-          <p><span class="id">mail.send</span> <L en="to" pl="do" /> <span class="id">partner@client-A.example</span></p>
-          <p class="muted">
-            <L
-              en="The recipient is on the mandate, but confidential data cannot go to <span class='id'>mail.send:external</span>, which is cleared for public."
-              pl="Odbiorca jest w mandacie, ale dane poufne nie mogą trafić do <span class='id'>mail.send:external</span>, dopuszczonego tylko dla publicznych."
-            />
-          </p>
-        </div>
-        <span class="stamp stamp-block" role="img" aria-label="Blocked, rule IFC-001">
-          <span class="stamp-word"><L en="Blocked" pl="Zablokowane" /></span>
-          <span class="stamp-rule">IFC-001</span>
-        </span>
-      </div>
-      <div class="proof">
-        <p class="verdict"><b>0</b> <L en="e-mails left the building." pl="e-maili opuściło firmę." /></p>
-        <p class="muted">
-          <L
-            en="The mail backend never received the call, and the attempt is in the append-only audit log."
-            pl="Backend poczty nigdy nie dostał wywołania, a próba trafiła do dziennika audytu, którego nikt nie może zmieniać."
-          />
-        </p>
-      </div>
-    </aside>
+  <div class="wrap">
+    <ul class="pillars">
+      {pillars.map((p) => (
+        <li>
+          <h2><L en={p.en[0]} pl={p.pl[0]} /></h2>
+          <p><L en={p.en[1]} pl={p.pl[1]} /></p>
+        </li>
+      ))}
+    </ul>
   </div>
 </section>

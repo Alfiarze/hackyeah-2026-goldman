@@ -67,9 +67,15 @@ button { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--rule);
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.rosette circle { fill: var(--intaglio); }
-.rosette path { fill: none; stroke: var(--paper); stroke-width: 0.32; opacity: 0.9; }
-.wordmark { font-weight: 800; font-size: 21px; letter-spacing: -0.03em; }
+.rosette { flex: none; }
+.rosette path { fill: none; stroke: var(--intaglio); }
+.rosette .r-outer path { stroke-width: 0.45; opacity: 0.75; }
+.rosette .r-middle path { stroke-width: 0.55; opacity: 0.85; }
+.rosette .r-inner path { stroke-width: 0.6; }
+.wordmark {
+  font-family: "Libre Caslon Display", Georgia, serif; font-weight: 400; font-size: 19px; line-height: 1;
+  text-transform: uppercase; letter-spacing: 0.32em; color: var(--ink);
+}
 
 nav { display: flex; gap: 20px; flex-wrap: nowrap; white-space: nowrap; }
 .nav-group { display: flex; align-items: baseline; gap: 2px; }

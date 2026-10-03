@@ -23,8 +23,12 @@ const stages = [
     pl: ["Przepływ danych", "Przeczytanie poufnego dokumentu zanieczyszcza całe zadanie. Parafraza, tłumaczenie czy kodowanie tego nie obniża. Ujścia mają poziom dostępu: mail na zewnętrzny adres jest dopuszczony tylko dla danych publicznych."],
   },
   {
-    en: ["Semantic guard", "A local LLM scores the risk, thresholds come from the profile. It can only tighten a decision. If the guard is unreachable, the treatment gets stricter, never looser."],
-    pl: ["Strażnik semantyczny", "Lokalny model LLM ocenia ryzyko, progi zależą od profilu. Może tylko zaostrzyć decyzję. Gdy strażnik jest niedostępny, obsługa staje się ostrzejsza, nigdy luźniejsza."],
+    en: ["AI review", "DeepSeek V4 Flash on our GB10s scores untrusted text for manipulation; the thresholds come from the profile. It can only tighten a decision. If it is unreachable, the request is blocked."],
+    pl: ["Ocena AI", "DeepSeek V4 Flash na naszych GB10 ocenia niezaufaną treść pod kątem manipulacji, a progi zależą od profilu. Może tylko zaostrzyć decyzję. Gdy jest niedostępny, żądanie jest blokowane."],
+  },
+  {
+    en: ["Code sandbox", "Code an agent wants to run goes to a throw-away container with no network, a read-only disk and hard limits on memory, CPU and time. Strict profiles block code outright."],
+    pl: ["Piaskownica kodu", "Kod, który agent chce uruchomić, trafia do jednorazowego kontenera bez sieci, z dyskiem tylko do odczytu i twardymi limitami pamięci, procesora i czasu. Profil rygorystyczny blokuje kod całkowicie."],
   },
   {
     en: ["Budget escrow", "Tokens, calls and concurrency are reserved before execution, atomically in Postgres, across task, parent, principal and global. Thirty concurrent agents, zero overspend."],
@@ -34,7 +38,7 @@ const stages = [
 ---
 <section class="section" id="how">
   <div class="wrap">
-    <h2><L en="Seven checks before anything runs" pl="Siedem kontroli, zanim cokolwiek się wykona" /></h2>
+    <h2 class="display"><L en="Eight checks before anything runs" pl="Osiem kontroli, zanim cokolwiek się wykona" /></h2>
     <p class="lede">
       <L
         en="The gateway sits between agents and everything they touch: models, tools, MCP servers, other agents. Every call walks the same pipeline."

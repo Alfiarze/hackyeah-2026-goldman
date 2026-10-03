@@ -1,0 +1,60 @@
+---
+import L from "./L.astro";
+
+const acts = [
+  {
+    en: ["They read data", "Contracts, client files and internal records, often more than the task needs.", "Each task may read only the paths on its mandate, and whatever it reads raises its classification."],
+    pl: ["Czytają dane", "Umowy, akta klientów i dokumenty wewnętrzne, często więcej, niż wymaga zadanie.", "Zadanie czyta tylko ścieżki ze swojego mandatu, a to, co przeczyta, podnosi jego poziom poufności."],
+  },
+  {
+    en: ["They call tools", "Mail, code execution and MCP tools whose definitions can change after approval.", "Tools are granted per task, MCP definitions are pinned by hash, and code runs in a throw-away sandbox."],
+    pl: ["Wywołują narzędzia", "Poczta, uruchamianie kodu i narzędzia MCP, których definicje mogą się zmienić po zatwierdzeniu.", "Narzędzia są przyznawane per zadanie, definicje MCP przypięte hashem, a kod uruchamia się w jednorazowej piaskownicy."],
+  },
+  {
+    en: ["They spend", "Tokens, tool calls and parallel requests. A loop can burn a budget in minutes.", "Cost is reserved before every call in one database transaction, so the limit holds under load."],
+    pl: ["Wydają", "Tokeny, wywołania narzędzi i równoległe żądania. Pętla potrafi spalić budżet w kilka minut.", "Koszt jest rezerwowany przed każdym wywołaniem w jednej transakcji bazy, więc limit trzyma się pod obciążeniem."],
+  },
+  {
+    en: ["They delegate", "Sub-agents inherit context and data, and may try to do more than their parent.", "A sub-agent's mandate is a subset of its parent's, and it inherits the parent's classification."],
+    pl: ["Delegują", "Podagenci dziedziczą kontekst i dane i mogą próbować robić więcej niż rodzic.", "Mandat podagenta jest podzbiorem mandatu rodzica, a podagent dziedziczy jego poziom poufności."],
+  },
+];
+---
+<section class="section" id="why">
+  <div class="wrap">
+    <h2 class="display"><L en="Agents don’t just answer. They act." pl="Agenci nie tylko odpowiadają. Działają." /></h2>
+    <p class="lede">
+      <L
+        en="Security tools were built for software that responds. An agent with a task reads documents, calls tools, spends money and hands work to other agents, and a single poisoned document can tell it to do something nobody asked for."
+        pl="Narzędzia bezpieczeństwa powstały dla oprogramowania, które odpowiada. Agent z zadaniem czyta dokumenty, wywołuje narzędzia, wydaje pieniądze i przekazuje pracę innym agentom, a jeden zatruty dokument może kazać mu zrobić coś, o co nikt nie prosił."
+      />
+    </p>
+
+    <ol class="acts">
+      {acts.map((a) => (
+        <li>
+          <h3><L en={a.en[0]} pl={a.pl[0]} /></h3>
+          <p><L en={a.en[1]} pl={a.pl[1]} /></p>
+          <p class="answer"><L en={a.en[2]} pl={a.pl[2]} /></p>
+        </li>
+      ))}
+    </ol>
+
+    <div class="question">
+      <div>
+        <p class="q-who"><L en="A typical guardrail asks" pl="Typowe zabezpieczenie pyta" /></p>
+        <p class="q-text"><L en="Does this action look dangerous?" pl="Czy ta akcja wygląda groźnie?" /></p>
+      </div>
+      <div>
+        <p class="q-who"><L en="Aegis asks" pl="Aegis pyta" /></p>
+        <p class="q-text q-ours"><L en="Was this agent ever authorized to do it, with this data, for this task?" pl="Czy ten agent w ogóle miał prawo to zrobić, z tymi danymi, w tym zadaniu?" /></p>
+      </div>
+    </div>
+    <p class="q-note">
+      <L
+        en="An attacker can make text look harmless, and a model can miss it. Authorization cannot be talked around: it depends on the task, not on how the request is worded."
+        pl="Atakujący potrafi sprawić, że tekst wygląda niewinnie, a model może go przeoczyć. Uprawnień nie da się przegadać: zależą od zadania, a nie od tego, jak sformułowano prośbę."
+      />
+    </p>
+  </div>
+</section>

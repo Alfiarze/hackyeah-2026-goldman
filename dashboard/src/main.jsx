@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource/libre-caslon-display/400.css";
 import "@fontsource/schibsted-grotesk/400.css";
 import "@fontsource/schibsted-grotesk/500.css";
 import "@fontsource/schibsted-grotesk/600.css";

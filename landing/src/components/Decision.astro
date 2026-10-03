@@ -1,0 +1,65 @@
+---
+import L from "./L.astro";
+import Rosette from "./Rosette.astro";
+---
+<section class="section" id="proof">
+  <div class="wrap decision-grid">
+    <div>
+      <h2 class="display"><L en="One request, from mandate to evidence" pl="Jedno żądanie, od mandatu do dowodu" /></h2>
+      <p class="lede">
+        <L
+          en="A lawyer’s assistant reads a confidential contract, then tries to mail it to the client. The recipient is allowed. The mail is still stopped, because the task now carries confidential data and external mail is cleared for public data only."
+          pl="Asystent prawnika czyta poufną umowę, a potem próbuje wysłać ją mailem do klienta. Odbiorca jest dozwolony. Mail i tak zostaje zatrzymany, bo zadanie niesie już poufne dane, a mail na zewnątrz jest dopuszczony tylko dla danych publicznych."
+        />
+      </p>
+      <p class="decision-note">
+        <L
+          en="The stamp is not a warning in a user interface. It means the mail server never received the call: its own counter stays at zero, and the attempt is written to an audit log the database will not let anyone change."
+          pl="Pieczątka to nie ostrzeżenie w interfejsie. Oznacza, że serwer poczty nigdy nie dostał wywołania: jego własny licznik zostaje na zerze, a próba trafia do dziennika audytu, którego baza nie pozwala nikomu zmienić."
+        />
+      </p>
+    </div>
+
+    <aside class="contract" aria-label="Example execution contract">
+      <header class="contract-head">
+        <Rosette size={42} />
+        <div>
+          <h3><L en="Execution contract" pl="Kontrakt wykonawczy" /></h3>
+          <p class="muted"><L en="Profile" pl="Profil" /> <span class="id">contract_review</span></p>
+        </div>
+      </header>
+      <dl class="facts">
+        <dt><L en="On behalf of" pl="W imieniu" /></dt><dd><span class="id">lawyer_anna</span></dd>
+        <dt><L en="Task" pl="Zadanie" /></dt>
+        <dd><L en="Summarize client A’s contract before the call" pl="Podsumuj umowę klienta A przed rozmową" /></dd>
+        <dt><L en="May use" pl="Może używać" /></dt>
+        <dd><span class="id">doc.read</span> <span class="id">notes.write</span> <span class="id">mail.send</span></dd>
+        <dt><L en="May write to" pl="Może pisać do" /></dt>
+        <dd><span class="id">*@lawfirm.example</span> <span class="id">*@client-A.example</span></dd>
+        <dt><L en="Limits" pl="Limity" /></dt>
+        <dd><L en="15 minutes, 20,000 tokens, 30 calls" pl="15 minut, 20 000 tokenów, 30 wywołań" /></dd>
+        <dt><L en="Data read" pl="Przeczytane dane" /></dt>
+        <dd><span class="level level-2"><i style="--n: 3"></i><L en="confidential" pl="poufne" /></span></dd>
+      </dl>
+      <div class="step">
+        <div class="step-body">
+          <h4><L en="The agent mails the contract out" pl="Agent wysyła umowę na zewnątrz" /></h4>
+          <p><span class="id">mail.send</span> <L en="to" pl="do" /> <span class="id">partner@client-A.example</span></p>
+          <p class="muted">
+            <L
+              en="Confidential data cannot go to <span class='id'>mail.send:external</span>, which is cleared for public data."
+              pl="Dane poufne nie mogą trafić do <span class='id'>mail.send:external</span>, dopuszczonego dla danych publicznych."
+            />
+          </p>
+        </div>
+        <span class="stamp stamp-block" role="img" aria-label="Blocked, rule IFC-001">
+          <span class="stamp-word"><L en="Blocked" pl="Zablokowane" /></span>
+          <span class="stamp-rule">IFC-001</span>
+        </span>
+      </div>
+      <div class="proof">
+        <p class="verdict"><b>0</b> <L en="e-mails left the building." pl="e-maili opuściło firmę." /></p>
+      </div>
+    </aside>
+  </div>
+</section>

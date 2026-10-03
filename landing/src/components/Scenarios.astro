@@ -6,8 +6,8 @@ import L from "./L.astro";
 const runs = [
   {
     title: ["A normal day", "Zwykły dzień pracy"],
-    en: "The agent searches case law, reads the client's contract, asks the local model for risks and files a memo. Nothing gets in its way.",
-    pl: "Agent przeszukuje orzecznictwo, czyta umowę klienta, pyta lokalny model o ryzyka i zapisuje notatkę. Nic mu nie przeszkadza.",
+    en: "The agent searches case law, reads the client's contract, asks the model for risks and files a memo. Nothing gets in its way.",
+    pl: "Agent przeszukuje orzecznictwo, czyta umowę klienta, pyta model o ryzyka i zapisuje notatkę. Nic mu nie przeszkadza.",
     action: "allow",
   },
   {
@@ -45,6 +45,12 @@ const runs = [
     en: "Models arrive with a pickle that imports os, a vulnerable llama-cpp-python, and a host one letter away from the real one.",
     pl: "Modele przychodzą z plikiem pickle importującym os, podatnym llama-cpp-python i z hosta różniącego się jedną literą od prawdziwego.",
     action: "block", rule: "ATK-SUPPLY-001",
+  },
+  {
+    title: ["Code runs in a sandbox", "Kod w piaskownicy"],
+    en: "The agent is tricked into running code that phones home and loops forever. It runs in a throw-away container: the network call fails, the loop is killed, the host is untouched.",
+    pl: "Agent zostaje nakłoniony do uruchomienia kodu, który łączy się z zewnątrz i zapętla się. Działa w jednorazowym kontenerze: połączenie się nie udaje, pętla zostaje ubita, host jest nietknięty.",
+    action: "allow",
   },
   {
     title: ["Thirty agents, one budget", "Trzydziestu agentów, jeden budżet"],

@@ -2,26 +2,31 @@
 import { dashboardUrl } from "../config";
 import L from "./L.astro";
 import Rosette from "./Rosette.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 ---
 <footer>
-  <div class="wrap">
-    <span class="foot-brand"><Rosette size={22} /> Aegis</span>
-    <p class="foot-line">
-      <L
-        en="A gateway between agents and everything they touch. Every task gets a mandate, every call gets checked, every decision leaves evidence."
-        pl="Bramka między agentami i wszystkim, czego dotykają. Każde zadanie dostaje mandat, każde wywołanie jest sprawdzane, każda decyzja zostawia ślad."
-      />
-    </p>
-    <p class="foot-line">
-      <L
-        en="HackYeah 2026, Goldman Sachs AI Control Layer challenge."
-        pl="HackYeah 2026, wyzwanie Goldman Sachs AI Control Layer."
-      />
-    </p>
-    <div class="foot-links">
-      <a href={`${dashboardUrl}`} data-dashboard=""><L en="Dashboard" pl="Dashboard" /></a>
-      <a href="/docs"><L en="API docs" pl="Dokumentacja API" /></a>
-      <a href="#how"><L en="How it works" pl="Jak to działa" /></a>
+  <div class="foot-band" aria-hidden="true">
+    <img src={`${base}art/engraving-landscape.jpg`} width="650" height="140" alt="" loading="lazy" decoding="async" />
+  </div>
+  <div class="wrap foot-grid">
+    <div>
+      <span class="foot-brand"><Rosette size={28} /> <span class="wordmark">Aegis</span></span>
+      <p class="foot-line">
+        <L
+          en="A control gateway between AI agents and everything they touch. Every task gets a mandate, every call is checked, every decision leaves evidence."
+          pl="Bramka kontroli między agentami AI a wszystkim, czego dotykają. Każde zadanie dostaje mandat, każde wywołanie jest sprawdzane, każda decyzja zostawia ślad."
+        />
+      </p>
+      <p class="foot-line muted">
+        <L en="Built at HackYeah 2026 for the Goldman Sachs AI Control Layer challenge." pl="Zbudowane na HackYeah 2026 na wyzwanie Goldman Sachs AI Control Layer." />
+      </p>
     </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href={`${dashboardUrl}`} data-dashboard=""><L en="Dashboard" pl="Dashboard" /></a>
+      <a href="#how"><L en="How it works" pl="Jak to działa" /></a>
+      <a href="#tech"><L en="Under the hood" pl="Technologia" /></a>
+      <a href="#scenarios"><L en="Try it" pl="Wypróbuj" /></a>
+    </nav>
   </div>
 </footer>

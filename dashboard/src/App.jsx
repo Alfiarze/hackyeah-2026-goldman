@@ -81,23 +81,29 @@ function Section({ title, aside, children, className = "" }) {
   );
 }
 
+// The Aegis mark: guilloche rings drawn as fine intaglio lines (same as the landing page).
 function Rosette({ size = 30 }) {
-  const paths = useMemo(() => {
+  const groups = useMemo(() => {
     const ring = (base, amp, lobes, phase) => {
       const pts = [];
-      for (let i = 0; i <= 720; i++) {
-        const a = (i / 720) * Math.PI * 2;
+      for (let i = 0; i <= 900; i++) {
+        const a = (i / 900) * Math.PI * 2;
         const rad = base + amp * Math.sin(lobes * a + phase);
-        pts.push(`${(16 + rad * Math.cos(a)).toFixed(2)},${(16 + rad * Math.sin(a)).toFixed(2)}`);
+        pts.push(`${(32 + rad * Math.cos(a)).toFixed(2)},${(32 + rad * Math.sin(a)).toFixed(2)}`);
       }
       return `M${pts.join("L")}Z`;
     };
-    return [ring(11.5, 1.6, 18, 0), ring(11.5, 1.6, 18, Math.PI), ring(7, 2.2, 12, 0), ring(7, 2.2, 12, Math.PI), ring(3.2, 0.9, 8, 0)];
+    return {
+      outer: [0, 1, 2, 3].map((k) => ring(26, 3.4, 12, (k * Math.PI) / 6)),
+      middle: [0, 1, 2].map((k) => ring(17, 4.2, 9, (k * Math.PI) / 4.5)),
+      inner: [0, 1].map((k) => ring(8, 2.6, 7, k * Math.PI)),
+    };
   }, []);
   return (
-    <svg className="rosette" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="15.5" />
-      {paths.map((d, i) => <path key={i} d={d} />)}
+    <svg className="rosette" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      {Object.entries(groups).map(([name, ds]) => (
+        <g key={name} className={`r-${name}`}>{ds.map((d, i) => <path key={i} d={d} />)}</g>
+      ))}
     </svg>
   );
 }

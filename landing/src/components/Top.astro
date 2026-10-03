@@ -5,21 +5,24 @@ import Rosette from "./Rosette.astro";
 ---
 <header class="top">
   <div class="wrap">
-    <a class="brand" href={import.meta.env.BASE_URL}>
-      <Rosette size={30} />
-      <span class="wordmark">Aegis</span>
+    <a class="brand" href={import.meta.env.BASE_URL} aria-label="Aegis">
+      <Rosette size={34} />
+      <span class="lockup">
+        <span class="wordmark">Aegis</span>
+        <span class="lockup-sub"><L en="Control gateway for AI agents" pl="Bramka kontroli dla agentów AI" /></span>
+      </span>
     </a>
     <nav aria-label="Sections">
       <a href="#how"><L en="How it works" pl="Jak to działa" /></a>
-      <a href="#proof"><L en="Proof" pl="Dowód" /></a>
-      <a href="#scenarios"><L en="Scenarios" pl="Scenariusze" /></a>
+      <a href="#tech"><L en="Under the hood" pl="Technologia" /></a>
+      <a href="#scenarios"><L en="Try it" pl="Wypróbuj" /></a>
     </nav>
     <div class="top-tools">
       <div class="lang" role="group" aria-label="Language">
         <button type="button" data-set-lang="pl" aria-pressed="false">PL</button>
         <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
       </div>
-      <a class="console-btn" href={`${dashboardUrl}`} data-dashboard=""><L en="Open dashboard" pl="Otwórz dashboard" /></a>
+      <a class="console-btn" href={`${dashboardUrl}`} data-dashboard=""><L en="Open the dashboard" pl="Otwórz dashboard" /></a>
     </div>
   </div>
 </header>

@@ -28,9 +28,13 @@ COPY db ./db
 COPY demo ./demo
 COPY tests ./tests
 COPY --from=dashboard /dashboard/dist ./dashboard/dist
-RUN pip install --no-deps .
+# defaults copied into empty policy/feed volumes on first start (docker/entrypoint.sh)
+COPY policy ./defaults/policy
+COPY feeds ./defaults/feeds
+COPY docker/entrypoint.sh /usr/local/bin/mandate-entrypoint
+RUN pip install --no-deps . && mkdir -p policy feeds && chmod +x /usr/local/bin/mandate-entrypoint
 
-RUN useradd --create-home --uid 1000 app
+RUN useradd --create-home --uid 1000 app && chown -R app:app /app/policy /app/feeds
 USER app
 
 EXPOSE 8000
@@ -40,4 +44,5 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
 
 # Single worker on purpose: in-process state (policy snapshot) stays simple. Budget atomicity is in Postgres,
 # so more workers/instances stay correct (each polls the policy file).
+ENTRYPOINT ["mandate-entrypoint"]
 CMD ["uvicorn", "mandate.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

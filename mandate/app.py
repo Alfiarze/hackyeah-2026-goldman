@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from mandate.attacks import FeedStore
 from mandate.audit import Audit
-from mandate.db import create_pool
+from mandate.db import create_pool, migrate
 from mandate.engine import Gateway
 from mandate.models import GatewayError
 from mandate.policy import PolicyStore
@@ -50,6 +50,7 @@ def create_app(settings: Settings | None = None,
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
         pool = await create_pool(settings.dsn)
+        await migrate(pool, ROOT / "db" / "init")
         audit = Audit(pool)
         policy = PolicyStore(settings.policy_path, pool, audit)
         await policy.load_initial()

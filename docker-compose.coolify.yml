@@ -1,0 +1,77 @@
+# Coolify deployment (Build Pack: Docker Compose, compose file: docker-compose.coolify.yml).
+# Domains: set them per service in Coolify (several, comma-separated, are fine), e.g.
+#   gateway  -> https://app.example.com:8000      (dashboard at /dashboard, API, MCP)
+#   landing  -> https://example.com,https://www.example.com
+# Coolify generates the URLs and passwords below (SERVICE_URL_* / SERVICE_PASSWORD_*); nothing is published
+# on host ports, the Coolify proxy routes to the containers. Set LLM_API_KEY (and the other LLM_* vars for the
+# GB10) in Coolify > Environment Variables.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goldman
+      POSTGRES_USER: goldman
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goldman -d goldman"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  tools:
+    build: .
+    restart: unless-stopped
+    command: ["uvicorn", "mandate.backends:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      TOOL_BACKEND_SECRET: ${SERVICE_PASSWORD_TOOLS}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+
+  gateway:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      tools:
+        condition: service_started
+    environment:
+      SERVICE_URL_GATEWAY_8000: /
+      DATABASE_URL: postgresql://goldman:${SERVICE_PASSWORD_POSTGRES}@db:5432/goldman
+      TOOLS_BASE_URL: http://tools:8001
+      TOOL_BACKEND_SECRET: ${SERVICE_PASSWORD_TOOLS}
+      # shown in Coolify > Environment Variables; give it to whoever needs the dashboard (jury)
+      ADMIN_API_KEY: ${SERVICE_PASSWORD_ADMIN}
+      APP_API_KEY: ${SERVICE_PASSWORD_APP}
+      LEASE_SECRET: ${SERVICE_PASSWORD_64_LEASE}
+      AGENT_KEYS: agent-key-demo:demo-agent,agent-key-other:other-agent
+      POLICY_PATH: /app/policy/policy.yaml
+      ATTACK_FEED_PATH: /app/feeds/attacks.yaml
+      ATTACK_FEED_URL: ${ATTACK_FEED_URL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-deepseek/deepseek-v4.1-flash}
+      LLM_LOCATION: ${LLM_LOCATION:-onprem}
+      LLM_EXTRA_BODY: ${LLM_EXTRA_BODY:-}   # empty: reasoning is switched off automatically on OpenRouter
+    volumes:
+      # seeded from the image on first start; console edits persist across redeploys
+      - policy_data:/app/policy
+      - feeds_data:/app/feeds
+
+  landing:
+    build: ./landing
+    restart: unless-stopped
+    environment:
+      SERVICE_URL_LANDING_80: /
+      # where "Open the dashboard" points; override in Coolify if the gateway has a custom domain
+      DASHBOARD_URL: ${DASHBOARD_URL:-${SERVICE_URL_GATEWAY}/dashboard/}
+
+volumes:
+  db_data:
+  policy_data:
+  feeds_data:

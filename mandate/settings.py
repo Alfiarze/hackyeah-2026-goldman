@@ -41,7 +41,10 @@ class Settings:
     llm_location: str = os.environ.get("LLM_LOCATION", "onprem")  # onprem | cloud (data-flow sink)
     # extra JSON merged into every request, e.g. {"reasoning": {"enabled": false}} on OpenRouter so a reasoning
     # model does not spend the whole token budget thinking; vLLM/SGLang use their own switches
-    llm_extra_body: dict = field(default_factory=lambda: json.loads(os.environ.get("LLM_EXTRA_BODY") or "{}"))
+    llm_extra_body: dict = field(default_factory=lambda: json.loads(
+        os.environ.get("LLM_EXTRA_BODY")
+        or ('{"reasoning": {"enabled": false}}' if "openrouter.ai" in os.environ.get("LLM_BASE_URL", "openrouter.ai")
+            else "{}")))
     poll_interval: float = float(os.environ.get("POLICY_POLL_SECONDS", "1.0"))
     background_tasks: bool = True
 

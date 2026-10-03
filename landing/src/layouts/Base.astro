@@ -25,6 +25,8 @@ const baseUrl = import.meta.env.BASE_URL;
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
+    <!-- runtime config written by the container at start (DASHBOARD_URL); falls back to the build-time link -->
+    <script is:inline src={`${baseUrl}env.js`}></script>
     <script is:inline>
       (() => {
         let lang = "en";
@@ -40,5 +42,13 @@ const baseUrl = import.meta.env.BASE_URL;
   </head>
   <body>
     <slot />
+      <script is:inline>
+      (() => {
+        const url = window.MANDATE_DASHBOARD_URL;
+        if (!url) return;
+        const base = url.endsWith("/") ? url : url + "/";
+        document.querySelectorAll("a[data-dashboard]").forEach((a) => { a.href = base + a.dataset.dashboard; });
+      })();
+    </script>
   </body>
 </html>

@@ -223,8 +223,27 @@ docker build -t mandate-landing \
 docker run -p 8080:80 mandate-landing          # anywhere
 ```
 
-`PUBLIC_DASHBOARD_URL` is where its "Open the dashboard" links point. `LANDING_BASE` sets the sub-path when the page
-is not served at the root.
+The "Open the dashboard" links are set at **container start** from `DASHBOARD_URL`, so one image works on any domain
+without rebuilding. `PUBLIC_DASHBOARD_URL` (build arg) is only the fallback; `LANDING_BASE` sets a sub-path.
+
+## Deploying on Coolify
+
+Use **Build Pack: Docker Compose** with the compose file `docker-compose.coolify.yml`.
+
+1. Set the domains per service in Coolify. A service can have several domains, comma-separated:
+   - `gateway`: e.g. `https://app.example.com:8000` (`:8000` is the container port, not part of the public URL). It
+     serves the dashboard at `/dashboard`, the API and MCP.
+   - `landing`: e.g. `https://example.com,https://www.example.com`.
+2. In **Environment Variables**, set `LLM_API_KEY`, plus `LLM_BASE_URL`, `LLM_MODEL` and `LLM_LOCATION` when you
+   switch to the GB10. Set `DASHBOARD_URL` only if the landing page should link somewhere other than the gateway's
+   generated URL.
+3. Deploy. Coolify generates the database password, the admin, app and lease keys and the tool-backend secret
+   (`SERVICE_PASSWORD_*`). Give the admin key (`SERVICE_PASSWORD_ADMIN`) to whoever opens the dashboard, e.g. the
+   jury. It goes into "Admin key" in the top bar.
+
+On Coolify, no ports are published and the Coolify proxy routes traffic. The gateway applies the database schema on
+every start (idempotent). The policy and the attack feed live in volumes, seeded from the image on first start, so
+console edits survive redeploys. The dev keys from `.env.example` are never used there.
 
 ## Repo map
 

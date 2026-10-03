@@ -38,13 +38,17 @@ const pillars = [
       </div>
     </div>
     <figure class="hero-art">
-      <img
-        src={`${base}art/engraving-hero.jpg`}
-        width="780" height="740"
-        alt=""
-        decoding="async"
-        fetchpriority="high"
-      />
+      <!-- transparent line-work in two inks: no blend modes, so no backdrop can show through in any browser -->
+      <picture>
+        <source srcset={`${base}art/engraving-hero-dark.webp`} media="(prefers-color-scheme: dark)" />
+        <img
+          src={`${base}art/engraving-hero-light.webp`}
+          width="780" height="740"
+          alt=""
+          decoding="async"
+          fetchpriority="high"
+        />
+      </picture>
       <!-- a live guilloché layer over the engraved one: draws itself in, then turns very slowly -->
       <Rosette size={64} class="hero-rosette" />
       <span class="hero-serial" aria-hidden="true" data-serial="4817">Nº AE·26 <b>{"004817".split("").map((d) => <i>{d}</i>)}</b></span>

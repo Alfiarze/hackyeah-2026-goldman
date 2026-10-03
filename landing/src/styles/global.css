@@ -158,14 +158,15 @@ main { display: block; }
 
 /* the engraving melts into the paper: multiply on light, inverted line-work on dark */
 .hero-art { margin: 0; }
+.hero-art picture { display: block; }
 .hero-art img {
-  width: 100%; height: auto; mix-blend-mode: multiply; filter: brightness(1.08) contrast(1.06);
+  width: 100%; height: auto;
   -webkit-mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 52%, transparent 100%);
   mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 52%, transparent 100%);
 }
 @media (prefers-color-scheme: dark) {
   /* invert the line-work and push the scanned paper to pure black, so screen leaves only the lines */
-  .hero-art img { filter: brightness(1.1) contrast(1.15) invert(1) hue-rotate(180deg) contrast(1.6) brightness(0.8); mix-blend-mode: screen; }
+
 }
 
 /* four pillars, hairline-divided like the artwork */
@@ -342,12 +343,12 @@ main { display: block; }
 footer { border-top: 1px solid var(--rule); }
 .foot-band { display: flex; justify-content: center; overflow: hidden; padding-top: 28px; }
 .foot-band img {
-  width: min(1100px, 100%); height: auto; mix-blend-mode: multiply; filter: brightness(1.08) contrast(1.06);
+  width: min(1100px, 100%); height: auto;
   -webkit-mask-image: radial-gradient(ellipse 52% 60% at 50% 55%, #000 55%, transparent 100%);
   mask-image: radial-gradient(ellipse 52% 60% at 50% 55%, #000 55%, transparent 100%);
 }
 @media (prefers-color-scheme: dark) {
-  .foot-band img { filter: brightness(1.12) invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.05); mix-blend-mode: screen; opacity: 0.85; }
+  .foot-band img { opacity: 0.85; }
 }
 .foot-grid { padding-block: 28px 64px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px 48px; }
 .foot-brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -481,10 +482,7 @@ footer { border-top: 1px solid var(--rule); }
 .motion .brand:hover .rosette .r-outer { animation-duration: 40s; }
 
 /* hero: the engraving inks in from its centre, then breathes; a live rosette turns over it */
-/* The figure is transformed (parallax, breathing), which makes it its own compositing group: the image's
-   multiply/screen blend then mixes with the figure, not the page. Painting the paper behind it keeps the
-   blend correct in both themes, otherwise the inverted engraving shows its black background in dark mode. */
-.hero-art { position: relative; will-change: transform; isolation: isolate; background: var(--paper); }
+.hero-art { position: relative; will-change: transform; }
 .motion .hero-art img {
   -webkit-mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 var(--ink-reach), transparent calc(var(--ink-reach) + 48%));
   mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 var(--ink-reach), transparent calc(var(--ink-reach) + 48%));
@@ -499,14 +497,14 @@ footer { border-top: 1px solid var(--rule); }
 
 .hero-rosette {
   position: absolute; left: 43.6%; top: 43.6%; width: 106%; height: auto; aspect-ratio: 1;
-  translate: -50% -50%; pointer-events: none; opacity: 0.45; mix-blend-mode: multiply;
+  translate: -50% -50%; pointer-events: none; opacity: 0.45;
   -webkit-mask-image: radial-gradient(circle, #000 52%, transparent 71%);
   mask-image: radial-gradient(circle, #000 52%, transparent 71%);
 }
 /* only the outer ring: a turning guilloché border around the engraved rosette */
 .hero-rosette .r-middle, .hero-rosette .r-inner { display: none; }
 .hero-rosette path { stroke-width: 0.12 !important; }
-@media (prefers-color-scheme: dark) { .hero-rosette { mix-blend-mode: screen; opacity: 0.45; } }
+
 :root:not(.motion) .hero-rosette { display: none; }
 .motion .hero-rosette { animation: fade-in 1.2s ease 0.6s both; }
 @keyframes fade-in { from { opacity: 0; } }

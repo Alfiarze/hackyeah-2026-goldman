@@ -19,6 +19,7 @@ const P = {
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5" /><circle cx="12" cy="7.8" r="0.5" /></>,
+  download: <><path d="M12 4v11M7 10.5l5 5 5-5" /><path d="M5 20h14" /></>,
   key: <><circle cx="8" cy="14" r="4" /><path d="M11 11l8-8M16 6l2.5 2.5" /></>,
 };
 

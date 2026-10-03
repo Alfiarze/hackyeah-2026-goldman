@@ -5,7 +5,7 @@ import { Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, nu
 import Agent from "./Agent.jsx";
 import Icon from "./icons.jsx";
 import { TraceStep } from "./Trace.jsx";
-import { DisabledBanner, ExampleChips, FileLoad, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
+import { DisabledBanner, DocInput, ExampleChips, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
   { group: "Guide", items: [["start", "Start here"]] },
@@ -404,6 +404,7 @@ const ORIGINS = [["tool_results", "A document or tool result the agent reads"], 
 
 function Playground() {
   const [text, setText] = useState("");
+  const [doc, setDoc] = useState(null);
   const [target, setTarget] = useState("tool_results");
   const [sink, setSink] = useState("");
   const [cls, setCls] = useState("PUBLIC");
@@ -416,17 +417,16 @@ function Playground() {
   const go = (e) => { e?.preventDefault(); return check({ text, target, sink: sink || null, classification: cls }); };
   const pick = (x) => {
     const tg = x.target || "user_input";
-    setText(x.text); setTarget(tg); setSink(""); setCls("PUBLIC"); setRes(null);
+    setDoc(null); setText(x.text); setTarget(tg); setSink(""); setCls("PUBLIC"); setRes(null);
   };
   return (
     <div className="two-col">
       {notice}
       <form className="sheet form" onSubmit={go}>
-        <div className="field"><span>{t("1. Pick an example, load a document, or write your own")}</span><ExampleChips onPick={pick} active={text} /></div>
-        <FileLoad onText={(txt) => { setText(txt); setTarget("tool_results"); setSink(""); setCls("PUBLIC"); setRes(null); }} />
-        <label className="field"><span>{t("2. Text to check")}</span>
-          <textarea rows={7} value={text} onChange={(e) => { setText(e.target.value); setRes(null); }} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(); }} />
-        </label>
+        <div className="field"><span>{t("1. Pick an example, load a document, or write your own")}</span><ExampleChips onPick={pick} active={doc ? null : text} /></div>
+        <DocInput label={t("2. Text to check")} text={text} rows={6} placeholder={t("Pick an example above, or type any prompt here…")}
+          onText={(v) => { setText(v); setRes(null); }} onSubmit={() => go()} doc={doc}
+          onDoc={(d) => { setDoc(d); setText(d ? d.text : ""); if (d) { setTarget("tool_results"); setSink(""); setCls("PUBLIC"); } setRes(null); }} />
         <details className="more">
           <summary>{t("3. Optional: where the text comes from and where it is going")}</summary>
           <label className="field"><span>{t("Where it comes from")}</span>

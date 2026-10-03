@@ -167,47 +167,76 @@ async function extractText(blob) {
   return data;
 }
 
-// Load a document (a PDF contract, an e-mail, a text file) as something the agent reads.
-export function FileLoad({ onText }) {
+// The text box of a check, or (once a file is loaded) a card for that document instead of its raw text.
+// The whole area takes dropped files. The parent keeps `text` (what gets checked) and `doc` (the loaded file).
+export function DocInput({ label, text, onText, doc, onDoc, rows = 5, placeholder, onSubmit }) {
   const [drag, setDrag] = useState(false);
-  const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [peek, setPeek] = useState(false);
   const load = async (blob, name) => {
     if (!blob) return;
-    if (blob.size > 10 * 1024 * 1024) { setInfo({ err: t("File too large (max 10 MB)") }); return; }
-    setBusy(true); setInfo(null);
+    if (blob.size > 10 * 1024 * 1024) { setErr(t("File too large (max 10 MB)")); return; }
+    setBusy(true); setErr(null);
     try {
       const d = await extractText(blob);
-      setInfo({ name, pages: d.pages, chars: d.chars });
-      onText(d.text, name);
-    } catch (e) { setInfo({ err: e.message }); }
+      if (!d.text.trim()) throw new Error(t("No text found in this file. A scanned PDF needs OCR first."));
+      setPeek(false);
+      onDoc({ name, pages: d.pages, chars: d.chars, text: d.text, pdf: /\.pdf$/i.test(name || "") || d.pages !== null });
+    } catch (e) { setErr(e.message); }
     setBusy(false);
   };
   const sample = async (path) => load(await (await fetch(path)).blob(), path.split("/").pop());
+  const picker = (
+    <input type="file" accept=".pdf,.txt,.md,.csv,.json,.eml,application/pdf,text/*" hidden
+      onChange={(e) => { const f = e.target.files[0]; load(f, f?.name); e.target.value = ""; }} />
+  );
   return (
-    <div className={`fileload ${drag ? "is-drag" : ""}`}
+    <div className={`docinput ${drag ? "is-drag" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
       onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; load(f, f?.name); }}>
-      <div className="fileload-main">
-        <Icon name="audit" size={22} />
-        <div>
-          <b>{t("Check a whole document")}</b>
-          <span className="muted small">{t("Drop a PDF, .txt or .md file here (a contract, an e-mail), or pick one. All of its text is checked as a document the agent reads, including text hidden in a PDF.")}</span>
+      {label && <span className="field-label">{label}</span>}
+      {doc ? (
+        <div className="doc-card">
+          <div className="doc-main">
+            <span className={`doc-icon ${doc.pdf ? "is-pdf" : ""}`} aria-hidden="true">{doc.pdf ? "PDF" : "TXT"}</span>
+            <div className="doc-meta">
+              <b title={doc.name}>{doc.name}</b>
+              <span className="muted small">
+                {doc.pages ? t("{pages} page(s) · {chars} characters", { pages: doc.pages, chars: num(doc.chars) }) : t("{chars} characters", { chars: num(doc.chars) })}
+                {" · "}{t("checked as a document the agent reads")}
+              </span>
+            </div>
+            <button type="button" className="doc-x" onClick={() => { onDoc(null); setErr(null); }} aria-label={t("Remove the file")} title={t("Remove the file")}><Icon name="close" size={16} /></button>
+          </div>
+          <div className="doc-actions">
+            <button type="button" className="link" onClick={() => setPeek(!peek)}>{peek ? t("Hide the text") : t("Show the extracted text")}</button>
+            <label className="link">{t("Choose another file")}{picker}</label>
+          </div>
+          {peek && <pre className="doc-peek">{doc.text}</pre>}
         </div>
-        <label className="btn small">{busy ? t("Reading…") : t("Choose a file")}<input type="file" accept=".pdf,.txt,.md,.csv,.json,.eml,application/pdf,text/*" hidden onChange={(e) => { const f = e.target.files[0]; load(f, f?.name); e.target.value = ""; }} /></label>
-      </div>
-      <div className="fileload-samples">
-        <span className="label">{t("Sample contracts")}</span>
-        {SAMPLES.map(([p, l, txt]) => (
-          <span key={p} className="sample">
-            <button type="button" className="link" onClick={() => sample(p)}>{t("Load")}: {t(l)} (PDF)</button>
-            <a className="link muted" href={p} download>{t("download PDF")}</a>
-            <a className="link muted" href={txt} download>TXT</a>
-          </span>
-        ))}
-      </div>
-      {info?.err && <p className="small t-block">{info.err}</p>}
-      {info?.name && <p className="small t-allow">{info.pages ? t("Loaded {name}: {pages} page(s), {chars} characters of text.", info) : t("Loaded: {name}", info)}</p>}
+      ) : (
+        <>
+          <textarea rows={rows} value={text} placeholder={placeholder} onChange={(e) => onText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit?.(); }} />
+          <label className={`dropzone ${busy ? "is-busy" : ""}`}>
+            <Icon name="audit" size={18} />
+            <span>{busy ? t("Reading the file…") : <>{t("Or drop a PDF / TXT file here, or")} <u>{t("choose a file")}</u></>}</span>
+            {picker}
+          </label>
+          <div className="samples">
+            {SAMPLES.map(([p, l, txt]) => (
+              <div key={p} className="sample-tile">
+                <span className="doc-icon is-pdf small" aria-hidden="true">PDF</span>
+                <div className="sample-text"><b>{t(l)}</b><span className="muted small">{t(l === "Clean contract" ? "should pass" : "should be stopped")}</span></div>
+                <button type="button" className="btn small" onClick={() => sample(p)}>{t("Load")}</button>
+                <a className="sample-dl" href={p} download title={t("download PDF")} aria-label={t("download PDF")}><Icon name="download" size={16} /></a>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {err && <p className="small t-block">{err}</p>}
     </div>
   );
 }
@@ -244,16 +273,15 @@ function QuickCheck() {
     catch (e) { setErr(e.message); }
     finally { setBusy(false); }
   };
-  const pick = (x) => { setText(x.text); setTarget(x.target || "user_input"); setRes(null); };
+  const [doc, setDoc] = useState(null);
+  const pick = (x) => { setDoc(null); setText(x.text); setTarget(x.target || "user_input"); setRes(null); };
   return (
     <div className="quick">
       <div className="quick-input">
-        <ExampleChips onPick={pick} active={text} />
-        <FileLoad onText={(txt) => { setText(txt); setTarget("tool_results"); setRes(null); }} />
-        <label className="field"><span>{t("Text to check")}</span>
-          <textarea rows={4} value={text} placeholder={t("Pick an example above, or type any prompt here…")} onChange={(e) => { setText(e.target.value); setRes(null); }}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) check(); }} />
-        </label>
+        <ExampleChips onPick={pick} active={doc ? null : text} />
+        <DocInput label={t("Text to check")} text={text} rows={4} placeholder={t("Pick an example above, or type any prompt here…")}
+          onText={(v) => { setText(v); setRes(null); }} onSubmit={() => check()} doc={doc}
+          onDoc={(d) => { setDoc(d); setText(d ? d.text : ""); if (d) setTarget("tool_results"); setRes(null); }} />
         <div className="actions">
           <button className="btn btn-primary btn-lg" disabled={busy || !text.trim()} onClick={() => check()}>{busy ? t("Checking…") : t("Check it")}<Icon name="arrow" size={17} /></button>
           <span className="note">{t("Ctrl+Enter also works. Nothing is executed, the gateway only decides.")}</span>

@@ -982,3 +982,44 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 .fileload-samples { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
 .fileload-samples .label { margin: 0; }
 .sample { display: inline-flex; gap: 8px; align-items: baseline; }
+
+/* ============================================================ document input */
+
+.docinput { display: flex; flex-direction: column; gap: 10px; border-radius: 12px; transition: box-shadow 0.15s; }
+.docinput.is-drag { box-shadow: 0 0 0 2px var(--intaglio); background: color-mix(in srgb, var(--intaglio) 6%, transparent); }
+.field-label { font-size: 13px; color: var(--ink-2); font-weight: 500; }
+.dropzone {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 14px; border-radius: 10px;
+  border: 1.5px dashed var(--rule); color: var(--ink-2); font-size: 13.5px; transition: border-color 0.15s, color 0.15s;
+}
+.dropzone:hover { border-color: var(--intaglio); color: var(--ink); }
+.dropzone .icon { color: var(--intaglio); flex: none; }
+.dropzone u { color: var(--intaglio); text-underline-offset: 3px; }
+.dropzone.is-busy { opacity: 0.7; }
+.samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+.sample-tile {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; border-radius: 10px;
+  background: var(--paper); border: 1px solid var(--rule);
+}
+.sample-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; font-size: 13.5px; }
+.sample-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.sample-dl { color: var(--ink-3); display: inline-flex; padding: 4px; border-radius: 6px; }
+.sample-dl:hover { color: var(--intaglio); background: color-mix(in srgb, var(--intaglio) 10%, transparent); }
+.doc-icon {
+  flex: none; display: grid; place-items: center; width: 40px; height: 48px; border-radius: 6px;
+  font: 700 11px/1 var(--mono); letter-spacing: 0.04em; color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 8%, var(--sheet)); border: 1px solid var(--rule);
+  clip-path: polygon(0 0, 72% 0, 100% 22%, 100% 100%, 0 100%);
+}
+.doc-icon.is-pdf { color: #fff; background: var(--block); border-color: var(--block); }
+.doc-icon.small { width: 30px; height: 36px; font-size: 9px; }
+.doc-card { border: 1px solid var(--rule); background: var(--paper); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; animation: rise 0.25s ease; }
+.doc-main { display: flex; align-items: center; gap: 14px; }
+.doc-meta { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.doc-meta b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-x { flex: none; border: 0; background: none; color: var(--ink-3); cursor: pointer; padding: 6px; border-radius: 8px; display: inline-flex; }
+.doc-x:hover { color: var(--block); background: color-mix(in srgb, var(--block) 12%, transparent); }
+.doc-actions { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.doc-actions label.link { cursor: pointer; }
+.doc-peek { font: 12.5px/1.55 var(--mono); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; white-space: pre-wrap; max-height: none; }
+.sample-text b { white-space: normal; }

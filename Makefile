@@ -1,4 +1,4 @@
-.PHONY: run up down logs ps test test-docker demo dashboard-dev landing venv db-shell clean
+.PHONY: run up down logs ps test test-docker demo dashboard-dev landing venv db-shell clean sample-pdfs
 
 ADMIN ?= dev-admin-key
 GW ?= http://localhost:8000
@@ -41,6 +41,11 @@ demo:
 landing:
 	docker compose --profile landing up -d --build landing
 	@echo "Landing: http://localhost:$${LANDING_PORT:-8080}"
+
+# Rebuild the sample contract PDFs (dashboard/public/samples) with headless Chromium in Docker
+sample-pdfs:
+	docker run --rm -v "$(CURDIR)":/work -w /tmp/pdfs mcr.microsoft.com/playwright:v1.56.1-noble \
+		sh -c "npm init -y >/dev/null && npm i --silent playwright@1.56.1 && NODE_PATH=/tmp/pdfs/node_modules node /work/demo/samples/build-pdfs.cjs"
 
 dashboard-dev:
 	cd dashboard && npm install && npm run dev

@@ -202,7 +202,7 @@ report them together with the machine and the model.
 ```
 mandate/      gateway (app, engine pipeline, policy, attacks, detectors, semantic, budget, tasks, audit, admin)
 mandate/backends.py   mock tool backends + MCP server with counters
-dashboard/    React + Vite dashboard (built into the image, served at /dashboard)
+dashboard/    React + Vite dashboard, Polish/English (built into the image, served at /dashboard)
 policy/       central policy (single source of truth)
 feeds/        attack signature feed
 db/init/      Postgres schema + seed (trusted document catalog)

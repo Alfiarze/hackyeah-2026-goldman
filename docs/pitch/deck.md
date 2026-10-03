@@ -148,7 +148,7 @@ principal: lawyer_anna        # from API key, not body
 purpose: "Summarise contract of client A"
 resources_allow: ["/clients/A/contracts/*"]
 tools_allow: [doc.read, legal_db.search, notes.write]
-model_allow: [ollama/qwen2.5:3b]
+model_allow: [main/deepseek-v4.1-flash]
 budget: {tokens: 20000, calls: 12, concurrency: 3}
 expires_at: +15 min
 classification: PUBLIC   # only goes UP (taint)
@@ -192,10 +192,10 @@ przed wywołaniem modelu.
                          │
         ┌────────────────▼──────────────── PIPELINE (cheap → expensive, first BLOCK wins) ─┐
         │ 0 policy snapshot  1 mandate/lease  2 allowlist  3 attack signatures            │
-        │ 4 PII + secrets    5 taint / IFC    6 semantic (Ollama, can only TIGHTEN)       │
+        │ 4 PII + secrets    5 taint / IFC    6 semantic (LLM on GB10, only TIGHTENS)     │
         │ 7 budget escrow ── execute ── POST: re-scan model output + tool results         │
         └────────────────┬─────────────────────────────────────────────────────────────────┘
-          Ollama (local) · tool backends (secret only gateway knows) · Postgres audit
+          DeepSeek V4.1 Flash on our GB10 · tool backends (secret only gateway knows) · Postgres audit
                          ▼
           Dashboard · /metrics p50/p95 · audit export JSONL/CSV
 ```
@@ -223,7 +223,7 @@ bo tam siedzi pośredni prompt injection.
 ```yaml
 profile: balanced    # strict | balanced | permissive
 models:
-  allow: ["ollama/qwen2.5:3b"]
+  allow: ["main/*"]   # model server from .env: our GB10 (DeepSeek V4.1 Flash)
 controls:
   pii:     {enabled: true, mode: redact}
   secrets: {enabled: true, mode: block}
@@ -318,13 +318,13 @@ Jeśli demo padnie: nagranie (backup) + screenshoty w appendixie.
 |---|---|---|
 | Centralized policy engine | `policy.yaml`, 3 profiles, hot-reload, rollback | P-01…06 |
 | Deterministic controls | PII (PESEL, Luhn, IBAN), secrets (AWS, JWT, keys), mandate auth | D-01…10 |
-| Semantic controls | Ollama classifier, JSON risk, tighten-only, fail-closed | S-01…04 |
+| Semantic controls | DeepSeek V4.1 Flash on GB10 as classifier, JSON risk, tighten-only, fail-closed | S-01…04 |
 | Budget & resources | Escrow: tokens, calls, time, concurrency; task/user/global | B-01…07 |
 | Historical attacks | pickle opcode scan, `trust_remote_code`, CVE-2024-34359, typosquat, MCP tool poisoning | A-01…10 |
 | Reporting & audit | Live dashboard, SSE, JSONL/CSV export, no secrets in logs | R-01…04 |
-| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | <span class="todo">N</span> cases |
+| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 89 tests |
 
-`make test` → <span class="todo">N passed</span> · deterministic in CI, semantic `-m live` against real Ollama
+`make test-docker` → **89 passed** · deterministic in CI, semantic checked live against the GB10 model
 
 <!--
 NOTATKI (~35 s):
@@ -358,10 +358,10 @@ overspend with 30 parallel agents
 </div>
 <div class="card">
 
-<div class="big"><span class="todo">x ms</span></div>
+<div class="big">≈ 11 ms</div>
 
 p95 deterministic pipeline
-<span class="muted">semantic: <span class="todo">y ms</span> · hw: <span class="todo">…</span></span>
+<span class="muted">semantic (DeepSeek V4.1 Flash): ~1.9 s median · measured on an M2 laptop in Docker, model via OpenRouter; re-measure on GB10</span>
 
 </div>
 </div>
@@ -389,7 +389,7 @@ Security dostaje pełny ślad decyzji, management — kafelki i koszty, łączni
 - OpenAI-compatible endpoint → change `base_url`
 - MCP proxy → point the agent at `/mcp`
 - Python SDK: `mandate_sdk.govern(tool)`
-- `cp .env.example .env && make run` — Docker Compose, Postgres, local Ollama
+- `cp .env.example .env && make run` — Docker Compose, Postgres; model server = our GB10 (OpenAI-compatible)
 
 **Scales out**
 - Stateless gateway, state in Postgres
@@ -423,7 +423,7 @@ Streaming buforujemy przed wydaniem. Roadmapa: Research Airlock, Redis, eksport 
 
 **MANDATE** — authorise the task, track the data, cap the spend, prove the block.
 
-- Repo: <span class="todo">github.com/…</span>
+- Repo: github.com/Alfiarze/hackyeah-2026-goldman
 - Demo video: <span class="todo">link</span>
 - Team: <span class="todo">names · roles</span>
 

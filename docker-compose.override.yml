@@ -1,0 +1,16 @@
+# Local host ports. Loaded automatically by `docker compose up` / `make run` on top of docker-compose.yml.
+# Not used by Coolify (it runs `docker compose -f <file>`), so a deploy never binds a host port.
+services:
+  db:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+  gateway:
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+  # Published only so the jury can try a direct call: it is rejected without the gateway's secret.
+  tools:
+    ports:
+      - "${TOOLS_PORT:-8001}:8001"
+  landing:
+    ports:
+      - "${LANDING_PORT:-8080}:80"

@@ -1,10 +1,11 @@
 ---
+import { dashboardUrl } from "../config";
 import L from "./L.astro";
 import Rosette from "./Rosette.astro";
 ---
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="/landing/">
+    <a class="brand" href={import.meta.env.BASE_URL}>
       <Rosette size={30} />
       <span class="wordmark">Mandate</span>
     </a>
@@ -18,7 +19,7 @@ import Rosette from "./Rosette.astro";
         <button type="button" data-set-lang="pl" aria-pressed="false">PL</button>
         <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
       </div>
-      <a class="console-btn" href="/dashboard/"><L en="Open dashboard" pl="Otwórz dashboard" /></a>
+      <a class="console-btn" href={`${dashboardUrl}`}><L en="Open dashboard" pl="Otwórz dashboard" /></a>
     </div>
   </div>
 </header>

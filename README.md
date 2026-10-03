@@ -42,6 +42,7 @@ documents. Without a configured server the AI review falls back to a local heuri
 | `make test-docker` | run the full test suite inside the image (81 tests) |
 | `make venv && make test` | same suite on the host |
 | `make demo` | run every scripted scenario against the running stack |
+| `make landing` | build and start the landing page as its own nginx container on :8080 |
 | `make clean` | drop containers **and** the database volume |
 
 Default keys live in `.env.example`: admin `dev-admin-key`, app `dev-app-key`, agent `agent-key-demo`.
@@ -209,6 +210,21 @@ report them together with the machine and the model.
 * The heuristic semantic scorer is a fallback, not a replacement for the model; we report which backend is active.
 * Not built in this MVP: multi-instance policy push (`LISTEN/NOTIFY`), automated tests for the secret detectors.
   Redis is the path for very high request rates.
+
+## Landing page
+
+`landing/` is a static Astro site with its own `Dockerfile` (Node builds it, nginx serves it), so it can be hosted
+separately from the gateway:
+
+```bash
+make landing                                   # local: http://localhost:8080
+docker build -t mandate-landing \
+  --build-arg PUBLIC_DASHBOARD_URL=https://<your-host>/dashboard/ landing
+docker run -p 8080:80 mandate-landing          # anywhere
+```
+
+`PUBLIC_DASHBOARD_URL` is where its "Open the dashboard" links point. `LANDING_BASE` sets the sub-path when the page
+is not served at the root.
 
 ## Repo map
 

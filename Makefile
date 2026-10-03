@@ -1,4 +1,4 @@
-.PHONY: run up down logs ps test test-docker demo dashboard-dev venv db-shell clean
+.PHONY: run up down logs ps test test-docker demo dashboard-dev landing venv db-shell clean
 
 ADMIN ?= dev-admin-key
 GW ?= http://localhost:8000
@@ -36,6 +36,11 @@ test-docker:
 demo:
 	@for s in clean injection detector_miss cross_client expired_lease mcp_poison supply_chain budget_race; do \
 		echo "== $$s"; curl -s -X POST -H "X-Admin-Key: $(ADMIN)" $(GW)/admin/demo/scenarios/$$s | python3 -m json.tool | head -40; done
+
+# Landing page as its own container (nginx), http://localhost:8080
+landing:
+	docker compose --profile landing up -d --build landing
+	@echo "Landing: http://localhost:$${LANDING_PORT:-8080}"
 
 dashboard-dev:
 	cd dashboard && npm install && npm run dev

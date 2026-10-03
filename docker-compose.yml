@@ -66,5 +66,17 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
 
+  # Static landing page (optional, separate image). Start with: make landing  ->  http://localhost:8080
+  landing:
+    build:
+      context: ./landing
+      args:
+        PUBLIC_DASHBOARD_URL: ${PUBLIC_DASHBOARD_URL:-http://localhost:8000/dashboard/}
+    container_name: goldman-landing
+    profiles: ["landing"]
+    restart: unless-stopped
+    ports:
+      - "${LANDING_PORT:-8080}:80"
+
 volumes:
   db_data:

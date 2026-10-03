@@ -5,7 +5,7 @@ import { Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, nu
 import Agent from "./Agent.jsx";
 import Icon from "./icons.jsx";
 import { TraceStep } from "./Trace.jsx";
-import { DisabledBanner, DocInput, ExampleChips, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
+import { DisabledBanner, DocInput, ExampleChips, checkDocument, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
   { group: "Guide", items: [["start", "Start here"]] },
@@ -416,7 +416,7 @@ function Playground() {
   const [res, setRes] = useState(null);
   const [run, notice] = useAction();
   const check = async (body) => {
-    const r = await run(() => api("/admin/playground/evaluate", { method: "POST", body }), t("Checked. Nothing was executed."));
+    const r = await run(() => (doc ? checkDocument(doc) : api("/admin/playground/evaluate", { method: "POST", body })), t("Checked. Nothing was executed."));
     if (r) { setRes(r); markDone("check"); }
   };
   const go = (e) => { e?.preventDefault(); return check({ text, target, sink: sink || null, classification: cls }); };
@@ -485,6 +485,7 @@ const CONTROL_COPY = {
   injection_heuristics: ["Instruction hijacking", "Phrases and hidden markup that try to override the agent's instructions."],
   semantic: ["AI review", "A local model scores untrusted text for manipulation. It can tighten a decision, never loosen one."],
   code_execution: ["Code execution", "When an agent runs code: block it, or run it in an isolated throw-away container with no network and tight limits."],
+  documents: ["Active content in files", "Uploaded files with scripts, auto-run actions, macros, embedded files or remote templates. Their metadata, comments and hidden text are always checked like the rest."],
 };
 
 function Controls() {

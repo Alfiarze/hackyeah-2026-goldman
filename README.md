@@ -149,6 +149,7 @@ model/tool `502`, and auth failures `401`.
 | Sandboxed code execution (`code.run`) | deterministic | sandbox (strict: block) | LLM05 Improper Output Handling, CWE-94 |
 | MCP tool hash pinning and quarantine | deterministic | block | LLM01 / Invariant Labs tool poisoning |
 | Case-scoped memory | deterministic | block | Agentic: memory poisoning |
+| `documents`: uploaded PDF/DOCX files. Metadata, XMP (XML), annotations, form fields, comments, hidden runs and custom properties are checked like the text and reported by location; scripts, auto-actions, launch actions, embedded files, macros and remote templates are active content | deterministic | block | LLM01 indirect injection, LLM05 |
 
 **Historical attacks** (`feeds/attacks.yaml`, editable live or served from `ATTACK_FEED_URL`):
 - unsafe deserialization: a pickle opcode scan (`pickletools.genops`, the file is never unpickled) that flags

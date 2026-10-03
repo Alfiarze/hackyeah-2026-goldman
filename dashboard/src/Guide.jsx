@@ -43,14 +43,14 @@ export const EXAMPLES = [
 const CONTROL_OF_RULE = [
   [/^PII-/, "pii"], [/^SEC-/, "secrets"], [/^INJ-/, "injection_heuristics"], [/^SEM-(001|002|ERR)/, "semantic"],
   [/^ATK-/, "attack_signatures"], [/^IFC-/, "ifc_taint"], [/^MANDATE-MODEL/, "model_allowlist"], [/^MANDATE-/, "mandate"], [/^MODEL-/, "model_allowlist"],
-  [/^SBX-/, "code_execution"],
+  [/^SBX-/, "code_execution"], [/^DOC-/, "documents"],
 ];
 export const controlOf = (rule) => (CONTROL_OF_RULE.find(([re]) => re.test(rule || "")) || [])[1];
 
 export const CONTROL_NAMES = {
   mandate: "Task mandates", ifc_taint: "Data lineage", model_allowlist: "Approved models only", pii: "Personal data",
   secrets: "Credentials and keys", attack_signatures: "Known attacks", injection_heuristics: "Instruction hijacking",
-  semantic: "AI review", code_execution: "Code execution",
+  semantic: "AI review", code_execution: "Code execution", documents: "Active content in files",
 };
 
 const WHY = {
@@ -60,6 +60,7 @@ const WHY = {
   semantic: "The AI review judged it as manipulation.",
   attack_signatures: "It matches a known attack pattern.",
   ifc_taint: "Confidential data would end up somewhere it may not go.",
+  documents: "The file contains active content: a script, macro, embedded file or remote template.",
 };
 
 const OUTCOME = {
@@ -113,6 +114,7 @@ export function Verdict({ res, onRecheck }) {
           </ul>
         </>
       )}
+      <WhereFound document={res.document} />
       {res.redacted && <><h3 className="sub">{t("What the model would receive")}</h3><pre className="excerpt">{res.redacted}</pre></>}
       {sem && sem.action === "ALLOW" && <p className="note">{t("AI review also looked at it: risk {risk} ({backend}).", { risk: sem.detail?.risk ?? "?", backend: t(sem.detail?.backend || "") })}</p>}
       {onRecheck && controls.length > 0 && (
@@ -152,19 +154,63 @@ export function DisabledBanner({ onChange }) {
 
 // ------------------------------------------------------------------ upload
 
+// [file, title, what to expect, kind]
 const SAMPLES = [
-  ["samples/umowa-czysta.pdf", "Clean contract", "samples/umowa-czysta.txt"],
-  ["samples/umowa-z-defektami.pdf", "Contract with planted defects", "samples/umowa-z-defektami.txt"],
+  ["samples/umowa-czysta.pdf", "Clean contract", "should pass", "PDF"],
+  ["samples/umowa-z-defektami.pdf", "Contract with planted defects", "should be stopped", "PDF"],
+  ["samples/umowa-metadane.pdf", "Clean page, dirty metadata", "should be stopped", "PDF"],
+  ["samples/umowa-metadane.docx", "Word file with hidden parts", "should be stopped", "DOCX"],
 ];
 
-// The gateway turns the file into the text an agent would read (for a PDF: all of it, hidden text included).
-async function extractText(blob) {
-  const res = await fetch("/admin/playground/extract", {
+async function postFile(path, blob, name) {
+  const res = await fetch(`${path}?name=${encodeURIComponent(name || "document")}`, {
     method: "POST", headers: { "X-Admin-Key": getKey(), "Content-Type": blob.type || "application/octet-stream" }, body: blob,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || data?.error?.reason_code || res.statusText);
   return data;
+}
+
+// What an agent would read from the file: text, hidden parts (metadata, XMP, comments…) and active content.
+const extractText = (blob, name) => postFile("/admin/playground/extract", blob, name);
+
+// Check a loaded file as a whole: the result also says in which part of the file each rule fired.
+export const checkDocument = (doc) => postFile("/admin/playground/document", doc.blob, doc.name);
+
+const KIND = { pdf: "PDF", docx: "DOCX", text: "TXT" };
+
+function partKind(source) {
+  if (/^PDF metadata|^document properties|^application properties|^custom property/.test(source)) return "metadata";
+  if (/^XMP/.test(source)) return "XMP (XML)";
+  if (/^annotation|^comment/.test(source)) return "comments and notes";
+  if (/^hidden text/.test(source)) return "hidden text";
+  if (/^JavaScript/.test(source)) return "scripts";
+  if (/^external|^link/.test(source)) return "links";
+  if (/^form field/.test(source)) return "form fields";
+  return "other parts";
+}
+
+// Where in the file each rule fired: visible text, metadata, XMP, comments, hidden runs…
+export function WhereFound({ document: d }) {
+  if (!d) return null;
+  const rows = [];
+  if (d.body_rules?.length) rows.push([t("Visible text"), d.body_rules]);
+  (d.sections || []).filter((x) => x.rules?.length).forEach((x) => rows.push([x.source, x.rules]));
+  if (!rows.length && !d.active?.length) return null;
+  return (
+    <div className="where">
+      <h3 className="sub">{t("Where in the file")}</h3>
+      <ul>
+        {rows.map(([where, rules], i) => (
+          <li key={i}><span className={`where-src ${where === t("Visible text") ? "" : "is-hidden"}`}>{where}</span> {rules.map((r) => <Id key={r}>{r}</Id>)}</li>
+        ))}
+        {(d.active || []).map((a, i) => (
+          <li key={`a${i}`}><span className="where-src is-active">{t(a.kind.replace("_", " "))}</span> <span className="small muted">{a.detail}</span> <Id>DOC-001</Id></li>
+        ))}
+      </ul>
+      {rows.some(([w]) => w !== t("Visible text")) && <p className="note">{t("A person reading the page sees none of the parts marked as hidden; an agent or its parser reads all of them.")}</p>}
+    </div>
+  );
 }
 
 // The text box of a check, or (once a file is loaded) a card for that document instead of its raw text.
@@ -179,16 +225,16 @@ export function DocInput({ label, text, onText, doc, onDoc, rows = 5, placeholde
     if (blob.size > 10 * 1024 * 1024) { setErr(t("File too large (max 10 MB)")); return; }
     setBusy(true); setErr(null);
     try {
-      const d = await extractText(blob);
-      if (!d.text.trim()) throw new Error(t("No text found in this file. A scanned PDF needs OCR first."));
+      const d = await extractText(blob, name);
+      if (!d.text.trim() && !d.sections.length) throw new Error(t("No text found in this file. A scanned PDF needs OCR first."));
       setPeek(false);
-      onDoc({ name, pages: d.pages, chars: d.chars, text: d.text, pdf: /\.pdf$/i.test(name || "") || d.pages !== null });
+      onDoc({ ...d, name, blob });
     } catch (e) { setErr(e.message); }
     setBusy(false);
   };
   const sample = async (path) => load(await (await fetch(path)).blob(), path.split("/").pop());
   const picker = (
-    <input type="file" accept=".pdf,.txt,.md,.csv,.json,.eml,application/pdf,text/*" hidden
+    <input type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,.eml,.html,.xml,.svg,application/pdf,text/*" hidden
       onChange={(e) => { const f = e.target.files[0]; load(f, f?.name); e.target.value = ""; }} />
   );
   return (
@@ -199,7 +245,7 @@ export function DocInput({ label, text, onText, doc, onDoc, rows = 5, placeholde
       {doc ? (
         <div className="doc-card">
           <div className="doc-main">
-            <span className={`doc-icon ${doc.pdf ? "is-pdf" : ""}`} aria-hidden="true">{doc.pdf ? "PDF" : "TXT"}</span>
+            <span className={`doc-icon is-${doc.kind}`} aria-hidden="true">{KIND[doc.kind] || "TXT"}</span>
             <div className="doc-meta">
               <b title={doc.name}>{doc.name}</b>
               <span className="muted small">
@@ -209,11 +255,25 @@ export function DocInput({ label, text, onText, doc, onDoc, rows = 5, placeholde
             </div>
             <button type="button" className="doc-x" onClick={() => { onDoc(null); setErr(null); }} aria-label={t("Remove the file")} title={t("Remove the file")}><Icon name="close" size={16} /></button>
           </div>
+          {(doc.sections?.length > 0 || doc.active?.length > 0) && (
+            <div className="doc-hidden">
+              {doc.sections?.length > 0 && <span>{t("Besides the visible text the file carries {n} hidden part(s): {list}.", { n: doc.sections.length, list: [...new Set(doc.sections.map((x) => partKind(x.source)))].map((k) => t(k)).join(", ") })}</span>}
+              {doc.active?.length > 0 && <span className="t-block">{t("Active content: {list}.", { list: doc.active.map((a) => t(a.kind.replace("_", " "))).join(", ") })}</span>}
+            </div>
+          )}
           <div className="doc-actions">
-            <button type="button" className="link" onClick={() => setPeek(!peek)}>{peek ? t("Hide the text") : t("Show the extracted text")}</button>
+            <button type="button" className="link" onClick={() => setPeek(!peek)}>{peek ? t("Hide the text") : t("Show everything the agent would read")}</button>
             <label className="link">{t("Choose another file")}{picker}</label>
           </div>
-          {peek && <pre className="doc-peek">{doc.text}</pre>}
+          {peek && (
+            <div className="doc-peek-wrap">
+              <span className="label">{t("Visible text")}</span>
+              <pre className="doc-peek">{doc.text || "—"}</pre>
+              {doc.sections?.map((x, i) => (
+                <React.Fragment key={i}><span className="label">{x.source}</span><pre className="doc-peek">{x.text}</pre></React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -221,16 +281,16 @@ export function DocInput({ label, text, onText, doc, onDoc, rows = 5, placeholde
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit?.(); }} />
           <label className={`dropzone ${busy ? "is-busy" : ""}`}>
             <Icon name="audit" size={18} />
-            <span>{busy ? t("Reading the file…") : <>{t("Or drop a PDF / TXT file here, or")} <u>{t("choose a file")}</u></>}</span>
+            <span>{busy ? t("Reading the file…") : <>{t("Or drop a PDF, DOCX or TXT file here, or")} <u>{t("choose a file")}</u></>}</span>
             {picker}
           </label>
           <div className="samples">
-            {SAMPLES.map(([p, l, txt]) => (
+            {SAMPLES.map(([p, l, expect, kind]) => (
               <div key={p} className="sample-tile">
-                <span className="doc-icon is-pdf small" aria-hidden="true">PDF</span>
-                <div className="sample-text"><b>{t(l)}</b><span className="muted small">{t(l === "Clean contract" ? "should pass" : "should be stopped")}</span></div>
+                <span className={`doc-icon is-${kind.toLowerCase()} small`} aria-hidden="true">{kind}</span>
+                <div className="sample-text"><b>{t(l)}</b><span className="muted small">{t(expect)}</span></div>
                 <button type="button" className="btn small" onClick={() => sample(p)}>{t("Load")}</button>
-                <a className="sample-dl" href={p} download title={t("download PDF")} aria-label={t("download PDF")}><Icon name="download" size={16} /></a>
+                <a className="sample-dl" href={p} download title={t("download")} aria-label={t("download")}><Icon name="download" size={16} /></a>
               </div>
             ))}
           </div>
@@ -269,7 +329,7 @@ function QuickCheck() {
   const [busy, setBusy] = useState(false);
   const check = async (tx = text, tg = target) => {
     setBusy(true); setErr(null);
-    try { setRes(await api("/admin/playground/evaluate", { method: "POST", body: { text: tx, target: tg } })); markDone("check"); }
+    try { setRes(doc ? await checkDocument(doc) : await api("/admin/playground/evaluate", { method: "POST", body: { text: tx, target: tg } })); markDone("check"); }
     catch (e) { setErr(e.message); }
     finally { setBusy(false); }
   };

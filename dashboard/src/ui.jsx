@@ -31,6 +31,7 @@ export function Level({ v }) {
 
 export function describe(f) {
   const d = f.detail || {};
+  if (d.kinds) return t("found {list}", { list: d.kinds.map((k) => t(k.replace("_", " "))).join(", ") }) + (d.items?.length ? `: ${d.items[0]}` : "");
   if (d.entities) return t("found {list}", { list: d.entities.map(human).join(", ") });
   if (d.types) return t("found {list}", { list: d.types.map(human).join(", ") });
   if (d.patterns) return t("matched {list}", { list: d.patterns.map(human).join(", ") });

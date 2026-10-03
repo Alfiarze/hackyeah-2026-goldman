@@ -583,11 +583,15 @@ class Gateway:
     # ================================================================ playground
 
     async def evaluate(self, text: str, *, target: str = "user_input", sink: str | None = None,
-                       classification: str = "PUBLIC", tool: str | None = None) -> dict[str, Any]:
-        """Dry run for the jury: decision only, nothing is executed."""
+                       classification: str = "PUBLIC", tool: str | None = None,
+                       extra: list[Finding] | None = None) -> dict[str, Any]:
+        """Dry run for the jury: decision only, nothing is executed. `extra` carries findings about the
+        container the text came from (e.g. scripts in an uploaded PDF)."""
         t0 = time.perf_counter()
         policy = self.policy.active
         d = Decision(policy_version=self.policy.version)
+        for f in extra or []:
+            d.add(f)
         pii = True
         if sink:
             pii = policy.sink_clearance(sink) < Classification.CONFIDENTIAL or target != "tool_args"

@@ -51,3 +51,68 @@ async def test_extract_rejects_garbage(client):
     assert r.status_code == 422
     r = await client.post("/admin/playground/extract", headers=ADMIN, content=bytes([0xff, 0xfe, 0x00, 0x81]))
     assert r.status_code == 415
+
+
+# ---------------------------------------------------------------- hidden parts of files
+
+async def check_file(client, name):
+    r = await client.post(f"/admin/playground/document?name={name}", headers=ADMIN | {"Content-Type": "application/octet-stream"},
+                          content=(SAMPLES / name).read_bytes())
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def rules_in(doc, prefix):
+    return {rule for s in doc["sections"] if s["source"].startswith(prefix) for rule in s["rules"]}
+
+
+async def test_clean_pdf_file_passes_with_its_metadata(client):
+    body = await check_file(client, "umowa-czysta.pdf")
+    assert body["decision"]["action"] == "ALLOW", body["decision"]
+    assert not body["document"]["active"]
+
+
+async def test_pdf_attacks_hidden_in_metadata_xmp_annotations_and_script(client):
+    """The page text is the clean contract; everything bad is where a person does not look."""
+    body = await check_file(client, "umowa-metadane.pdf")
+    doc, d = body["document"], body["decision"]
+    assert body["document"]["body_rules"] == []                       # visible text is clean
+    assert d["action"] == "BLOCK"
+    assert "DOC-001" in {f["rule_id"] for f in d["findings"]}          # document-level JavaScript
+    assert {"javascript"} <= {a["kind"] for a in doc["active"]}
+    assert "INJ-001" in rules_in(doc, "PDF metadata Subject")           # instruction for the AI
+    assert "SEC-001" in rules_in(doc, "PDF metadata Keywords")          # password
+    assert "INJ-001" in rules_in(doc, "XMP metadata")                   # XML comment + base64 + markdown exfil
+    assert "ATK-EXEC-002" in rules_in(doc, "annotation on page 1")      # curl | bash in a sticky note
+
+
+async def test_docx_attacks_hidden_in_properties_comments_hidden_runs_and_template(client):
+    body = await check_file(client, "umowa-metadane.docx")
+    doc, d = body["document"], body["decision"]
+    assert doc["kind"] == "docx" and d["action"] == "BLOCK"
+    assert doc["body_rules"] == [] and "zignoruj" not in doc["text"]   # visible text is clean
+    assert "INJ-001" in rules_in(doc, "hidden text")
+    assert "INJ-001" in rules_in(doc, "document properties: description")
+    assert "INJ-001" in rules_in(doc, "document properties: keywords")  # base64
+    assert {"SEC-001", "PII-001"} <= rules_in(doc, "comment by")
+    assert "ATK-EXEC-002" in rules_in(doc, "custom property")
+    assert "remote_content" in {a["kind"] for a in doc["active"]}       # remote template (.dotm)
+
+
+async def test_documents_control_can_be_switched_off(client):
+    await client.patch("/admin/controls/documents", headers=ADMIN, json={"enabled": False})
+    body = await check_file(client, "umowa-metadane.pdf")
+    assert "DOC-001" not in {f["rule_id"] for f in body["decision"]["findings"]}
+
+
+async def test_docx_xml_is_never_expanded(client):
+    """A billion-laughs style entity bomb in a DOCX part is read as text, not parsed."""
+    import io
+    import zipfile
+    bomb = '<?xml version="1.0"?><!DOCTYPE l [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">' \
+           '<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">]><w:document xmlns:w="w"><w:body><w:p><w:r><w:t>&c;</w:t></w:r></w:p></w:body></w:document>'
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("word/document.xml", bomb)
+    r = await client.post("/admin/playground/extract?name=bomb.docx", headers=ADMIN, content=buf.getvalue())
+    assert r.status_code == 200 and len(r.json()["text"]) < 100

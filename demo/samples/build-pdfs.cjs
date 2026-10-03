@@ -86,7 +86,8 @@ const defective = `
   const browser = await chromium.launch(exe ? { executablePath: exe } : {});
   for (const [name, body] of [["umowa-czysta", clean], ["umowa-z-defektami", defective]]) {
     const page = await browser.newPage();
-    await page.setContent(`<!doctype html><html lang="pl"><meta charset="utf-8"><style>${CSS}</style><body>${body}</body></html>`);
+    const title = name === "umowa-czysta" ? "Umowa o świadczenie usług doradczych nr 14/2026" : "Umowa o świadczenie usług doradczych nr 15/2026";
+    await page.setContent(`<!doctype html><html lang="pl"><meta charset="utf-8"><title>${title}</title><style>${CSS}</style><body>${body}</body></html>`);
     await page.pdf({ path: path.join(OUT, `${name}.pdf`), format: "A4", printBackground: true });
     await page.close();
     console.log("wrote", `${name}.pdf`);

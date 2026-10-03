@@ -17,8 +17,10 @@ from fastapi import APIRouter, Body, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
+from aegis import detectors
+from aegis import documents as uploads  # not "documents": that name is the /documents route below
 from aegis.engine import Gateway, gather_limited, tool_def_hash
-from aegis.models import Classification, GatewayError
+from aegis.models import Classification, Finding, GatewayError
 from aegis.policy import Limit, disabled_controls, parse_policy
 
 
@@ -525,41 +527,46 @@ class Evaluate(BaseModel):
     tool: str | None = None
 
 
-MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
-
-
-def _pdf_text(data: bytes) -> dict[str, Any]:
-    """Every piece of text in the PDF, visible or not: white or 1-point text is exactly how instructions are
-    smuggled to an agent, and the agent's own PDF reader would extract it too."""
-    import io
-
-    from pypdf import PdfReader
-    from pypdf.errors import PdfReadError
-
-    try:
-        reader = PdfReader(io.BytesIO(data))
-        if reader.is_encrypted:
-            raise GatewayError(422, "PDF_ENCRYPTED", "the PDF is password-protected")
-        pages = [page.extract_text() or "" for page in reader.pages]
-    except (PdfReadError, ValueError, KeyError) as exc:
-        raise GatewayError(422, "PDF_UNREADABLE", f"cannot read this PDF: {type(exc).__name__}") from exc
-    text = "\n".join(pages).strip()
-    return {"text": text, "pages": len(pages), "chars": len(text)}
+def _locate(gw: Gateway, text: str) -> list[str]:
+    """Which deterministic rules fire on one part of a document (so the report can say where)."""
+    p = gw.policy.active
+    c = p.controls
+    hits = [f.rule_id for f in gw.feed.scan_text(text, "tool_results", c.attack_signatures.mode)] if c.attack_signatures.enabled else []
+    for enabled, f in ((c.secrets.enabled, detectors.secrets_finding(text, c.secrets.mode)),
+                       (c.pii.enabled, detectors.pii_finding(text, c.pii.entities, c.pii.mode)),
+                       (c.injection_heuristics.enabled, detectors.injection_finding(text, c.injection_heuristics.mode))):
+        if enabled and f:
+            hits.append(f.rule_id)
+    return sorted(set(hits))
 
 
 @router.post("/playground/extract")
-async def extract(request: Request):
-    """Turn an uploaded document into the text an agent would read (PDF via pypdf, plain text as is)."""
-    data = await request.body()
-    if len(data) > MAX_DOCUMENT_BYTES:
-        raise GatewayError(413, "DOCUMENT_TOO_LARGE", "documents up to 10 MB")
-    if data[:5] == b"%PDF-":
-        return await asyncio.to_thread(_pdf_text, data)
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise GatewayError(415, "UNSUPPORTED_DOCUMENT", "send a PDF or UTF-8 text") from exc
-    return {"text": text, "pages": None, "chars": len(text)}
+async def extract(request: Request, name: str = Query("document", max_length=200)):
+    """What an agent would read from an uploaded file: the text plus every hidden part (metadata, XMP,
+    annotations, comments, hidden runs) and any active content. Nothing is evaluated."""
+    doc = await asyncio.to_thread(uploads.analyze, await request.body(), name)
+    return doc.public()
+
+
+@router.post("/playground/document")
+async def check_document(request: Request, name: str = Query("document", max_length=200)):
+    """Dry run on a whole uploaded file: body and hidden parts are checked as a document the agent reads;
+    active content is judged by the `documents` control. Each part says which rules fired in it."""
+    gw = _gw(request)
+    doc = await asyncio.to_thread(uploads.analyze, await request.body(), name)
+    out = doc.public()
+    out["body_rules"] = _locate(gw, doc.body)
+    for section in out["sections"]:
+        section["rules"] = _locate(gw, section["text"])
+    extra = []
+    ctl = gw.policy.active.controls.documents
+    if doc.active and ctl.enabled:
+        extra.append(Finding(action="BLOCK" if ctl.mode == "block" else "REDACT", rule_id="DOC-001",
+                             reason_code="ACTIVE_CONTENT_IN_DOCUMENT", stage="signatures",
+                             detail={"kinds": sorted({a["kind"] for a in doc.active}),
+                                     "items": [a["detail"] for a in doc.active][:10]}))
+    result = await gw.evaluate(doc.analysis_text(), target="tool_results", extra=extra)
+    return result | {"document": out}
 
 
 @router.post("/playground/evaluate")

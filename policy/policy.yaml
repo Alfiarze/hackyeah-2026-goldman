@@ -51,6 +51,7 @@ controls:
     backend: auto          # auto = main model server (LLM_BASE_URL), otherwise local heuristic scorer
     on_error: block        # fail-closed
     timeout_ms: 20000      # remote model: allow for network and queueing
+  documents: {enabled: true, mode: block}   # uploaded files: scripts, auto-actions, macros, embedded files
   code_execution:          # mode comes from the profile: block | sandbox | allow
     enabled: true
     wall_seconds: 10

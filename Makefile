@@ -46,6 +46,8 @@ landing:
 sample-pdfs:
 	docker run --rm -v "$(CURDIR)":/work -w /tmp/pdfs mcr.microsoft.com/playwright:v1.56.1-noble \
 		sh -c "npm init -y >/dev/null && npm i --silent playwright@1.56.1 && NODE_PATH=/tmp/pdfs/node_modules node /work/demo/samples/build-pdfs.cjs"
+	docker run --rm -v "$(CURDIR)":/work -w /work python:3.12-slim \
+		sh -c "pip install -q pypdf && python demo/samples/build_metadata_samples.py"
 
 dashboard-dev:
 	cd dashboard && npm install && npm run dev

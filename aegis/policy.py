@@ -76,6 +76,7 @@ class Controls(_Strict):
     injection_heuristics: ModeControl = ModeControl(mode="redact")
     semantic: SemanticControl = SemanticControl()
     code_execution: SandboxControl = SandboxControl()
+    documents: ModeControl = ModeControl()  # active content in uploaded files (scripts, macros, embedded files)
 
 
 class Limit(_Strict):

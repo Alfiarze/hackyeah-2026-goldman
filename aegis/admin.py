@@ -554,7 +554,12 @@ async def simulate(request: Request, n: int = Query(30, ge=1, le=500), pool_toke
             err = resp.get("error", {}) if isinstance(resp, dict) else {}
             reason = err.get("rule_id") or err.get("reason_code") or err.get("type") or "error"
             failures[f"{status} {reason}"] = failures.get(f"{status} {reason}", 0) + 1
+    from aegis.llm import estimate_tokens
+    prompt_tokens = estimate_tokens("ping")
+    reserve = prompt_tokens + max_tokens  # what each agent must hold before its model call
     summary = {"run": run, "agents": n, "pool_tokens": pool_tokens, "max_tokens_per_request": max_tokens,
+               "prompt_tokens_per_request": prompt_tokens, "reserve_per_request": reserve,
+               "fit": min(n, pool_tokens // reserve),
                "executed": executed, "prevented": sum(1 for s, _ in results if s == 429),
                "other": sum(failures.values()), "failures": failures,
                "spent_tokens": spent, "reserved_tokens": reserved,

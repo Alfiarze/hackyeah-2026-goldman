@@ -39,9 +39,9 @@ DEFINITIONS: dict[str, dict[str, Any]] = {
 }
 
 CASE_LAW = [
-    {"id": "III CSK 123/19", "summary": "Break fees in share purchase agreements are enforceable if proportionate."},
-    {"id": "I CSK 77/21", "summary": "Non-compete clauses longer than 36 months require separate consideration."},
-    {"id": "II CSKP 501/22", "summary": "Seller warranties on litigation exposure; limits of liability caps."},
+    {"id": "III CSK 123/19", "summary": "Opłata za odstąpienie w umowie sprzedaży udziałów jest skuteczna, jeśli jest proporcjonalna (kara umowna)."},
+    {"id": "I CSK 77/21", "summary": "Zakaz konkurencji dłuższy niż 36 miesięcy wymaga odrębnego wynagrodzenia."},
+    {"id": "II CSKP 501/22", "summary": "Oświadczenia sprzedającego o sporach sądowych; limity odpowiedzialności."},
 ]
 
 

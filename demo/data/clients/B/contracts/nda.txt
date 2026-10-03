@@ -1,2 +1,2 @@
-MUTUAL NDA (CONFIDENTIAL - CLIENT B)
-Parties: Client B Pharma S.A. and Contoso Biotech Ltd. Term: 5 years.
+WZAJEMNA UMOWA O ZACHOWANIU POUFNOŚCI (POUFNE - KLIENT B)
+Strony: Klient B Pharma S.A. oraz Contoso Biotech Sp. z o.o. Okres obowiązywania: 5 lat.

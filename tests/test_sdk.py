@@ -24,7 +24,7 @@ async def new_task(sdk, profile="contract_review"):
 async def test_task_tool_and_chat(sdk):
     task = await new_task(sdk)
     doc = await task.call("doc.read", path=CONTRACT)
-    assert doc.decision.allowed and "SHARE PURCHASE AGREEMENT" in doc.content
+    assert doc.decision.allowed and "UMOWA SPRZEDAŻY UDZIAŁÓW" in doc.content
     answer = await task.chat("summarise", model="mock/echo")
     assert answer.content and answer.decision.action in ("ALLOW", "REDACT")
     info = await task.info()

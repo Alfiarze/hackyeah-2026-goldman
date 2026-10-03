@@ -26,7 +26,7 @@ signatures:
     refs: [OWASP-LLM03]
     match:
       type: regex
-      targets: [tool_args, model_output, user_input]
+      targets: [tool_args, model_output, user_input, tool_results]
       pattern: 'trust_remote_code\s*=\s*True'
 
   - id: ATK-CVE-2024-34359

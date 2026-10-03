@@ -935,3 +935,50 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 }
 .action-group li.action { display: block; border-bottom: 0; }
 .action-group ul.action-list { border-top: 0; }
+
+.stamp-contained { --c: var(--intaglio); }
+.trace-contained { border-left-color: var(--intaglio); }
+.sandbox-box { border: 1px dashed color-mix(in srgb, var(--intaglio) 50%, var(--rule)); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+.sandbox-box .small { color: var(--ink-2); }
+.trace-ran.is-sbx { color: var(--intaglio); }
+.trace-ran.is-sbx::before { background: var(--intaglio); }
+
+/* ============================================================ fit the screen: no nested scrollbars */
+
+.scen { grid-template-columns: 1fr; }
+.scen-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.scen-card { grid-template-rows: auto 1fr; }
+.scen-stage { position: static; max-height: none; overflow: visible; scroll-margin-top: 16px; }
+.replay-head { top: 0; }
+.replay-bar { top: 70px; }
+.placeholder.tall { min-height: 220px; }
+
+.side { scrollbar-width: none; }
+.side::-webkit-scrollbar { display: none; }
+.side-brand { padding: 18px 20px 14px; }
+.side-nav { gap: 12px; padding: 4px 12px 14px; }
+.side-label { padding-bottom: 5px; }
+.side-link { padding: 7px 10px; font-size: 14px; }
+.side-link.is-on::before { left: -12px; top: 7px; bottom: 7px; }
+.side-foot { padding: 10px 14px 14px; gap: 10px; }
+.side-status { padding: 10px 12px; }
+.side-status dl { gap: 3px 10px; margin-top: 8px; }
+@media (max-height: 760px) { .side-status dl { display: none; } }
+
+.facts dd { min-width: 0; overflow-wrap: anywhere; }
+.facts .id, .trace .id { white-space: normal; overflow-wrap: anywhere; }
+.trace .excerpt, .args dd, .resp .excerpt { max-height: none; overflow: visible; }
+.race-why { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
+
+.fileload {
+  border: 1.5px dashed var(--rule); border-radius: 12px; padding: 12px 14px; margin: 4px 0 14px;
+  display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, background 0.15s;
+}
+.fileload.is-drag { border-color: var(--intaglio); background: color-mix(in srgb, var(--intaglio) 8%, transparent); }
+.fileload-main { display: flex; align-items: center; gap: 12px; }
+.fileload-main > div { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.fileload-main .icon { color: var(--intaglio); flex: none; }
+.fileload-main label.btn { cursor: pointer; }
+.fileload-samples { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.fileload-samples .label { margin: 0; }
+.sample { display: inline-flex; gap: 8px; align-items: baseline; }

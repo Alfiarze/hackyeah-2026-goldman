@@ -161,7 +161,7 @@ INJECTION_PATTERNS: dict[str, re.Pattern[str]] = {
         r"(?i)\b(?:ignore|disregard|forget|override)\b[^.\n]{0,40}\b(?:previous|prior|above|earlier|all|your)\b[^.\n]{0,20}\b(?:instructions?|prompts?|rules|directives)"
     ),
     "IGNORE_INSTRUCTIONS_PL": re.compile(
-        r"(?i)\b(?:zignoruj|pomiń|zapomnij)\b[^.\n]{0,40}\b(?:poprzednie|wcześniejsze|wszystkie)\b[^.\n]{0,20}\b(?:instrukcje|polecenia|zasady)"
+        r"(?i)\b(?:zignoruj|ignoruj|pomiń|zapomnij)\b[^.\n]{0,40}\b(?:poprzednie|wcześniejsze|wszystkie)\b[^.\n]{0,20}\b(?:instrukcje|polecenia|zasady)"
     ),
     "ROLE_OVERRIDE": re.compile(r"(?i)\byou are now\b|\bnew system prompt\b|\bact as (?:an? )?(?:unrestricted|jailbroken)"),
     "SYSTEM_PROMPT_EXFIL": re.compile(r"(?i)\b(?:reveal|print|show|repeat|output)\b[^.\n]{0,30}\b(?:system prompt|hidden instructions|initial instructions)"),
@@ -182,6 +182,12 @@ INJECTION_PATTERNS: dict[str, re.Pattern[str]] = {
     "MARKDOWN_EXFIL": re.compile(r"!\[[^\]]*\]\(\s*https?://[^)\s]*[?&][^)\s]*\)"),
     "HIDDEN_AI_NOTE": re.compile(r"(?i)\b(?:note|message|instruction)s? (?:for|to) the (?:ai|assistant|agent|llm)\b"),
     "CONCEALMENT": re.compile(r"(?i)\bdo not (?:mention|tell|inform|reveal)\b[^.\n]{0,30}\b(?:user|anyone|this)"),
+    "HIDDEN_AI_NOTE_PL": re.compile(
+        r"(?i)\b(?:notatk\w*|wiadomoś\w*|instrukcj\w*|polecenie|uwaga)\s+(?:dla|do)\s+(?:asystenta|agenta|modelu|AI|sztucznej inteligencji)\b"
+    ),
+    "CONCEALMENT_PL": re.compile(
+        r"(?i)\bnie\s+(?:wspominaj|mów|informuj|ujawniaj|pokazuj)\b[^.\n]{0,40}\b(?:użytkownik\w*|nikomu|o tym|tego)"
+    ),
 }
 
 
@@ -217,26 +223,45 @@ def _deobfuscate(text: str) -> list[str]:
     leetspeak, s p a c e d letters and base64-wrapped instructions."""
     clean = unicodedata.normalize("NFKC", _ZERO_WIDTH.sub("", text))
     joined = _SPACED.sub(lambda m: re.sub(r"[ .\-_*]", "", m.group(0)), clean)
-    variants = [clean, joined, joined.translate(_LEET)]
+    variants = [clean, joined, joined.translate(_LEET), *_base64_payloads(text)]
+    return [v for v in dict.fromkeys(variants) if v != text]
+
+
+def _base64_payloads(text: str) -> list[str]:
+    out = []
     for m in _B64.finditer(text):
         try:
             decoded = base64.b64decode(m.group(0), validate=True).decode("utf-8")
         except (binascii.Error, UnicodeDecodeError, ValueError):
             continue
         if decoded.isprintable() or "\n" in decoded:
-            variants.append(decoded)
-    return [v for v in dict.fromkeys(variants) if v != text]
+            out.append(decoded)
+    return out
 
 
 def find_injection(text: str) -> list[tuple[int, int, str]]:
     spans = _find_injection_plain(text)
     if spans:
         return spans
-    for variant in _deobfuscate(text):  # obfuscated instruction: offsets do not map back, flag the whole text
-        names = sorted({s[2] for s in _find_injection_plain(variant)})
-        if names:
-            return [(0, len(text), f"OBFUSCATED_{names[0]}")]
-    return []
+    hidden = obfuscated_injection(text)
+    return [(0, len(text), hidden[0])] if hidden else []  # offsets do not map back: flag the whole text
+
+
+def obfuscated_injection(text: str) -> list[str]:
+    """Names of instructions found only after de-obfuscation (base64, leetspeak, zero-width, spacing)."""
+    plain = {s[2] for s in _find_injection_plain(text)}
+    found: set[str] = set()
+    payloads = set(_base64_payloads(text))
+    for variant in _deobfuscate(text):
+        decoded = variant in payloads  # a hidden payload, not a rewrite of the visible text
+        found |= {f"OBFUSCATED_{s[2]}" for s in _find_injection_plain(variant) if decoded or s[2] not in plain}
+    return sorted(found)
+
+
+def injection_patterns(text: str) -> list[str]:
+    """Every pattern that matched, before overlapping spans are merged (for the evidence)."""
+    names = {name for name, p in INJECTION_PATTERNS.items() if p.search(text)}
+    return sorted(names | set(obfuscated_injection(text)))
 
 
 def _find_injection_plain(text: str) -> list[tuple[int, int, str]]:
@@ -314,6 +339,6 @@ def injection_finding(text: str, mode: str) -> Finding | None:
         rule_id="INJ-001",
         reason_code="PROMPT_INJECTION_HEURISTIC",
         stage="deterministic",
-        detail={"patterns": sorted({s[2] for s in spans})},
+        detail={"patterns": injection_patterns(text) or sorted({s[2] for s in spans})},
         spans=spans,
     )

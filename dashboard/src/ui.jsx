@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { getLang, human, t } from "./i18n.js";
 export const LEVELS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET"];
-export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked" };
+export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked", CONTAINED: "Contained" };
 export const locale = () => (getLang() === "pl" ? "pl-PL" : "en-GB");
 export const num = (n, d = 0) => (n === null || n === undefined ? "—" : Number(n).toLocaleString(locale(), { maximumFractionDigits: d }));
 export const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString(locale()) : "");

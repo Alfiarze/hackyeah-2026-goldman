@@ -40,7 +40,7 @@ export function stageStates(decision, ran) {
 
 const STATE_WORD = { pass: "passed", redact: "masked", block: "stopped", skip: "not reached", na: "not needed" };
 
-export function Pipeline({ decision, ran, animate = false }) {
+export function Pipeline({ decision, ran, animate = false, sandbox = null }) {
   const states = stageStates(decision, ran);
   const last = states.reduce((acc, s, i) => (s === "skip" ? acc : i), 0);
   return (
@@ -51,7 +51,7 @@ export function Pipeline({ decision, ran, animate = false }) {
           <li key={s.id} className={`pipe-node pipe-${states[i]}`} style={{ "--i": i, "--last": last }} title={t(s.hint)}>
             <span className="pipe-dot" aria-hidden="true" />
             <span className="pipe-label">{t(s.label)}</span>
-            <span className="pipe-state">{t(STATE_WORD[states[i]])}{ms !== undefined && states[i] !== "skip" ? ` · ${num(ms, 1)} ms` : ""}</span>
+            <span className="pipe-state">{s.id === "execute" && sandbox && states[i] === "pass" ? t("in the sandbox") : t(STATE_WORD[states[i]])}{ms !== undefined && states[i] !== "skip" ? ` · ${num(ms, 1)} ms` : ""}</span>
           </li>
         );
       })}
@@ -87,9 +87,20 @@ function Response({ response, ran, decision }) {
 }
 
 // A full step: who did what, the pipeline, why it was decided so, and what came back.
+// What happened inside the sandbox, in plain words. A traceback there is the agent's code failing, not the gateway.
+function sandboxStory(sb) {
+  if (!sb) return null;
+  if (sb.network_attempted) return t("The code tried to reach the network. The sandbox has no network, so the connection failed inside the container. Nothing left the machine; the error below is the code's own, as expected.");
+  if (sb.status === "timeout") return t("The code ran past the time limit and the sandbox killed it. The server was never affected.");
+  if (sb.status === "oom") return t("The code ran out of the memory limit and the sandbox killed it.");
+  if (sb.status === "nonzero_exit") return t("The code failed inside the sandbox. The server was never affected.");
+  return t("The code ran in a throw-away container and finished normally.");
+}
+
 export function TraceStep({ n, title, why, request, decision, response, ran, action, rule, sandbox, extra, animate }) {
   const fired = (decision?.findings || []).filter((f) => f.action !== "ALLOW");
-  const act = action || decision?.action;
+  const contained = sandbox && (sandbox.network_attempted || sandbox.status !== "ok");
+  const act = contained && (action || decision?.action) === "ALLOW" ? "CONTAINED" : (action || decision?.action);
   return (
     <article className={`trace ${act ? `trace-${act.toLowerCase()}` : ""} ${animate ? "is-animated" : ""}`}>
       <header className="trace-head">
@@ -98,7 +109,7 @@ export function TraceStep({ n, title, why, request, decision, response, ran, act
           <h3>{t(title)}</h3>
           {why && <p>{t(why)}</p>}
         </div>
-        {act && <Stamp a={act} rule={rule || decision?.rule_id} />}
+        {act && <Stamp a={act} rule={act === "CONTAINED" ? t("sandbox") : rule || decision?.rule_id} />}
       </header>
 
       {request && (
@@ -108,7 +119,7 @@ export function TraceStep({ n, title, why, request, decision, response, ran, act
         </div>
       )}
 
-      {decision && <Pipeline decision={decision} ran={ran} animate={animate} />}
+      {decision && <Pipeline decision={decision} ran={ran} animate={animate} sandbox={sandbox} />}
 
       {fired.length > 0 && (
         <ul className="trace-why">
@@ -118,12 +129,17 @@ export function TraceStep({ n, title, why, request, decision, response, ran, act
         </ul>
       )}
 
-      {(decision || ran !== undefined) && request?.channel !== "registry" && (
+      {(decision || ran !== undefined) && request?.channel !== "registry" && !sandbox && (
         <p className={`trace-ran ${ran ? "is-ran" : "is-not"}`}>
           {ran ? (act === "BLOCK" ? t("The tool ran, but its output was held back from the agent.") : t("It ran.")) : t("It never ran: the tool or model was not called.")}
         </p>
       )}
-      {sandbox && <p className="small sandbox-line">{sandboxLine(sandbox, true)}</p>}
+      {sandbox && (
+        <div className={`sandbox-box ${contained ? "is-contained" : ""}`}>
+          <p className="trace-ran is-sbx">{sandboxLine(sandbox, true)}</p>
+          <p className="small">{sandboxStory(sandbox)}</p>
+        </div>
+      )}
       {extra}
       {response && <><span className="label">{t("What the agent got back")}</span><Response response={response} ran={ran} decision={decision} /></>}
     </article>

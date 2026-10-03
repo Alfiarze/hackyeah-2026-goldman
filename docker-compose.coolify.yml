@@ -89,7 +89,24 @@ services:
       # where "Open the dashboard" points; override in Coolify if the gateway has a custom domain
       DASHBOARD_URL: ${DASHBOARD_URL:-${SERVICE_URL_GATEWAY}/dashboard/}
 
+  # Local model server with DeepSeek, internal network only (no public URL). The gateway is not wired to it.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    expose:
+      - "11434"
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-r1:1.5b}
+    entrypoint: ["/bin/sh", "-c", "ollama serve & pid=$$!; sleep 5; ollama pull \"$$OLLAMA_MODEL\"; wait $$pid"]
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      start_period: 30s
+
 volumes:
   db_data:
   policy_data:
   feeds_data:
+  ollama_data:

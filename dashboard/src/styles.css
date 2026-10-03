@@ -1023,3 +1023,19 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 .doc-actions label.link { cursor: pointer; }
 .doc-peek { font: 12.5px/1.55 var(--mono); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; white-space: pre-wrap; max-height: none; }
 .sample-text b { white-space: normal; }
+
+/* start page: three steps and a row of links */
+.step-head .step-proves { text-transform: none; letter-spacing: 0; font: 400 14px/1.4 var(--sans); color: var(--ink-2); }
+.attack-card .actions { margin-top: 2px; }
+.more-links { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.more-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.more-tile {
+  display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer; color: var(--ink);
+  padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet); box-shadow: var(--shadow);
+  transition: border-color 0.15s, transform 0.15s;
+}
+.more-tile:hover { border-color: var(--intaglio); transform: translateY(-1px); }
+.more-tile .icon { color: var(--intaglio); flex: none; margin-top: 2px; }
+.more-tile > span { display: flex; flex-direction: column; gap: 3px; }
+.more-tile b { font-size: 14.5px; }
+.quick .samples { grid-template-columns: 1fr; }

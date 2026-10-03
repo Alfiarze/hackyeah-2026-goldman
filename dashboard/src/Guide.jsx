@@ -372,15 +372,6 @@ function useDone() {
   return done;
 }
 
-function Copy({ text, onCopy }) {
-  const [ok, setOk] = useState(false);
-  return (
-    <div className="cmd">
-      <code>{text}</code>
-      <button className="btn small quiet" onClick={() => { navigator.clipboard?.writeText(text); onCopy?.(); setOk(true); setTimeout(() => setOk(false), 1500); }}>{ok ? t("Copied") : t("Copy")}</button>
-    </div>
-  );
-}
 
 function StepHead({ n, done, title, proves }) {
   return (
@@ -407,29 +398,28 @@ function Ring({ value, total }) {
   );
 }
 
+const MORE = [
+  ["agent", "Be the agent", "Play the AI agent yourself and try to break the rules."],
+  ["live", "Live", "Every decision as it happens, with timings and spend."],
+  ["audit", "Audit log", "The record for the security team, exportable to JSONL or CSV."],
+  ["budget", "Budget", "Thirty agents race for one token pool; it never goes negative."],
+];
+
 export function Start({ go }) {
   const done = useDone();
-  const visit = (step, view) => { markDone(step); go(view); };
-  const cards = [
-    { id: "scenario", icon: "scenarios", title: "Run a full attack end to end", proves: "Robustness, agent ↔ tool ↔ MCP",
-      text: "A scripted agent goes through the real gateway, database and tool service. Start with “Poisoned contract”: the document tells the agent to e-mail it outside. Watch the mail counter stay at zero.",
-      cta: [["scenarios", "Go to scenarios"], ["agent", "Or drive the agent yourself"]] },
-    { id: "watch", icon: "live", title: "See every decision and export the audit log", proves: "Security reporting",
-      text: "“Live” shows decisions as they happen, what reached the tools, spend and the time each check adds. “Audit log” is append-only and exports to JSONL or CSV for the security team.",
-      cta: [["live", "Open Live"], ["audit", "Open the audit log"]] },
-    { id: "budget", icon: "budget", title: "Try to overspend the budget", proves: "Budget and resource governance",
-      text: "Thirty agents race for one token pool. Each request reserves its cost before the model is called, so the pool never goes negative.",
-      cta: [["budget", "Open Budget"]] },
-  ];
-  const total = 6;
-  const count = ["check", "config", ...cards.map((c) => c.id), "tests"].filter((x) => done.has(x)).length;
+  const total = 3;
+  const count = ["check", "config", "scenario"].filter((x) => done.has(x)).length;
+  const runAttack = () => {
+    try { sessionStorage.setItem("aegis.autorun", "injection"); } catch { /* private mode */ }
+    go("scenarios");
+  };
   return (
     <div className="start">
       <section className="hero card">
         <div className="hero-text">
-          <p className="eyebrow"><Icon name="start" size={16} />{t("Guide for the jury · about 5 minutes")}</p>
+          <p className="eyebrow"><Icon name="start" size={16} />{t("Three steps · about 3 minutes")}</p>
           <h1>{t("See Aegis stop an attack, step by step")}</h1>
-          <p className="lede">{t("Aegis sits between AI agents and everything they touch: models, tools, MCP servers and other agents. Every request is checked against one central policy and is allowed, redacted or blocked.")}</p>
+          <p className="lede">{t("Aegis stands between AI agents and everything they touch. Every request is checked and is allowed, masked or blocked:")}</p>
           <div className="legend">
             <span><Mark a="ALLOW" /> {t("goes through unchanged")}</span>
             <span><Mark a="REDACT" /> {t("goes through with sensitive parts masked")}</span>
@@ -444,38 +434,33 @@ export function Start({ go }) {
       </section>
 
       <section className="card step-card">
-        <StepHead n={1} done={done.has("check")} title="Check any text" proves="Guardrails: deterministic and AI-based" />
-        <p className="step-text">{t("Pick an example or write your own prompt, then press “Check it”. You get the decision, the reason in plain words, and exactly what the model would receive.")}</p>
+        <StepHead n={1} done={done.has("check")} title="Check a text or a document" proves="Pick an example or load a PDF, then press “Check it”." />
         <QuickCheck />
       </section>
 
       <section className="card step-card">
-        <StepHead n={2} done={done.has("config")} title="Change a rule and watch it apply immediately" proves="Central policy, live configuration" />
-        <p className="step-text">{t("All rules live in one policy file. Switch the personal-data control off, or move it from redact to block: the same text is checked again with the new policy version, no restart.")}</p>
+        <StepHead n={2} done={done.has("config")} title="Switch a rule off and see the difference" proves="The same text is checked again with the new policy, no restart." />
         <LiveConfigDemo />
-        <div className="step-foot">
-          <span className="note">{t("More: “Controls” has every control and the strictness profile; “Policy file” lets you edit the YAML itself, break it on purpose and roll back.")}</span>
-          <span className="actions"><button className="btn" onClick={() => visit("config", "controls")}>{t("Open Controls")}</button><button className="btn" onClick={() => visit("config", "policy")}>{t("Open the policy file")}</button></span>
-        </div>
       </section>
 
-      <div className="step-grid">
-        {cards.map((c, i) => (
-          <section key={c.id} className="card step-card small-card">
-            <StepHead n={i + 3} done={done.has(c.id)} title={c.title} proves={c.proves} />
-            <p className="step-text">{t(c.text)}</p>
-            <div className="actions step-cta">
-              {c.cta.map(([v, l], j) => <button key={v} className={`btn ${j === 0 ? "btn-primary" : ""}`} onClick={() => visit(c.id, v)}>{t(l)}{j === 0 && <Icon name="arrow" size={16} />}</button>)}
-            </div>
-          </section>
-        ))}
-        <section className="card step-card small-card">
-          <StepHead n={6} done={done.has("tests")} title="Run the automated test suite" proves="Self-testing suite" />
-          <p className="step-text">{t("Every control has cases that must pass and cases that must be stopped. Run them from the repository root:")}</p>
-          <Copy text="make test-docker" onCopy={() => markDone("tests")} />
-          <p className="note">{t("Without Docker for the app: make venv && make test. The input cases are listed in tests/cases/content.yaml and can be extended without code.")}</p>
-        </section>
-      </div>
+      <section className="card step-card attack-card">
+        <StepHead n={3} done={done.has("scenario")} title="Watch a whole attack, step by step" proves="A contract hides an order to e-mail it to an attacker. The agent obeys." />
+        <p className="step-text">{t("You see every request the agent makes, each check lighting up in turn, where it is stopped, and that the mail server receives nothing.")}</p>
+        <div className="actions"><button className="btn btn-primary btn-lg" onClick={runAttack}>{t("Run “Poisoned contract”")}<Icon name="arrow" size={17} /></button>
+          <button className="btn" onClick={() => go("scenarios")}>{t("See all scenarios")}</button></div>
+      </section>
+
+      <section className="more-links">
+        <span className="label">{t("Then look around")}</span>
+        <div className="more-grid">
+          {MORE.map(([v, title, text]) => (
+            <button key={v} className="more-tile" onClick={() => go(v)}>
+              <Icon name={v} size={20} />
+              <span><b>{t(title)}</b><span className="muted small">{t(text)}</span></span>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

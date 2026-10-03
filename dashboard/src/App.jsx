@@ -256,6 +256,11 @@ function Scenarios() {
       setTimeout(() => document.querySelector(".scen-stage")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     }
   };
+  useEffect(() => {  // "Run Poisoned contract" on the start page lands here and starts it
+    let name = null;
+    try { name = sessionStorage.getItem("aegis.autorun"); sessionStorage.removeItem("aegis.autorun"); } catch { /* private mode */ }
+    if (name) go(name);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="scen">
       {notice}

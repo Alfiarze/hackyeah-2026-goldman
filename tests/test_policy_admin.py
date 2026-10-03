@@ -89,11 +89,11 @@ async def test_rollback_is_append_only(client, gw):
 
 
 async def test_model_allowlist_crud(client):
-    r = await client.post("/admin/models", headers=ADMIN, json={"model": "ollama/phi3:mini"})
+    r = await client.post("/admin/models", headers=ADMIN, json={"model": "main/other-model"})
     assert r.status_code == 200
-    assert "ollama/phi3:mini" in (await client.get("/admin/models", headers=ADMIN)).json()["allow"]
-    await client.delete("/admin/models/ollama/phi3:mini", headers=ADMIN)
-    assert "ollama/phi3:mini" not in (await client.get("/admin/models", headers=ADMIN)).json()["allow"]
+    assert "main/other-model" in (await client.get("/admin/models", headers=ADMIN)).json()["allow"]
+    await client.delete("/admin/models/main/other-model", headers=ADMIN)
+    assert "main/other-model" not in (await client.get("/admin/models", headers=ADMIN)).json()["allow"]
 
 
 async def test_sink_clearance_change(client):
@@ -150,7 +150,7 @@ async def test_semantic_threshold_from_profile(client):
 
 
 async def test_semantic_fail_closed_when_guard_unavailable(client):
-    await client.patch("/admin/controls/semantic", headers=ADMIN, json={"backend": "ollama", "timeout_ms": 200})
+    await client.patch("/admin/controls/semantic", headers=ADMIN, json={"backend": "main", "timeout_ms": 200})
     d = await evaluate(client, "hello there")
     assert d["action"] == "BLOCK" and d["rule_id"] == "SEM-ERR"
 

@@ -67,6 +67,15 @@ export default function Agent() {
   const [backend, setBackend] = useState(null);
   const [error, setError] = useState(null);
   const [lastDoc, setLastDoc] = useState(null);
+  const [models, setModels] = useState([]);
+  const [model, setModel] = useState("");
+  useEffect(() => {
+    api("/admin/models/available").then((list) => {
+      setModels(list);
+      const pick = list.find((m) => m.available && m.model.startsWith("main/")) || list.find((m) => m.available);
+      if (pick) setModel(pick.model);
+    }).catch(() => {});
+  }, []);
 
   const refresh = async (id) => {
     const d = await api(`/admin/console/tasks/${id}`);
@@ -89,11 +98,11 @@ export default function Agent() {
     setBusy(a.id);
     const args = { ...(a.args || {}) };
     (a.fields || []).forEach(([k]) => { args[k] = values[`${a.id}.${k}`]; });
-    const body = a.kind === "chat" ? { kind: "chat", content: args.content, context: lastDoc?.content } : a.kind === "tool" ? { kind: "tool", tool: a.tool, args } : { kind: a.kind };
+    const body = a.kind === "chat" ? { kind: "chat", content: args.content, context: lastDoc?.content, model } : a.kind === "tool" ? { kind: "tool", tool: a.tool, args } : { kind: a.kind };
     try {
       const before = task.classification;
       const res = await api(`/admin/console/tasks/${task.task_id}/act`, { method: "POST", body });
-      setLog((l) => [{ id: Date.now(), label: a.label, args: a.kind === "tool" ? args : null, res, before, withDoc: a.kind === "chat" ? lastDoc?.path : null }, ...l]);
+      setLog((l) => [{ id: Date.now(), label: a.label, args: a.kind === "tool" ? args : null, res, before, withDoc: a.kind === "chat" ? lastDoc?.path : null, model: a.kind === "chat" ? model : null }, ...l]);
       const content = res.response?.result?.content;
       if (a.tool === "doc.read" && content) setLastDoc({ path: args.path, content });
       if (res.task) setTask((x) => ({ ...x, ...res.task }));
@@ -166,6 +175,15 @@ export default function Agent() {
                     <li key={a.id}>
                       <div className="action-main">
                         <span className="action-label">{t(a.label)}{outside && <span className="outside">{t("not on your pass")}</span>}</span>
+                        {a.kind === "chat" && models.length > 0 && (
+                          <select aria-label={t("Model")} value={model} onChange={(ev) => setModel(ev.target.value)}>
+                            {models.map((m) => (
+                              <option key={m.model} value={m.model} disabled={!m.available}>
+                                {m.model} ({t(m.sink === "llm:external" ? "cloud, public data only" : m.sink === "llm:onprem" ? "our model server" : "test model, no AI")}){m.available ? "" : `, ${t("not configured")}`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         {(a.fields || []).length > 0 && (
                           <div className="action-fields">
                             {a.fields.map(([k, , options]) => {
@@ -202,6 +220,7 @@ export default function Agent() {
                 <li key={e.id} className="step" style={{ "--i": 0 }}>
                   <div className="step-body">
                     <h4>{t(e.label)}{e.args?.to && <> <Id>{e.args.to}</Id></>}{e.args?.path && <> <Id>{e.args.path}</Id></>}</h4>
+                    {e.model && <p className="small muted">{t("Model")}: <Id>{e.model}</Id></p>}
                     {e.withDoc && <p className="small muted">{t("The model was given {doc} as context.", { doc: e.withDoc })}</p>}
                     <p>{x.text}</p>
                     {after && after !== e.before && <p className="taint small">{t("Your task now carries {level} data. From here on, nothing it produces may go anywhere cleared for less.", { level: t(after.toLowerCase()) })}</p>}

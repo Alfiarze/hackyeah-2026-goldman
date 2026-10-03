@@ -1,3 +1,4 @@
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,7 +22,6 @@ class Settings:
     policy_path: Path = Path(os.environ.get("POLICY_PATH", ROOT / "policy" / "policy.yaml"))
     feed_path: Path = Path(os.environ.get("ATTACK_FEED_PATH", ROOT / "feeds" / "attacks.yaml"))
     feed_url: str | None = os.environ.get("ATTACK_FEED_URL") or None
-    ollama_base_url: str = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     tools_base_url: str = os.environ.get("TOOLS_BASE_URL", "http://localhost:8001")
     tool_backend_secret: str = os.environ.get("TOOL_BACKEND_SECRET", "dev-backend-secret")
     admin_api_key: str = os.environ.get("ADMIN_API_KEY", "dev-admin-key")
@@ -33,8 +33,30 @@ class Settings:
             os.environ.get("AGENT_KEYS", "agent-key-demo:demo-agent,agent-key-other:other-agent")
         )
     )
+    # Main model server, any OpenAI-compatible API. Testing: OpenRouter. Production: the team's GB10
+    # (vLLM / SGLang / llama.cpp). Switching = changing these four variables, nothing else.
+    llm_base_url: str = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+    llm_api_key: str = os.environ.get("LLM_API_KEY", "")
+    llm_model: str = os.environ.get("LLM_MODEL", "deepseek/deepseek-v4.1-flash")
+    llm_location: str = os.environ.get("LLM_LOCATION", "onprem")  # onprem | cloud (data-flow sink)
+    # extra JSON merged into every request, e.g. {"reasoning": {"enabled": false}} on OpenRouter so a reasoning
+    # model does not spend the whole token budget thinking; vLLM/SGLang use their own switches
+    llm_extra_body: dict = field(default_factory=lambda: json.loads(os.environ.get("LLM_EXTRA_BODY") or "{}"))
     poll_interval: float = float(os.environ.get("POLICY_POLL_SECONDS", "1.0"))
     background_tasks: bool = True
+
+    @property
+    def main_configured(self) -> bool:
+        # OpenRouter needs a key; a self-hosted server (GB10) may run without one
+        return bool(self.llm_base_url) and (bool(self.llm_api_key) or "openrouter.ai" not in self.llm_base_url)
+
+    @property
+    def providers(self) -> dict[str, tuple[str, str]]:
+        return {"main": (self.llm_base_url, self.llm_api_key)} if self.main_configured else {}
+
+    @property
+    def main_model_id(self) -> str:
+        return f"main/{self.llm_model}"
 
     @property
     def dsn(self) -> str:

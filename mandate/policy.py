@@ -51,8 +51,7 @@ class PiiControl(ModeControl):
 
 class SemanticControl(_Strict):
     enabled: bool = True
-    backend: Literal["auto", "ollama", "heuristic"] = "auto"
-    model: str = "qwen2.5:3b"
+    backend: Literal["auto", "main", "heuristic"] = "auto"
     block_at_risk: float = Field(0.7, ge=0.0, le=1.0)
     redact_at_risk: float = Field(0.5, ge=0.0, le=1.0)
     on_error: Literal["block", "allow"] = "block"
@@ -114,12 +113,17 @@ class Models(_Strict):
     default: str
 
 
+class Provider(_Strict):
+    sink: str  # data-flow sink this provider counts as, e.g. llm:local, llm:onprem, llm:external
+
+
 class Policy(_Strict):
     version: int = 1
     profile: str = "balanced"
     models: Models
     internal_domains: list[str] = []
     sinks: dict[str, str]
+    providers: dict[str, Provider] = {}
     controls: Controls = Controls()
     budgets: Budgets = Budgets()
     task_profiles: dict[str, TaskProfile]
@@ -131,6 +135,15 @@ class Policy(_Strict):
         for level in v.values():
             Classification.parse(level)
         return v
+
+    def model_allowed(self, model: str) -> bool:
+        import fnmatch
+        return any(fnmatch.fnmatchcase(model, pattern) for pattern in self.models.allow)
+
+    def model_sink(self, model: str) -> str:
+        """Where a prompt to this model goes. Unknown providers count as external (strictest)."""
+        provider = model.partition("/")[0]
+        return self.providers[provider].sink if provider in self.providers else "llm:external"
 
     def sink_clearance(self, sink: str) -> Classification:
         """Unknown sink => PUBLIC (strictest)."""

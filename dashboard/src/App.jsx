@@ -469,7 +469,7 @@ function SemanticCfg({ cfg, patch }) {
   const [r, setR] = useState(cfg.redact_at_risk);
   useEffect(() => { setB(cfg.block_at_risk); setR(cfg.redact_at_risk); }, [cfg]);
   const commit = () => patch("semantic", { block_at_risk: b, redact_at_risk: Math.min(r, b) }, t("Thresholds saved"));
-  const engine = cfg.backend === "auto" ? t("Ollama when available, otherwise the local scorer") : t(cfg.backend);
+  const engine = cfg.backend === "heuristic" ? t("the local scorer") : t("the main model server, or the local scorer if none is configured");
   return (
     <div className="thresholds">
       <label><span>{t("Block when risk is at least")} <b>{b.toFixed(2)}</b></span>
@@ -798,7 +798,8 @@ function Posture() {
       {s && <>
         <span>{t("Policy")} <Id>{s.policy.version}</Id></span>
         <span>{t("Profile")} <b>{t(s.policy.profile)}</b></span>
-        <span>{s.semantic.backend === "ollama" ? t("AI review on Ollama") : t("AI review on the local scorer")}</span>
+        <span>{s.semantic.backend === "main" ? t("AI review on {model}", { model: s.llm.model.replace("main/", "") }) : t("AI review on the local scorer")}</span>
+        {s.llm.configured && s.llm.server && s.llm.server.includes("openrouter.ai") && <span className="alert">{t("Test mode: prompts go to OpenRouter (cloud)")}</span>}
         <span>{t("{n} attack signatures", { n: s.feed.signatures })}</span>
         {s.semantic.override && <span className="alert">{t("AI review forced to “safe” (demo)")}</span>}
         {s.policy.disabled_controls.length > 0 && <span className="alert">{t("Off: {list}", { list: s.policy.disabled_controls.map((c) => t(CONTROL_COPY[c]?.[0] || c)).join(", ") })}</span>}

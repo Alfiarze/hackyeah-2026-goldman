@@ -32,7 +32,7 @@ class _Run:
         return task, self.gw.tasks.lease_for(task)
 
     def model(self) -> str:
-        return "ollama/qwen2.5:3b" if self.gw.semantic.ollama_available else "mock/echo"
+        return self.gw.default_model(self.gw.policy.active)
 
     async def tool(self, lease, tool, label, **args):
         status, body = await self.gw.tool_call(AGENT, lease, tool, args)

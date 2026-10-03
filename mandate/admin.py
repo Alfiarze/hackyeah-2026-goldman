@@ -155,6 +155,20 @@ async def models(request: Request):
     return _gw(request).policy.active.models.model_dump()
 
 
+@router.get("/models/available")
+async def available_models(request: Request):
+    gw = _gw(request)
+    p = gw.policy.active
+    out = []
+    names = [gw.settings.main_model_id if m == "main/*" else m for m in p.models.allow]
+    for m in names:
+        provider = m.partition("/")[0]
+        ready = provider == "mock" or provider in gw.settings.providers
+        sink = gw.model_sink(p, m)
+        out.append({"model": m, "available": ready, "sink": sink, "clearance": p.sink_clearance(sink).name})
+    return out
+
+
 @router.post("/models")
 async def add_model(request: Request, body: ModelBody):
     def mutate(raw):
@@ -460,8 +474,10 @@ async def stats(request: Request, include_synthetic: bool = False):
                    "disabled_controls": disabled_controls(p),
                    "controls": {n: c.model_dump() for n, c in p.controls}},
         "feed": {"version": gw.feed.version, "signatures": len(gw.feed.signatures)},
+        "llm": {"model": gw.default_model(p), "server": gw.settings.llm_base_url if gw.settings.main_configured else None,
+                "location": gw.settings.llm_location, "configured": gw.settings.main_configured},
         "semantic": {"backend": gw.semantic.backend_for(p.controls.semantic),
-                     "ollama_available": gw.semantic.ollama_available, "override": gw.semantic.override},
+                     "main_available": gw.semantic.main_available, "override": gw.semantic.override},
         "budget": {"spent_tokens": spent, "reserved_tokens": budget["reserved"],
                    "global_limit": glob["token_limit"] if glob else p.budgets.global_.tokens,
                    "estimated_cost_usd": round(spent / 1000 * p.budgets.usd_per_1k_tokens, 4),
@@ -666,12 +682,12 @@ async def console_act(request: Request, task_id: str, body: ConsoleAction):
         if body.kind == "tool":
             status, payload = await gw.tool_call(CONSOLE_AGENT, lease, body.tool or "", body.args)
         elif body.kind == "chat":
-            model = body.model or ("ollama/qwen2.5:3b" if gw.semantic.ollama_available else "mock/echo")
+            model = body.model or gw.default_model(gw.policy.active)
             messages = [{"role": "system", "content": "You are a legal assistant. Answer briefly, in the user's language."}]
             if body.context:  # what a tool returned goes in as a tool message: checked like any untrusted input
                 messages.append({"role": "tool", "content": body.context})
             messages.append({"role": "user", "content": body.content or ""})
-            status, payload = await gw.chat(CONSOLE_AGENT, lease, {"model": model, "max_tokens": 300,
+            status, payload = await gw.chat(CONSOLE_AGENT, lease, {"model": model, "max_tokens": 700,
                                                                     "messages": messages})
         elif body.kind == "mcp_list":
             res = await gw.mcp(CONSOLE_AGENT, lease, {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})

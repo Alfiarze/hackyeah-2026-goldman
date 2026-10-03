@@ -1,4 +1,6 @@
-"""AI-based (semantic) control. May only TIGHTEN a decision, never grant anything."""
+"""AI-based (semantic) control. May only TIGHTEN a decision, never grant anything.
+Runs on the main model server (OpenRouter while testing, the team's GB10 in production);
+without one it falls back to a local heuristic scorer."""
 
 from __future__ import annotations
 
@@ -65,80 +67,70 @@ def heuristic_score(text: str) -> SemanticResult:
 
 
 class SemanticGuard:
-    def __init__(self, ollama_base_url: str):
-        self.base_url = ollama_base_url.rstrip("/")
-        self.ollama_available = False
+    def __init__(self, main: tuple[str, str, str] | None = None, extra_body: dict | None = None):
+        self.main = main  # (base_url, api_key, model) of the main OpenAI-compatible server
+        self.extra_body = extra_body or {}
+        self.main_available = False
         self.override: str | None = None  # demo only: "force_safe" simulates a detector miss
         self._cache: OrderedDict[str, SemanticResult] = OrderedDict()
 
-    async def probe(self, model: str | None = None) -> bool:
-        was = self.ollama_available
+    async def probe(self) -> bool:
+        """Is the main model server reachable? (GET /models works on OpenRouter, vLLM, SGLang, llama.cpp)"""
+        if not self.main:
+            self.main_available = False
+            return False
+        base_url, api_key, _model = self.main
         try:
-            async with httpx.AsyncClient(timeout=1.5) as client:
-                resp = await client.get(f"{self.base_url}/api/tags")
-            names = {m["name"] for m in resp.json().get("models", [])} if resp.status_code == 200 else set()
-            # the server being up is not enough: the model must be pulled, otherwise every check would fail closed
-            wanted = model or ""
-            self.ollama_available = bool(names) and (not wanted or wanted in names or f"{wanted}:latest" in names)
-        except (httpx.HTTPError, ValueError):
-            self.ollama_available = False
-        if self.ollama_available and not was and model:
-            asyncio.create_task(self._warm(model))
-        return self.ollama_available
-
-    async def _warm(self, model: str) -> None:
-        """Load the model into memory so the first real check does not hit the timeout."""
-        try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                await client.post(f"{self.base_url}/api/generate",
-                                  json={"model": model, "prompt": "ok", "stream": False, "keep_alive": "30m",
-                                        "options": {"num_predict": 1}})
+            async with httpx.AsyncClient(timeout=3) as client:
+                resp = await client.get(f"{base_url}/models",
+                                        headers={"Authorization": f"Bearer {api_key}"} if api_key else {})
+            self.main_available = resp.status_code == 200
         except httpx.HTTPError:
-            pass
+            self.main_available = False
+        return self.main_available
 
     def backend_for(self, cfg: SemanticControl) -> str:
         if cfg.backend == "auto":
-            return "ollama" if self.ollama_available else "heuristic"
+            return "main" if self.main else "heuristic"
         return cfg.backend
 
     async def classify(self, text: str, cfg: SemanticControl) -> SemanticResult:
         if self.override == "force_safe":
             return SemanticResult(0.0, "benign", "FORCED MISS (demo override)", "override")
         backend = self.backend_for(cfg)
-        key = hashlib.sha256(f"{backend}:{cfg.model}:{text}".encode()).hexdigest()
+        key = hashlib.sha256(f"{backend}:{text}".encode()).hexdigest()
         if key in self._cache:
             return self._cache[key]
-        if backend == "heuristic":
-            result = heuristic_score(text)
-        else:
-            result = await self._ollama(text, cfg)
+        result = heuristic_score(text) if backend == "heuristic" else await self._main(text, cfg)
         if result.error is None:
             self._cache[key] = result
             if len(self._cache) > 2000:
                 self._cache.popitem(last=False)
         return result
 
-    async def _ollama(self, text: str, cfg: SemanticControl) -> SemanticResult:
+    async def _main(self, text: str, cfg: SemanticControl) -> SemanticResult:
+        if not self.main:
+            return SemanticResult(1.0, "error", "", "main", error="NotConfigured")
+        base_url, api_key, model = self.main
         payload = {
-            "model": cfg.model,
-            "stream": False,
-            "format": "json",
-            "options": {"temperature": 0, "num_predict": 120},
-            "keep_alive": "30m",
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"<untrusted>\n{text[:6000]}\n</untrusted>"},
-            ],
+            "model": model, "temperature": 0, "max_tokens": 200,
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT},
+                         {"role": "user", "content": f"<untrusted>\n{text[:12000]}\n</untrusted>"}],
+            **self.extra_body,
         }
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         try:
             async with httpx.AsyncClient(timeout=cfg.timeout_ms / 1000) as client:
-                resp = await client.post(f"{self.base_url}/api/chat", json=payload)
+                resp = await client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
                 resp.raise_for_status()
-                data = json.loads(resp.json()["message"]["content"])
-            return SemanticResult(float(data.get("risk", 1.0)), str(data.get("label", "unknown")),
-                                  str(data.get("reason", ""))[:200], "ollama")
-        except (httpx.HTTPError, asyncio.TimeoutError, KeyError, ValueError, TypeError) as exc:
-            return SemanticResult(1.0, "error", "", "ollama", error=type(exc).__name__)
+                content = resp.json()["choices"][0]["message"].get("content") or ""
+            found = re.search(r"\{.*\}", content, re.S)  # tolerate prose or code fences around the JSON
+            data = json.loads(found.group(0) if found else content)
+            return SemanticResult(min(1.0, max(0.0, float(data.get("risk", 1.0)))), str(data.get("label", "unknown")),
+                                  str(data.get("reason", ""))[:200], f"main:{model}")
+        except (httpx.HTTPError, asyncio.TimeoutError, KeyError, IndexError, ValueError, TypeError) as exc:
+            return SemanticResult(1.0, "error", "", f"main:{model}", error=type(exc).__name__)
 
     @staticmethod
     def to_finding(result: SemanticResult, cfg: SemanticControl) -> Finding | None:

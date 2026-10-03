@@ -1,5 +1,5 @@
 """Test harness: real Postgres (database `goldman_test`), real gateway app, real backend app (ASGI),
-semantic guard on the local heuristic backend (no Ollama needed). Mark live-model tests with `-m live`."""
+semantic guard on the local heuristic backend (no model server needed). Mark live-model tests with `-m live`."""
 
 import asyncio
 import os
@@ -23,7 +23,7 @@ TABLES = "tasks, budgets, reservations, audit_events, policy_versions, tool_regi
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "live: requires a running Ollama")
+    config.addinivalue_line("markers", "live: requires the main model server (LLM_BASE_URL)")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -50,7 +50,8 @@ def settings(tmp_path: Path) -> Settings:
         database_url=TEST_DSN,
         policy_path=tmp_path / "policy" / "policy.yaml",
         feed_path=tmp_path / "feeds" / "attacks.yaml",
-        ollama_base_url=os.environ.get("TEST_OLLAMA_URL", "http://127.0.0.1:9"),
+        llm_base_url="",  # no model server in CI: AI review runs on the local scorer
+        llm_api_key="",
         admin_api_key="test-admin",
         app_api_key="test-app",
         lease_secret="test-lease-secret",

@@ -12,19 +12,29 @@ central policy and the data the task has already seen. Only then does it run.
 
 ## Quick start
 
-Requirements: Docker Desktop with **at least 3 GB of memory** (Settings > Resources > Memory). No API keys and no
-paid services. Everything runs locally.
+Requirements: Docker Desktop. Everything except the model runs locally in Docker.
 
 ```bash
-cp .env.example .env
-make run                 # postgres + gateway + tool backends + Ollama, and pulls qwen2.5:3b (~2 GB, first run only)
+cp .env.example .env     # put the model server key into LLM_API_KEY
+make run                 # postgres + gateway + tool backends
 open http://localhost:8000/dashboard/
 ```
 
-The first start downloads the model into a Docker volume. Until the model is ready the semantic guard uses a local
-heuristic scorer, and the dashboard says so. After that it switches to the model by itself. Inside Docker on macOS
-the model runs on CPU only, so one check takes about 5 s. For Metal speed, run Ollama on the host and set
-`OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`.
+**Model server.** The agent console and the AI review use one OpenAI-compatible model server, configured in `.env`:
+
+| Variable | Testing (now) | Production (team's GB10) |
+|---|---|---|
+| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | `http://<gb10-host>:8000/v1` (vLLM / SGLang / llama.cpp) |
+| `LLM_API_KEY` | OpenRouter key | server key, or empty |
+| `LLM_MODEL` | `deepseek/deepseek-v4.1-flash` | the id the GB10 serves |
+| `LLM_LOCATION` | `onprem` (behaves as production) | `onprem` |
+| `LLM_EXTRA_BODY` | `{"reasoning": {"enabled": false}}` | server-specific, or empty |
+
+Switching to the GB10 means changing these values and nothing else. `LLM_LOCATION` tells the data-flow rule where the
+server lives: `onprem` may receive confidential data, `cloud` only public data. While testing through OpenRouter,
+prompts really leave the machine (the dashboard shows a test-mode warning), so use only the synthetic demo
+documents. Without a configured server the AI review falls back to a local heuristic scorer and the console uses the
+`mock/echo` test model.
 
 | Command | What it does |
 |---|---|
@@ -53,7 +63,7 @@ flowchart LR
     B --> X[Execute]
     X --> P[Post-checks on the response<br/>output filter, taint update]
   end
-  GW --> LLM[Ollama / mock model]
+  GW --> LLM[Model server: GB10 / OpenRouter for tests]
   GW -- "backend secret" --> Tools[Tool backends / MCP server<br/>counters = proof]
   GW --> PG[(PostgreSQL<br/>tasks, budgets, audit, versions)]
   Policy[policy.yaml] -. hot reload .-> GW
@@ -93,7 +103,7 @@ flowchart LR
 | `pii`: PESEL (checksum), card (Luhn), IBAN (mod-97), e-mail, phone | deterministic | redact (strict: block) | LLM02 |
 | `secrets`: cloud keys, private keys, tokens, password assignments | deterministic | block | LLM02 |
 | `injection_heuristics`: override phrases, hidden markup, concealment | deterministic | redact (strict: block) | LLM01 Prompt Injection |
-| `semantic`: local LLM risk score (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | LLM01, Agentic: goal manipulation |
+| `semantic`: LLM risk score on the main model server (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | LLM01, Agentic: goal manipulation |
 | `attack_signatures`: external feed | deterministic | block | LLM03, LLM05 |
 | Budget escrow (tokens, calls, concurrency, guard budget) | deterministic | block (429) | LLM10 Unbounded Consumption |
 | MCP tool hash pinning and quarantine | deterministic | block | LLM01 / Invariant Labs tool poisoning |
@@ -156,7 +166,7 @@ curl -s localhost:8000/v1/tasks -H 'X-App-Key: dev-app-key' -H 'Content-Type: ap
 # -> {"task_id": "...", "lease": "...", "mandate": {...}}
 
 H='-H "Authorization: Bearer agent-key-demo" -H "X-Mandate-Lease: <lease>"'
-POST /v1/chat/completions            # OpenAI-compatible, model "ollama/qwen2.5:3b" or "mock/echo"
+POST /v1/chat/completions            # OpenAI-compatible, model "main/<LLM_MODEL>" or "mock/echo"
 POST /v1/tools/{tool}/call           # {"args": {...}}
 POST /mcp                            # JSON-RPC: initialize, tools/list (filtered), tools/call
 POST /v1/tasks/{id}/delegate         # child mandate ⊆ parent, inherits taint, charged to parent budget

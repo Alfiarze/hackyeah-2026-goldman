@@ -99,6 +99,17 @@ class Gateway:
         self.escrow = Escrow(pool)
         self.tools_http = tool_client
 
+    # ================================================================ models
+
+    def default_model(self, policy: Policy) -> str:
+        """The main model server when configured (OpenRouter now, GB10 later), else the policy default."""
+        return self.settings.main_model_id if self.settings.main_configured else policy.models.default
+
+    def model_sink(self, policy: Policy, model: str) -> str:
+        if model.startswith("main/"):  # where the main server lives decides what data may reach it
+            return "llm:onprem" if self.settings.llm_location == "onprem" else "llm:external"
+        return policy.model_sink(model)
+
     # ================================================================ auth
 
     def agent_id(self, authorization: str | None) -> str:
@@ -137,7 +148,7 @@ class Gateway:
             return
         t0 = time.perf_counter()
         guard_res = None
-        if self.semantic.backend_for(cfg) == "ollama":
+        if self.semantic.backend_for(cfg) != "heuristic":
             try:  # the guard has its own budget: the cost of protection is accounted for
                 guard_res = await self.escrow.reserve(task.id if task else None, [
                     Scope("guard", policy.budgets.guard)], tokens=estimate_tokens(text) + 150)
@@ -191,18 +202,18 @@ class Gateway:
         policy = self.policy.active
         d = Decision(policy_version=self.policy.version, task_id=task.id)
         timer = _Timer(d)
-        model = body.get("model") or policy.models.default
+        model = body.get("model") or self.default_model(policy)
         messages = [dict(m) for m in body.get("messages", [])]
         if body.get("stream"):
             body = dict(body, stream=False)  # responses are buffered and checked before release
         with timer("mandate"):
-            if policy.controls.model_allowlist.enabled and model not in policy.models.allow:
+            if policy.controls.model_allowlist.enabled and not policy.model_allowed(model):
                 d.add(Finding(action="BLOCK", rule_id="MODEL-001", reason_code="MODEL_NOT_ALLOWED",
                               stage="mandate", detail={"model": model}))
             if policy.controls.mandate.enabled and not task.allows_model(model):
                 d.add(Finding(action="BLOCK", rule_id="MANDATE-MODEL", reason_code="MODEL_NOT_IN_MANDATE",
                               stage="mandate", detail={"model": model}))
-            self.taint_check(d, policy, task, "llm:local")
+            self.taint_check(d, policy, task, self.model_sink(policy, model))
         untrusted = []
         if not d.blocked:
             for i, m in enumerate(messages):
@@ -242,7 +253,8 @@ class Gateway:
 
         try:
             t_model = time.perf_counter()
-            out = await complete(model, messages, max_tokens, self.settings.ollama_base_url)
+            out = await complete(model, messages, max_tokens, providers=self.settings.providers,
+                                 extra_body=self.settings.llm_extra_body)
             d.timings["model_call"] = (time.perf_counter() - t_model) * 1000
         except LLMError as exc:
             await self.escrow.mark_uncertain(res_id)

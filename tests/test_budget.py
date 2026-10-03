@@ -75,5 +75,44 @@ async def test_uncertain_reservation_keeps_tokens(gw, new_task):
 
 async def test_model_not_allowed(client, new_task):
     t = await new_task()
-    r = await chat(client, t, model="ollama/some-random-model")
+    r = await chat(client, t, model="cloud/some-random-model")
     assert r.status_code == 403 and r.json()["mandate"]["rule_id"] == "MODEL-001"
+
+
+# ---------------------------------------------------------------- model providers and data flow
+
+async def test_confidential_task_cannot_prompt_cloud_model(client, new_task, call, monkeypatch):
+    import mandate.engine as engine
+    called = []
+
+    async def fake(*a, **k):
+        called.append(1)
+    monkeypatch.setattr(engine, "complete", fake)
+    gw = client._transport.app.state.gw
+    gw.settings.llm_location = "cloud"
+    t = await new_task()
+    await call(t, "doc.read", path="/clients/A/contracts/acquisition.txt")
+    r = await chat(client, t, model="main/deepseek/deepseek-v4.1-flash")
+    gw.settings.llm_location = "onprem"
+    m = r.json()["mandate"]
+    assert r.status_code == 403 and m["rule_id"] == "IFC-001"
+    assert m["findings"][0]["detail"]["sink"] == "llm:external" and called == []
+
+
+async def test_confidential_task_may_use_onprem_model(client, new_task, call, monkeypatch):
+    import mandate.engine as engine
+    from mandate.llm import Completion
+
+    async def fake(model, *a, **k):
+        return Completion(f"answer from {model}", 5, 5)
+    monkeypatch.setattr(engine, "complete", fake)
+    t = await new_task()
+    await call(t, "doc.read", path="/clients/A/contracts/acquisition.txt")
+    r = await chat(client, t, model="main/deepseek/deepseek-v4.1-flash")
+    assert r.status_code == 200 and "main/deepseek/deepseek-v4.1-flash" in r.json()["choices"][0]["message"]["content"]
+
+
+async def test_unconfigured_provider_fails_cleanly(client, new_task):
+    t = await new_task()
+    r = await chat(client, t, model="main/deepseek/deepseek-v4.1-flash")
+    assert r.status_code == 502 and r.json()["mandate"]["reason_code"] == "MODEL_UNAVAILABLE"

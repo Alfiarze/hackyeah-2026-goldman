@@ -55,8 +55,9 @@ def create_app(settings: Settings | None = None,
         await policy.load_initial()
         feed = FeedStore(settings.feed_path, audit, settings.feed_url)
         await feed.load_initial()
-        semantic = SemanticGuard(settings.ollama_base_url)
-        await semantic.probe(policy.active.controls.semantic.model)
+        semantic = SemanticGuard((settings.llm_base_url, settings.llm_api_key, settings.llm_model)
+                                 if settings.main_configured else None, settings.llm_extra_body)
+        await semantic.probe()
         tool_client = (tool_client_factory() if tool_client_factory
                        else httpx.AsyncClient(base_url=settings.tools_base_url, timeout=10))
         app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client)
@@ -64,8 +65,8 @@ def create_app(settings: Settings | None = None,
         if settings.background_tasks:
             async def probe_loop():
                 while True:
-                    await asyncio.sleep(10)
-                    await semantic.probe(policy.active.controls.semantic.model)
+                    await asyncio.sleep(30)
+                    await semantic.probe()
             background = [asyncio.create_task(c) for c in
                           (policy.watch(settings.poll_interval), feed.watch(settings.poll_interval), probe_loop())]
         try:
@@ -101,7 +102,8 @@ def create_app(settings: Settings | None = None,
         status = 200 if db == "ok" else 503
         return JSONResponse({"status": "ok" if status == 200 else "degraded", "db": db,
                              "policy_version": g.policy.version, "feed_version": g.feed.version,
-                             "semantic_backend": g.semantic.backend_for(g.policy.active.controls.semantic)}, status)
+                             "semantic_backend": g.semantic.backend_for(g.policy.active.controls.semantic),
+                             "model": g.default_model(g.policy.active)}, status)
 
     # ------------------------------------------------------------ app <-> agent
 

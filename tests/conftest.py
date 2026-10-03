@@ -2,6 +2,7 @@
 semantic guard on the local heuristic backend (no model server needed). Mark live-model tests with `-m live`."""
 
 import asyncio
+import sys
 import os
 import shutil
 from pathlib import Path
@@ -12,6 +13,10 @@ import pytest
 from asgi_lifespan import LifespanManager
 
 from fastapi import FastAPI
+
+from aegis.settings import ROOT as _ROOT
+
+sys.path.insert(0, str(_ROOT / "sdk"))  # the SDK ships as its own package in sdk/
 
 from aegis import backends
 from aegis.app import create_app

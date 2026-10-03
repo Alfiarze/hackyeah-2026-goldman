@@ -253,6 +253,21 @@ signatures (CRUD + test), tasks (list, detail, revoke), documents (labels), tool
 reservations (list, settle), budgets, memory (list, delete), audit (query, export JSONL/CSV), stats, metrics,
 SSE events, playground, simulation, scenarios, agent console and backend demo helpers.
 
+## Python SDK
+
+`sdk/` is a small client package (`pip install ./sdk`) that depends only on `httpx`. It has sync and async
+clients, typed decisions and one exception per refusal (`Rejected`, `Blocked`, `BudgetExceeded`,
+`Unavailable`). Details: [`sdk/README.md`](sdk/README.md).
+
+```python
+from aegis_sdk import Aegis, Blocked
+aegis = Aegis("http://localhost:8000", app_key="dev-app-key", agent_key="agent-key-demo")
+with aegis.create_task(principal="lawyer_anna", agent_id="demo-agent",
+                       profile="contract_review", params={"client": "A"}) as task:
+    doc = task.call("doc.read", path="/clients/A/contracts/acquisition.txt")
+    answer = task.chat(f"List the risks:\n{doc.content}")
+```
+
 ## Tests
 
 `make test-docker` runs the full suite against a real Postgres (`goldman_test`), the real gateway and the real tool

@@ -31,6 +31,7 @@ COPY aegis ./aegis
 COPY db ./db
 COPY demo ./demo
 COPY tests ./tests
+COPY sdk ./sdk
 COPY --from=dashboard /dashboard/dist ./dashboard/dist
 # defaults copied into empty policy/feed volumes on first start (docker/entrypoint.sh)
 COPY policy ./defaults/policy

@@ -386,7 +386,8 @@ function RaceView({ res }) {
       {res.reserve_per_request && (
         <ol className="race-why">
           <li>{t("Each agent had to reserve {r} tokens before calling the model: {p} for its prompt plus {m} for the longest answer it may get.", { r: num(res.reserve_per_request), p: res.prompt_tokens_per_request, m: num(res.max_tokens_per_request) })}</li>
-          <li>{t("{fit} × {r} fits in a pool of {pool}; one more would not. So exactly {fit} agents ran and {stopped} got 429 without calling the model.", { fit: res.fit, r: num(res.reserve_per_request), pool: num(res.pool_tokens), stopped: res.prevented })}</li>
+          <li>{t("{fit} × {r} fits in a pool of {pool}; one more would not. So at most {fit} agents can hold a reservation at the same moment; the others get 429 without calling the model ({stopped} this time).", { fit: res.fit, r: num(res.reserve_per_request), pool: num(res.pool_tokens), stopped: res.prevented })}</li>
+          {res.executed > res.fit && <li>{t("{extra} late agent(s) still got in: an agent that finished early had already handed back its unused tokens. The pool was never overdrawn.", { extra: res.executed - res.fit })}</li>}
           <li>{t("The test model answers in a few words, so the {fit} calls really used {spent} tokens. The unused part of each reservation went back to the pool.", { fit: res.executed, spent: num(res.spent_tokens) })}</li>
         </ol>
       )}
@@ -836,7 +837,7 @@ function Budget() {
             <label className="field"><span>{t("Pool, tokens")}</span><input type="number" min="1" value={pool} onChange={(e) => setPool(+e.target.value)} /><small>{t("shared budget")}</small></label>
             <label className="field"><span>{t("Per request")}</span><input type="number" min="1" value={maxT} onChange={(e) => setMaxT(+e.target.value)} /><small>{t("max_tokens of each")}</small></label>
           </div>
-          <p className="predict">{t("Each agent reserves its prompt (about 2 tokens) plus max_tokens. With these numbers exactly {fit} of {n} agents fit in the pool. The rest must be stopped before calling the model, and the pool must never go below zero.", { fit, n })}</p>
+          <p className="predict">{t("Each agent reserves its prompt (about 2 tokens) plus max_tokens. With these numbers {fit} of {n} agents fit in the pool at once. The rest must be stopped before calling the model, and the pool must never go below zero.", { fit, n })}</p>
           <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? t("Racing…") : t("Start {n} agents", { n })}</button>
           <p className="note">{t("Uses the mock model and a throwaway user, so it does not touch real budgets or latency figures.")}</p>
         </form>

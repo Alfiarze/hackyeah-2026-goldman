@@ -131,9 +131,11 @@ async def test_simulation_reports_refusals_instead_of_crashing(client):
 
 
 async def test_race_admits_exactly_what_fits(client):
-    """Each agent reserves prompt + max_tokens; exactly floor(pool / reserve) of them may run."""
+    """Each agent reserves prompt + max_tokens, so floor(pool / reserve) reservations fit at once. Agents that
+    finish early hand back the unused part, so a late agent may still get in, but the pool is never overdrawn."""
     r = await client.post("/admin/simulate/agents?n=30&pool_tokens=10000&max_tokens=1000", headers=ADMIN)
     body = r.json()
     assert body["reserve_per_request"] == body["prompt_tokens_per_request"] + 1000
-    assert body["executed"] == body["fit"] == 10000 // body["reserve_per_request"]
-    assert body["prevented"] == 30 - body["fit"] and body["overspend_tokens"] == 0
+    assert body["fit"] == 10000 // body["reserve_per_request"]
+    assert body["executed"] >= body["fit"] and body["executed"] + body["prevented"] == 30
+    assert body["overspend_tokens"] == 0 and body["committed_tokens"] <= 10000

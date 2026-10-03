@@ -853,4 +853,7 @@ export default {
   "Loaded: {name}": "Wczytano: {name}",
   "Clean contract": "umowa czysta",
   "Contract with planted defects": "umowa z ukrytymi defektami",
+  "{fit} × {r} fits in a pool of {pool}; one more would not. So at most {fit} agents can hold a reservation at the same moment; the others get 429 without calling the model ({stopped} this time).": "{fit} × {r} mieści się w puli {pool}, a jeden więcej już nie. Dlatego naraz rezerwację może mieć najwyżej {fit} agentów; pozostali dostają 429 bez wywołania modelu (tym razem {stopped}).",
+  "{extra} late agent(s) still got in: an agent that finished early had already handed back its unused tokens. The pool was never overdrawn.": "Spóźnionych agentów, którzy i tak weszli: {extra}. Agent, który skończył wcześniej, oddał już niewykorzystane tokeny. Pula ani razu nie została przekroczona.",
+  "Each agent reserves its prompt (about 2 tokens) plus max_tokens. With these numbers {fit} of {n} agents fit in the pool at once. The rest must be stopped before calling the model, and the pool must never go below zero.": "Każdy agent rezerwuje prompt (ok. 2 tokeny) plus max_tokens. Przy tych liczbach w puli mieści się naraz {fit} z {n} agentów. Reszta musi zostać zatrzymana przed wywołaniem modelu, a pula nie może spaść poniżej zera.",
 };

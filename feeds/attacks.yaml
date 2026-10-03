@@ -1,0 +1,73 @@
+# Historical attack signatures. Hot-reloaded like the policy; can also be served from an external
+# threat-intel URL (ATTACK_FEED_URL). An invalid feed is rejected and the previous one stays active.
+version: 1
+signatures:
+  - id: ATK-PICKLE-001
+    title: Unsafe deserialization - pickle imports dangerous globals
+    severity: critical
+    refs: [OWASP-LLM03, CWE-502]
+    match:
+      type: pickle_scan       # opcode scan via pickletools; the file is never unpickled
+      deny_globals: ["os.*", "posix.*", "nt.*", "subprocess.*", "builtins.eval", "builtins.exec",
+                     "builtins.__import__", "builtins.compile", "socket.*", "shutil.*", "runpy.*"]
+
+  - id: ATK-PICKLE-002
+    title: Unsafe deserialization calls in agent-produced code
+    severity: high
+    refs: [CWE-502]
+    match:
+      type: regex
+      targets: [tool_args, model_output]
+      pattern: 'pickle\.loads?\(|marshal\.loads\(|torch\.load\((?![^)]*weights_only\s*=\s*True)|yaml\.load\((?![^)]*Loader\s*=\s*(?:yaml\.)?SafeLoader)|joblib\.load\('
+
+  - id: ATK-TRC-001
+    title: Remote code execution via trust_remote_code
+    severity: high
+    refs: [OWASP-LLM03]
+    match:
+      type: regex
+      targets: [tool_args, model_output, user_input]
+      pattern: 'trust_remote_code\s*=\s*True'
+
+  - id: ATK-CVE-2024-34359
+    title: llama-cpp-python SSTI via GGUF chat_template ("Llama Drama")
+    severity: critical
+    refs: [CVE-2024-34359, OWASP-LLM03]
+    match:
+      - {type: component, package: llama-cpp-python, version_lt: "0.2.72"}
+      - {type: gguf_template, pattern: '__class__|__globals__|__subclasses__|__builtins__|__import__|os\.popen|subprocess'}
+
+  - id: ATK-EXEC-001
+    title: Code execution primitives sent to a code-executing tool
+    severity: critical
+    refs: [OWASP-LLM05, CWE-94]
+    match:
+      type: regex
+      targets: [tool_args]
+      tools: [code.run]
+      pattern: 'os\.system|subprocess\.|\beval\(|\bexec\(|__import__|os\.popen|pty\.spawn'
+
+  - id: ATK-EXEC-002
+    title: Reverse shell / download-and-execute payloads
+    severity: critical
+    refs: [CWE-78]
+    match:
+      type: regex
+      targets: [user_input, tool_args, tool_results, model_output]
+      pattern: 'bash\s+-i\s+>&\s*/dev/tcp/|nc\s+-e\s+/bin/(?:ba)?sh|curl\s+[^|\n]+\|\s*(?:ba)?sh|wget\s+[^|\n]+\|\s*(?:ba)?sh'
+
+  - id: ATK-SUPPLY-001
+    title: Model pulled from a non-allowlisted or typosquatted source
+    severity: high
+    refs: [OWASP-LLM03]
+    match:
+      type: model_source
+      allow_hosts: [huggingface.co, ollama.com, registry.ollama.ai]
+      typosquat_distance: 2
+
+  - id: ATK-MCP-POISON-001
+    title: MCP tool definition changed after approval (tool poisoning / rug pull)
+    severity: high
+    refs: [OWASP-LLM01, Invariant-Labs-MCP-tool-poisoning]
+    match:
+      type: tool_hash_mismatch

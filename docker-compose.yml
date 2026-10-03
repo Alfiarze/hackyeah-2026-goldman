@@ -26,11 +26,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      tools:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-goldman}:${POSTGRES_PASSWORD:-goldman}@db:5432/${POSTGRES_DB:-goldman}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       POLICY_PATH: /app/policy/policy.yaml
       ATTACK_FEED_PATH: /app/feeds/attacks.yaml
+      ATTACK_FEED_URL: ${ATTACK_FEED_URL:-}
+      TOOLS_BASE_URL: http://tools:8001
+      TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+      APP_API_KEY: ${APP_API_KEY:-dev-app-key}
+      LEASE_SECRET: ${LEASE_SECRET:-dev-lease-secret}
+      AGENT_KEYS: ${AGENT_KEYS:-agent-key-demo:demo-agent,agent-key-other:other-agent}
     ports:
       - "${GATEWAY_PORT:-8000}:8000"
     volumes:
@@ -39,6 +48,21 @@ services:
       - ./feeds:/app/feeds
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # Mock tool backends / MCP server. Holds the counters that prove a blocked call never arrived.
+  # Port published only so the jury can try a direct call: it is rejected without the gateway's secret.
+  tools:
+    build: .
+    container_name: goldman-tools
+    restart: unless-stopped
+    command: ["uvicorn", "mandate.backends:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
+    ports:
+      - "${TOOLS_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
 
   # Optional: Ollama in a container (Linux / no host Ollama). On macOS prefer host Ollama (Metal GPU).
   # Enable with: docker compose --profile ollama up

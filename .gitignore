@@ -2,3 +2,9 @@
 docker-compose.override.yml
 node_modules/
 dist/
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+policy/.*.tmp
+feeds/.*.tmp

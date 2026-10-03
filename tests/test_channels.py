@@ -2,7 +2,7 @@
 import httpx
 
 from conftest import ADMIN
-from mandate import backends
+from aegis import backends
 
 CONTRACT = "/clients/A/contracts/acquisition.txt"
 
@@ -103,8 +103,8 @@ async def test_memory_write_inherits_classification(client, new_task, call):
 # ---------------------------------------------------------------- output filter & injection on results
 
 async def test_model_output_is_filtered(client, new_task, monkeypatch):
-    import mandate.engine as engine
-    from mandate.llm import Completion
+    import aegis.engine as engine
+    from aegis.llm import Completion
 
     async def fake(*a, **k):
         return Completion("The signatory PESEL is 44051401359.", 10, 10)
@@ -118,8 +118,8 @@ async def test_model_output_is_filtered(client, new_task, monkeypatch):
 
 
 async def test_pii_redacted_before_model(client, new_task, monkeypatch):
-    import mandate.engine as engine
-    from mandate.llm import Completion
+    import aegis.engine as engine
+    from aegis.llm import Completion
     seen = []
 
     async def fake(model, messages, *a, **k):

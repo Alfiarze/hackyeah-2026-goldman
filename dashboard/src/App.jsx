@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
-import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num } from "./ui.jsx";
+import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
 
 const NAV = [
@@ -242,6 +242,7 @@ const SCENARIO_COPY = {
   expired_lease: ["Reused credentials", "The task ends, the agent keeps its lease and tries to use it again."],
   mcp_poison: ["Tool changes after approval", "The MCP server silently rewrites a tool description to include an exfiltration instruction."],
   supply_chain: ["Model supply chain", "Four models are registered: one clean, one with a pickle that imports os, one hit by CVE-2024-34359, one from a typosquatted host."],
+  code_sandbox: ["Code runs in a sandbox", "An agent is tricked into running code that tries to reach the network and to run forever. Each run happens in an isolated, throw-away container."],
   budget_race: ["Thirty agents, one budget", "Thirty agents race for a 10,000-token pool at 1,000 tokens each."],
 };
 
@@ -317,6 +318,7 @@ function ScenarioResult({ r }) {
               <div className="step-body">
                 <h4>{t(s.step)}</h4><p className="muted">{stepText(s)}</p>
                 {s.findings?.length > 1 && <p className="also">{t("Rules that fired:")} {s.findings.map((f) => <Id key={f}>{f.split(" ")[1]}</Id>)}</p>}
+                {s.sandbox && <p className="small sandbox-line">{sandboxLine(s.sandbox)}</p>}
               </div>
               {action && <Stamp a={action} rule={s.rule_id || (s.rules || []).join(" ")} />}
             </li>
@@ -411,6 +413,7 @@ const CONTROL_COPY = {
   attack_signatures: ["Known attacks", "Signatures from the attack feed: unsafe deserialization, code execution, poisoned tools."],
   injection_heuristics: ["Instruction hijacking", "Phrases and hidden markup that try to override the agent's instructions."],
   semantic: ["AI review", "A local model scores untrusted text for manipulation. It can tighten a decision, never loosen one."],
+  code_execution: ["Code execution", "When an agent runs code: block it, or run it in an isolated throw-away container with no network and tight limits."],
 };
 
 function Controls() {
@@ -764,8 +767,8 @@ function Audit() {
         <label className="field"><span>{t("Rule")}</span><input value={filters.rule} placeholder="IFC-001" onChange={(e) => setFilters({ ...filters, rule: e.target.value })} /></label>
         <label className="field"><span>{t("Event")}</span><select value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value })}><option value="">{t("Any")}</option>{KINDS.map((k) => <option key={k} value={k}>{human(k)}</option>)}</select></label>
         <span className="actions push">
-          <button className="btn" onClick={() => download("/admin/audit/export?format=jsonl", "mandate-audit.jsonl")}>{t("Download JSONL")}</button>
-          <button className="btn" onClick={() => download("/admin/audit/export?format=csv", "mandate-audit.csv")}>{t("Download CSV")}</button>
+          <button className="btn" onClick={() => download("/admin/audit/export?format=jsonl", "aegis-audit.jsonl")}>{t("Download JSONL")}</button>
+          <button className="btn" onClick={() => download("/admin/audit/export?format=csv", "aegis-audit.csv")}>{t("Download CSV")}</button>
         </span>
       </div>
       <p className="note">{t("Entries can only be added. The database rejects edits and deletions, and evidence never contains the raw text that was checked.")}</p>
@@ -814,14 +817,14 @@ export default function App() {
   const [key, setK] = useState(getKey());
   const [showKey, setShowKey] = useState(false);
   useEffect(() => { location.hash = view; }, [view]);
-  useEffect(() => { document.title = `${t(TITLES[view])} | Mandate`; }, [view, lang]);
+  useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
   const Views = { agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Live;
   return (
     <div className="app" key={lang}>
       <header className="top">
-        <div className="brand"><Rosette /><span className="wordmark">Mandate</span></div>
+        <div className="brand"><Rosette /><span className="wordmark">Aegis</span></div>
         <nav aria-label={t("Sections")}>
           {NAV.map((g) => (
             <div className="nav-group" key={g.group}>

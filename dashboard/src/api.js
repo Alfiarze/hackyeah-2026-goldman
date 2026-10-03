@@ -1,4 +1,4 @@
-const KEY = "mandate.adminKey";
+const KEY = "aegis.adminKey";
 
 export function getKey() {
   try { return localStorage.getItem(KEY) || "dev-admin-key"; } catch { return "dev-admin-key"; }

@@ -5,27 +5,27 @@ const entries = [
   {
     en: ["Task mandate and lease", "Capabilities scoped to one task, not to one user. A lease cannot be reused across agents, tasks or clients."],
     pl: ["Mandat i lease zadania", "Uprawnienia przypisane do jednego zadania, nie do jednego użytkownika. Leasu nie da się użyć ponownie w innym agencie, zadaniu czy kliencie."],
-    ref: "mandate/tasks.py",
+    ref: "aegis/tasks.py",
   },
   {
     en: ["Data lineage", "Classification follows the data, not the model's opinion. Labels come from a trusted catalog, and encoding does not launder them."],
     pl: ["Pochodzenie danych", "Klasyfikacja idzie za danymi, nie za opinią modelu. Etykiety pochodzą z zaufanego katalogu, a kodowanie ich nie czyści."],
-    ref: "mandate/engine.py",
+    ref: "aegis/engine.py",
   },
   {
     en: ["Proof of enforcement", "Every decision records tool_invoked, and backend counters show that a blocked mail never arrived. Enforcement you can check, not a promise."],
     pl: ["Dowód egzekwowania", "Każda decyzja zapisuje tool_invoked, a liczniki backendu pokazują, że zablokowany mail nigdy nie dotarł. Egzekwowanie do sprawdzenia, nie obietnica."],
-    ref: "mandate/backends.py",
+    ref: "aegis/backends.py",
   },
   {
     en: ["Budget escrow", "Reserve before execute, atomic in Postgres. A runaway agent hits a wall, not an invoice."],
     pl: ["Escrow budżetu", "Rezerwacja przed wykonaniem, atomowa w Postgresie. Agent, który oszalał, trafia na mur, a nie na fakturę."],
-    ref: "mandate/budget.py",
+    ref: "aegis/budget.py",
   },
   {
     en: ["Hybrid defence", "Deterministic rules decide authority. The AI model only tightens. When the detector says safe on a real exfiltration, the data-flow rule still blocks."],
     pl: ["Obrona hybrydowa", "Reguły deterministyczne rozstrzygają o uprawnieniach. Model AI może tylko zaostrzyć. Gdy detektor uzna prawdziwą eksfiltrację za bezpieczną, reguła przepływu danych i tak blokuje."],
-    ref: "mandate/semantic.py",
+    ref: "aegis/semantic.py",
   },
 ];
 ---

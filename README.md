@@ -1,11 +1,11 @@
-# MANDATE — AI Control Layer
+# Aegis — AI Control Layer
 
 **Zero-trust execution contracts for AI agents.** HackYeah 2026 · Goldman Sachs challenge.
 
-> Other guardrails ask whether an action *looks* dangerous. MANDATE asks whether this agent was ever
+> Other guardrails ask whether an action *looks* dangerous. Aegis asks whether this agent was ever
 > **authorized** to do it, with this data, for this task.
 
-MANDATE is a gateway that sits between agents and everything they touch: models, tools, MCP servers
+Aegis is a gateway that sits between agents and everything they touch: models, tools, MCP servers
 and other agents. Every task gets a short-lived **mandate**: which resources it may read, which tools it may call,
 where results may go, how much it may spend and for how long. Every call is checked against the mandate, the
 central policy and the data the task has already seen. Only then does it run.
@@ -63,7 +63,7 @@ Default keys live in `.env.example`: admin `dev-admin-key`, app `dev-app-key`, a
 flowchart LR
   App[Trusted app] -- "POST /v1/tasks (X-App-Key)" --> GW
   Agent -- "chat / tools / MCP / delegate<br/>(agent key + lease)" --> GW
-  subgraph GW[MANDATE gateway]
+  subgraph GW[Aegis gateway]
     direction TB
     M[1 Mandate & lease<br/>tools, resources, recipients, TTL] --> A[2 Allowlists<br/>models, MCP tool hashes]
     A --> S[3 Attack signatures<br/>external feed]
@@ -76,6 +76,7 @@ flowchart LR
   end
   GW --> LLM[Model server: GB10 / OpenRouter for tests]
   GW -- "backend secret" --> Tools[Tool backends / MCP server<br/>counters = proof]
+  GW -- "sandbox secret" --> Sbx[Sandbox runner<br/>isolated throw-away containers]
   GW --> PG[(PostgreSQL<br/>tasks, budgets, audit, versions)]
   Policy[policy.yaml] -. hot reload .-> GW
   Feed[attacks.yaml / feed URL] -. hot reload .-> GW
@@ -126,28 +127,28 @@ model/tool `502`, and auth failures `401`.
 
 | Feature | What it means | Where |
 |---|---|---|
-| **Task mandate + lease** | Capabilities scoped to one task. The HMAC lease is bound to the agent and the principal. It dies on completion, revocation or TTL expiry. | `mandate/tasks.py` |
-| **Data lineage (taint)** | Reading a `CONFIDENTIAL` document makes the whole task `CONFIDENTIAL`. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance (`mail.send:external` = `PUBLIC`). Labels come from a trusted catalog, never from the model, and propagate to the parent task. | `mandate/engine.py` `taint_check` |
-| **Proof of enforcement** | Each decision records `tool_invoked`. Backend counters show that a blocked mail never arrived (`mail_sent` stays 0). | `mandate/backends.py`, dashboard |
-| **Budget escrow** | Reserve before execute, across task → parent → principal → global in one Postgres transaction. Tested with 30 concurrent agents: overspend is 0. | `mandate/budget.py` |
-| **Hybrid defence** | Deterministic rules decide authority. The semantic model can only tighten a decision. The `detector_miss` scenario forces the AI detector to say "safe", and the data-flow rule still blocks. | `mandate/semantic.py` |
-| **Everything is live** | Policy, attack signatures and document labels can be changed while the stack runs, with version history and rollback. | `mandate/policy.py`, `mandate/attacks.py`, dashboard |
+| **Task mandate + lease** | Capabilities scoped to one task. The HMAC lease is bound to the agent and the principal. It dies on completion, revocation or TTL expiry. | `aegis/tasks.py` |
+| **Data lineage (taint)** | Reading a `CONFIDENTIAL` document makes the whole task `CONFIDENTIAL`. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance (`mail.send:external` = `PUBLIC`). Labels come from a trusted catalog, never from the model. | `engine.py taint_check` |
+| **Proof of enforcement** | Each decision records `tool_invoked`. Backend counters show that a blocked mail never arrived (`mail_sent` stays 0). | `backends.py`, dashboard |
+| **Budget escrow** | Reserve before execute, across task → parent → principal → global. Tested with 30 concurrent agents: overspend is 0. | `aegis/budget.py` |
+| **Hybrid defence** | Deterministic rules decide authority. The semantic model can only tighten a decision. The `detector_miss` scenario forces the AI detector to say "safe", and the data-flow rule still blocks. | `semantic.py` |
 
 ## Controls and OWASP mapping
 
-| Control | Type | Default | Rule id | OWASP |
-|---|---|---|---|---|
-| `mandate`: tools, resources, recipients, TTL | deterministic | block | `MANDATE-*` | LLM06 Excessive Agency, Agentic: privilege compromise |
-| `ifc_taint`: data flow by classification | deterministic | block | `IFC-001` | LLM02 Sensitive Information Disclosure |
-| `model_allowlist` | deterministic | block | `MODEL-001` | LLM03 Supply Chain |
-| `pii`: PESEL (checksum), card (Luhn), IBAN (mod-97), e-mail, phone | deterministic | redact (strict: block) | `PII-001` | LLM02 |
-| `secrets`: cloud keys, private keys, JWT, tokens, password assignments | deterministic | block | `SEC-001` | LLM02 |
-| `injection_heuristics`: override phrases, hidden markup, concealment | deterministic | redact (strict: block) | `INJ-001` | LLM01 Prompt Injection |
-| `semantic`: AI risk score on the main model server (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | `SEM-001/002/ERR` | LLM01, Agentic: goal manipulation |
-| `attack_signatures`: external feed | deterministic | block | `ATK-*` | LLM03, LLM05 |
-| Budget escrow (tokens, calls, concurrency, guard budget) | deterministic | block (429) | `BUD-001/002` | LLM10 Unbounded Consumption |
-| MCP tool hash pinning and quarantine | deterministic | block | `ATK-MCP-POISON-001` | LLM01 / Invariant Labs tool poisoning |
-| Case-scoped memory | deterministic | block | `MEMORY_CROSS_CASE` | Agentic: memory poisoning |
+| Control | Type | Default | OWASP |
+|---|---|---|---|
+| `mandate`: tools, resources, recipients, TTL | deterministic | block | LLM06 Excessive Agency, Agentic: privilege compromise |
+| `ifc_taint`: data flow by classification | deterministic | block | LLM02 Sensitive Information Disclosure |
+| `model_allowlist` | deterministic | block | LLM03 Supply Chain |
+| `pii`: PESEL (checksum), card (Luhn), IBAN (mod-97), e-mail, phone | deterministic | redact (strict: block) | LLM02 |
+| `secrets`: cloud keys, private keys, tokens, password assignments | deterministic | block | LLM02 |
+| `injection_heuristics`: override phrases, hidden markup, concealment | deterministic | redact (strict: block) | LLM01 Prompt Injection |
+| `semantic`: LLM risk score on the main model server (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | LLM01, Agentic: goal manipulation |
+| `attack_signatures`: external feed | deterministic | block | LLM03, LLM05 |
+| Budget escrow (tokens, calls, concurrency, guard budget) | deterministic | block (429) | LLM10 Unbounded Consumption |
+| Sandboxed code execution (`code.run`) | deterministic | sandbox (strict: block) | LLM05 Improper Output Handling, CWE-94 |
+| MCP tool hash pinning and quarantine | deterministic | block | LLM01 / Invariant Labs tool poisoning |
+| Case-scoped memory | deterministic | block | Agentic: memory poisoning |
 
 **Historical attacks** (`feeds/attacks.yaml`, editable live or served from `ATTACK_FEED_URL`):
 - unsafe deserialization: a pickle opcode scan (`pickletools.genops`, the file is never unpickled) that flags
@@ -280,8 +281,10 @@ itself is visible.
 * Taint is **conservative**: after a confidential read, the whole task is confidential. This can block harmless
   output (false positive). Per-sentence provenance is future work.
 * Streaming responses are buffered and checked before release.
-* The heuristic semantic scorer is a fallback, not a replacement for the model; the dashboard reports which backend
-  is active.
+* `code.run` executes in a throw-away container (no network, read-only, memory/CPU/pids caps, hard timeout). The
+  sandbox runner is the only service with Docker access. A container shares the host kernel, so production would
+  use gVisor or Firecracker; we state this openly.
+* The heuristic semantic scorer is a fallback, not a replacement for the model; we report which backend is active.
 * Not built in this MVP: multi-instance policy push (`LISTEN/NOTIFY`), automated tests for the secret detectors.
   Redis is the path for very high request rates.
 
@@ -292,9 +295,9 @@ separately from the gateway:
 
 ```bash
 make landing                                   # local: http://localhost:8080
-docker build -t mandate-landing \
+docker build -t aegis-landing \
   --build-arg PUBLIC_DASHBOARD_URL=https://<your-host>/dashboard/ landing
-docker run -p 8080:80 -e DASHBOARD_URL=https://app.example.com/dashboard/ mandate-landing
+docker run -p 8080:80 aegis-landing          # anywhere
 ```
 
 The "Open the dashboard" links are set at **container start** from `DASHBOARD_URL`, so one image works on any domain
@@ -322,30 +325,12 @@ every start (idempotent). The policy and the attack feed live in volumes, seeded
 ## Repo map
 
 ```
-mandate/
-  app.py         FastAPI app and public API (tasks, delegate, chat, tools, MCP, models/register)
-  engine.py      the pipeline: mandate → allowlist → signatures → deterministic → taint → semantic → budget → execute → post
-  admin.py       admin API, dashboard/console/scenario/playground endpoints
-  policy.py      policy schema, profiles, versioned store, atomic writes, hot reload
-  attacks.py     signature feed (hot-reloadable, local file or URL) and all matchers
-  detectors.py   PII (PESEL/Luhn/IBAN), secrets, injection heuristics
-  semantic.py    semantic guard (main model server or local heuristic), fail-closed
-  tasks.py       task mandates, HMAC leases, delegation, taint
-  budget.py      budget escrow: atomic reserve/settle across all scopes in Postgres
-  audit.py       append-only audit log, SSE event bus, stats and export
-  backends.py    mock tool + MCP backend service with counters (separate process, port 8001)
-  llm.py         OpenAI-compatible and mock model backends
-  models.py      Decision, Finding, Classification, GatewayError
-  scenarios.py   scripted demo scenarios
-  settings.py    environment configuration
-  db.py          asyncpg pool and schema migration
-dashboard/       React + Vite dashboard, EN/PL, built into the image, served at /dashboard
-landing/         static Astro landing page with its own nginx image
-policy/          central policy (single source of truth)
-feeds/           attack signature feed
-db/init/         PostgreSQL schema (001) and trusted document catalog seed (002)
-demo/data/       synthetic contracts (one with a hidden injection)
-tests/           pytest suite + tests/cases/content.yaml
-docker/          entrypoint that seeds the policy/feed volumes
-docs/pitch/      pitch deck, demo script, MANDATE.pdf
+aegis/       gateway (app, engine pipeline, policy, attacks, detectors, semantic, budget, tasks, audit, admin)
+aegis/backends.py    mock tool backends + MCP server with counters
+dashboard/    React + Vite dashboard, Polish/English (built into the image, served at /dashboard)
+policy/       central policy (single source of truth)
+feeds/        attack signature feed
+db/init/      Postgres schema + seed (trusted document catalog)
+demo/data/    synthetic contracts (one with a hidden injection)
+tests/        pytest suite
 ```

@@ -11,9 +11,29 @@ import httpx
 import pytest
 from asgi_lifespan import LifespanManager
 
-from mandate import backends
-from mandate.app import create_app
-from mandate.settings import ROOT, Settings
+from fastapi import FastAPI
+
+from aegis import backends
+from aegis.app import create_app
+from aegis.settings import ROOT, Settings
+
+# A fake sandbox runner: no Docker. Canned results keyed by a marker in the code, so engine wiring is
+# tested deterministically in CI. The real isolation is exercised live via aegis/sandbox.py.
+sandbox_app = FastAPI()
+
+
+@sandbox_app.post("/run")
+async def _fake_run(body: dict):
+    code = body.get("code", "")
+    if "NETWORK" in code:
+        return {"status": "nonzero_exit", "exit_code": 1, "stdout": "", "stderr": "Network is unreachable",
+                "duration_ms": 5.0, "network_attempted": True, "notes": ["code tried to use the network"]}
+    if "LOOP" in code:
+        return {"status": "timeout", "exit_code": None, "stdout": "", "stderr": "", "duration_ms": 10.0,
+                "network_attempted": False, "notes": ["killed after the limit"]}
+    return {"status": "ok", "exit_code": 0, "stdout": "hello from the sandbox", "stderr": "",
+            "duration_ms": 5.0, "network_attempted": False, "notes": []}
+
 
 ADMIN = {"X-Admin-Key": "test-admin"}
 APP = {"X-App-Key": "test-app"}
@@ -68,7 +88,9 @@ async def app(settings):
     await conn.close()
     backends.state.reset()
     application = create_app(settings, tool_client_factory=lambda: httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=backends.app), base_url="http://tools"))
+        transport=httpx.ASGITransport(app=backends.app), base_url="http://tools"),
+        sandbox_client_factory=lambda: httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=sandbox_app), base_url="http://sandbox"))
     async with LifespanManager(application):
         yield application
 

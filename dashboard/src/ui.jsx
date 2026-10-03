@@ -45,3 +45,15 @@ export function describe(f) {
   if (d.title) return d.title;
   return Object.entries(d).map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ");
 }
+
+const SBX = { ok: "exited cleanly", nonzero_exit: "exited with an error", timeout: "killed at the time limit",
+  oom: "killed at the memory limit", runner_error: "could not run", skipped: "skipped" };
+
+export function sandboxLine(sb, host = false) {
+  const status = t(SBX[sb.status] || sb.status);
+  const ms = Math.round(sb.duration_ms);
+  const net = sb.network_attempted ? t("; network was blocked") : "";
+  return host
+    ? t("Ran in an isolated container: {status}, {ms} ms{net}. Host untouched.", { status, ms, net })
+    : t("Sandbox: {status}, {ms} ms{net}", { status, ms, net });
+}

@@ -28,6 +28,8 @@ services:
         condition: service_healthy
       tools:
         condition: service_started
+      sandbox:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-goldman}:${POSTGRES_PASSWORD:-goldman}@db:5432/${POSTGRES_DB:-goldman}
       POLICY_PATH: /app/policy/policy.yaml
@@ -35,6 +37,8 @@ services:
       ATTACK_FEED_URL: ${ATTACK_FEED_URL:-}
       TOOLS_BASE_URL: http://tools:8001
       TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
+      SANDBOX_BASE_URL: http://sandbox:8002
+      SANDBOX_SECRET: ${SANDBOX_SECRET:-dev-sandbox-secret}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
       APP_API_KEY: ${APP_API_KEY:-dev-app-key}
       LEASE_SECRET: ${LEASE_SECRET:-dev-lease-secret}
@@ -51,13 +55,30 @@ services:
       - ./policy:/app/policy
       - ./feeds:/app/feeds
 
+  # Sandbox runner: the ONLY service with Docker access. Runs code.run in a throw-away, no-network,
+  # read-only, memory/CPU/pids-capped container, then removes it. Gateway talks to it over HTTP with a secret.
+  sandbox:
+    build: .
+    container_name: goldman-sandbox
+    restart: unless-stopped
+    command: ["uvicorn", "aegis.sandbox:app", "--host", "0.0.0.0", "--port", "8002"]
+    user: "0:0"   # needs the docker socket; this service only launches locked-down containers
+    environment:
+      SANDBOX_SECRET: ${SANDBOX_SECRET:-dev-sandbox-secret}
+      SANDBOX_IMAGE: ${SANDBOX_IMAGE:-python:3.12-slim}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # required to launch sibling containers
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+
   # Mock tool backends / MCP server. Holds the counters that prove a blocked call never arrived.
   # Port published only so the jury can try a direct call: it is rejected without the gateway's secret.
   tools:
     build: .
     container_name: goldman-tools
     restart: unless-stopped
-    command: ["uvicorn", "mandate.backends:app", "--host", "0.0.0.0", "--port", "8001"]
+    command: ["uvicorn", "aegis.backends:app", "--host", "0.0.0.0", "--port", "8001"]
     environment:
       TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
     ports:

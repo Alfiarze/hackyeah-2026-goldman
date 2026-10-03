@@ -1,4 +1,4 @@
-"""Public gateway API: app<->agent (tasks), agent<->model, agent<->tool, agent<->MCP, agent<->agent."""
+"""Aegis public gateway API: app<->agent (tasks), agent<->model, agent<->tool, agent<->MCP, agent<->agent."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from mandate.attacks import FeedStore
-from mandate.audit import Audit
-from mandate.db import create_pool, migrate
-from mandate.engine import Gateway
-from mandate.models import GatewayError
-from mandate.policy import PolicyStore
-from mandate.semantic import SemanticGuard
-from mandate.settings import ROOT, Settings
+from aegis.attacks import FeedStore
+from aegis.audit import Audit
+from aegis.db import create_pool, migrate
+from aegis.engine import Gateway
+from aegis.models import GatewayError
+from aegis.policy import PolicyStore
+from aegis.semantic import SemanticGuard
+from aegis.settings import ROOT, Settings
 
 
 class TaskCreate(BaseModel):
@@ -44,7 +44,8 @@ class ToolCall(BaseModel):
 
 
 def create_app(settings: Settings | None = None,
-               tool_client_factory: Callable[[], httpx.AsyncClient] | None = None) -> FastAPI:
+               tool_client_factory: Callable[[], httpx.AsyncClient] | None = None,
+               sandbox_client_factory: Callable[[], httpx.AsyncClient] | None = None) -> FastAPI:
     settings = settings or Settings()
 
     @contextlib.asynccontextmanager
@@ -61,7 +62,10 @@ def create_app(settings: Settings | None = None,
         await semantic.probe()
         tool_client = (tool_client_factory() if tool_client_factory
                        else httpx.AsyncClient(base_url=settings.tools_base_url, timeout=10))
-        app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client)
+        sandbox_client = (sandbox_client_factory() if sandbox_client_factory
+                          else httpx.AsyncClient(base_url=settings.sandbox_base_url, timeout=70)
+                          if settings.sandbox_base_url else None)
+        app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client, sandbox_client)
         background = []
         if settings.background_tasks:
             async def probe_loop():
@@ -76,9 +80,11 @@ def create_app(settings: Settings | None = None,
             for t in background:
                 t.cancel()
             await tool_client.aclose()
+            if sandbox_client:
+                await sandbox_client.aclose()
             await pool.close()
 
-    app = FastAPI(title="MANDATE - AI Control Layer", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Aegis - AI Control Layer", version="0.1.0", lifespan=lifespan)
 
     @app.exception_handler(GatewayError)
     async def _gateway_error(_req: Request, exc: GatewayError):
@@ -203,7 +209,7 @@ def create_app(settings: Settings | None = None,
 
     # ------------------------------------------------------------ admin + dashboard
 
-    from mandate.admin import router as admin_router
+    from aegis.admin import router as admin_router
 
     app.include_router(admin_router)
 

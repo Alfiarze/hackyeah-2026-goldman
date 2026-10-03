@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import asyncpg
 
-from mandate.policy import Limit
+from aegis.policy import Limit
 
 
 @dataclass

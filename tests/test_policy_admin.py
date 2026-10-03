@@ -197,4 +197,4 @@ async def test_all_demo_scenarios_run(client):
 async def test_console_edit_keeps_comments(client, settings):
     await client.put("/admin/policy/profile", headers=ADMIN, json={"profile": "strict"})
     text = settings.policy_path.read_text()
-    assert "profile: strict" in text and "# MANDATE central policy" in text
+    assert "profile: strict" in text and "# Aegis central policy" in text

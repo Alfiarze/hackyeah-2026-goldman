@@ -20,7 +20,7 @@ async def test_within_budget(client, new_task):
 
 async def test_request_larger_than_budget_blocked_before_model(client, new_task, monkeypatch):
     called = []
-    import mandate.engine as engine
+    import aegis.engine as engine
 
     async def fake(*a, **k):
         called.append(1)
@@ -63,7 +63,7 @@ async def test_runaway_loop_stopped_by_call_limit(new_task, call):
 
 async def test_uncertain_reservation_keeps_tokens(gw, new_task):
     t = await new_task()
-    res = await gw.escrow.reserve(t["task_id"], [__import__("mandate.budget", fromlist=["Scope"]).Scope(
+    res = await gw.escrow.reserve(t["task_id"], [__import__("aegis.budget", fromlist=["Scope"]).Scope(
         f"task:{t['task_id']}")], tokens=500)
     await gw.escrow.mark_uncertain(res)
     row = await gw.pool.fetchrow("SELECT * FROM budgets WHERE scope_id=$1", f"task:{t['task_id']}")
@@ -82,7 +82,7 @@ async def test_model_not_allowed(client, new_task):
 # ---------------------------------------------------------------- model providers and data flow
 
 async def test_confidential_task_cannot_prompt_cloud_model(client, new_task, call, monkeypatch):
-    import mandate.engine as engine
+    import aegis.engine as engine
     called = []
 
     async def fake(*a, **k):
@@ -100,8 +100,8 @@ async def test_confidential_task_cannot_prompt_cloud_model(client, new_task, cal
 
 
 async def test_confidential_task_may_use_onprem_model(client, new_task, call, monkeypatch):
-    import mandate.engine as engine
-    from mandate.llm import Completion
+    import aegis.engine as engine
+    from aegis.llm import Completion
 
     async def fake(model, *a, **k):
         return Completion(f"answer from {model}", 5, 5)

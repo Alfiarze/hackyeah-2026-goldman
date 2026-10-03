@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
-from mandate.settings import ROOT
+from aegis.settings import ROOT
 
 DATA_DIR = Path(os.environ.get("DEMO_DATA_DIR", ROOT / "demo" / "data")).resolve()
 
@@ -58,12 +58,12 @@ class State:
 
 
 state = State()
-app = FastAPI(title="MANDATE mock tool backends")
+app = FastAPI(title="Aegis mock tool backends")
 
 
 def require_secret(x_backend_secret: str | None = Header(default=None)) -> None:
     if x_backend_secret != os.environ.get("TOOL_BACKEND_SECRET", "dev-backend-secret"):
-        raise HTTPException(401, "direct access denied: only the MANDATE gateway holds backend credentials")
+        raise HTTPException(401, "direct access denied: only the Aegis gateway holds backend credentials")
 
 
 class Call(BaseModel):
@@ -105,8 +105,8 @@ async def call(name: str, body: Call) -> dict[str, Any]:
     if name == "http.post":
         state.http_posts.append({"url": str(a.get("url")), "task_id": body.task_id})
         return {"status": 200}
-    # code.run: never executes anything in the demo
-    return {"stdout": "", "note": "demo sandbox: code recorded, not executed"}
+    # code.run is handled by the gateway via the sandbox runner, never here
+    raise HTTPException(501, "code.run is executed by the sandbox runner, not the tool backend")
 
 
 @app.get("/stats", dependencies=[Depends(require_secret)])

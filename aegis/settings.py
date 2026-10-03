@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(os.environ.get("MANDATE_ROOT", Path(__file__).resolve().parent.parent))
+ROOT = Path(os.environ.get("AEGIS_ROOT", Path(__file__).resolve().parent.parent))
 
 
 def _pairs(raw: str) -> dict[str, str]:
@@ -24,6 +24,8 @@ class Settings:
     feed_url: str | None = os.environ.get("ATTACK_FEED_URL") or None
     tools_base_url: str = os.environ.get("TOOLS_BASE_URL", "http://localhost:8001")
     tool_backend_secret: str = os.environ.get("TOOL_BACKEND_SECRET", "dev-backend-secret")
+    sandbox_base_url: str = os.environ.get("SANDBOX_BASE_URL", "http://localhost:8002")
+    sandbox_secret: str = os.environ.get("SANDBOX_SECRET", "dev-sandbox-secret")
     admin_api_key: str = os.environ.get("ADMIN_API_KEY", "dev-admin-key")
     app_api_key: str = os.environ.get("APP_API_KEY", "dev-app-key")
     lease_secret: str = os.environ.get("LEASE_SECRET", "dev-lease-secret")

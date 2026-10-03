@@ -3,8 +3,10 @@ import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
 import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
+import { DisabledBanner, ExampleChips, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
+  { group: "", items: [["start", "Start here"]] },
   { group: "Watch", items: [["live", "Live"], ["tasks", "Tasks"], ["audit", "Audit log"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
   { group: "Prove", items: [["agent", "Be the agent"], ["scenarios", "Run a scenario"], ["playground", "Test an input"], ["budget", "Budget"]] },
@@ -263,7 +265,7 @@ function Scenarios() {
     const title = t(SCENARIO_COPY[name]?.[0] || name);
     const r = await run(() => api(`/admin/demo/scenarios/${name}`, { method: "POST" }), t("{name}: finished", { name: title }));
     setBusy(null);
-    if (r) setResult({ ...r, name });
+    if (r) { setResult({ ...r, name }); markDone("scenario"); }
   };
   return (
     <div className="scenarios">
@@ -348,44 +350,43 @@ function Playground() {
   const [cls, setCls] = useState("PUBLIC");
   const [res, setRes] = useState(null);
   const [run, notice] = useAction();
-  const go = async (e) => {
-    e?.preventDefault();
-    const r = await run(() => api("/admin/playground/evaluate", { method: "POST", body: { text, target, sink: sink || null, classification: cls } }), t("Checked. Nothing was executed."));
-    if (r) setRes(r);
+  const check = async (body) => {
+    const r = await run(() => api("/admin/playground/evaluate", { method: "POST", body }), t("Checked. Nothing was executed."));
+    if (r) { setRes(r); markDone("check"); }
+  };
+  const go = (e) => { e?.preventDefault(); return check({ text, target, sink: sink || null, classification: cls }); };
+  const pick = (x) => {
+    const tg = x.target || "user_input";
+    setText(x.text); setTarget(tg); setSink(""); setCls("PUBLIC");
+    check({ text: x.text, target: tg, sink: null, classification: "PUBLIC" });
   };
   return (
     <div className="two-col">
       {notice}
       <form className="sheet form" onSubmit={go}>
-        <label className="field"><span>{t("Text to check")}</span>
-          <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} />
+        <div className="field"><span>{t("1. Pick an example, or skip and write your own")}</span><ExampleChips onPick={pick} active={text} /></div>
+        <label className="field"><span>{t("2. Text to check")}</span>
+          <textarea rows={7} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(); }} />
         </label>
-        <label className="field"><span>{t("Where it comes from")}</span>
-          <select value={target} onChange={(e) => setTarget(e.target.value)}>{ORIGINS.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
-        </label>
-        <label className="field"><span>{t("Where it is going")}</span>
-          <select value={sink} onChange={(e) => setSink(e.target.value)}>{SINKS.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
-        </label>
-        <label className="field"><span>{t("Most sensitive data the task has read")}</span>
-          <select value={cls} onChange={(e) => setCls(e.target.value)}>{LEVELS.map((l) => <option key={l} value={l}>{lvl(l)}</option>)}</select>
-        </label>
+        <details className="more">
+          <summary>{t("3. Optional: where the text comes from and where it is going")}</summary>
+          <label className="field"><span>{t("Where it comes from")}</span>
+            <select value={target} onChange={(e) => setTarget(e.target.value)}>{ORIGINS.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
+          </label>
+          <label className="field"><span>{t("Where it is going")}</span>
+            <select value={sink} onChange={(e) => setSink(e.target.value)}>{SINKS.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
+          </label>
+          <label className="field"><span>{t("Most sensitive data the task has read")}</span>
+            <select value={cls} onChange={(e) => setCls(e.target.value)}>{LEVELS.map((l) => <option key={l} value={l}>{lvl(l)}</option>)}</select>
+          </label>
+          <p className="note">{t("Example: choose “Confidential” and “E-mail outside the firm”: even a harmless sentence is blocked, because confidential data may not leave.")}</p>
+        </details>
         <button className="btn btn-primary" type="submit">{t("Check this input")}</button>
         <p className="note">{t("A dry run: the gateway decides, but no model or tool is called.")}</p>
       </form>
       <div>
-        {res ? (
-          <article className="certificate compact">
-            <header>
-              <Stamp a={res.decision.action} rule={res.decision.rule_id} />
-              <div>
-                <h2>{res.decision.reason_code === "OK" ? t("Nothing to stop") : human(res.decision.reason_code)}</h2>
-                <p className="muted">{t("Policy")} <Id>{res.decision.policy_version}</Id> {t("decided in {ms} ms", { ms: num(res.decision.latency_ms, 2) })}</p>
-              </div>
-            </header>
-            <Findings findings={res.decision.findings} />
-            {res.redacted && <><h3 className="sub">{t("What the agent would receive")}</h3><pre className="excerpt">{res.redacted}</pre></>}
-          </article>
-        ) : <Empty>{t("Write or paste anything, then check it. Try a PESEL number, a hidden instruction, or confidential data heading to an outside address.")}</Empty>}
+        {res ? <Verdict res={res} onRecheck={go} />
+          : <Empty>{t("Write or paste anything, then check it. Try a PESEL number, a hidden instruction, or confidential data heading to an outside address.")}</Empty>}
       </div>
     </div>
   );
@@ -414,8 +415,8 @@ const CONTROL_COPY = {
   mandate: ["Task mandates", "Each task may only use its own tools, files and recipients, until it ends."],
   ifc_taint: ["Data lineage", "Once a task reads confidential data, it cannot send anything to a less trusted place."],
   model_allowlist: ["Approved models only", "Requests to models outside the list are refused."],
-  pii: ["Personal data", "PESEL, card numbers, IBANs, e-mail addresses and phone numbers."],
-  secrets: ["Credentials and keys", "Cloud keys, private keys, tokens and passwords in transit."],
+  pii: ["Personal data", "PESEL, NIP, ID card and passport numbers, addresses, card numbers, IBANs, e-mail addresses and phone numbers."],
+  secrets: ["Credentials and keys", "Cloud keys, private keys, tokens, database URLs, and passwords or PINs, even written in a sentence."],
   attack_signatures: ["Known attacks", "Signatures from the attack feed: unsafe deserialization, code execution, poisoned tools."],
   injection_heuristics: ["Instruction hijacking", "Phrases and hidden markup that try to override the agent's instructions."],
   semantic: ["AI review", "A local model scores untrusted text for manipulation. It can tighten a decision, never loosen one."],
@@ -705,7 +706,7 @@ function Budget() {
     setBusy(true);
     const r = await run(() => api(`/admin/simulate/agents?n=${n}&pool_tokens=${pool}&max_tokens=${maxT}`, { method: "POST" }), t("Race finished"));
     setBusy(false);
-    if (r) { setRes(r); reload(); }
+    if (r) { setRes(r); reload(); markDone("budget"); }
   };
   const named = (rows || []).filter((r) => !r.scope_id.startsWith("task:"));
   return (
@@ -818,14 +819,14 @@ function Posture() {
 }
 
 export default function App() {
-  const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "live"));
+  const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "start"));
   const [lang, setL] = useState(getLang());
   const [key, setK] = useState(getKey());
   const [showKey, setShowKey] = useState(false);
   useEffect(() => { location.hash = view; }, [view]);
   useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
-  const Views = { agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
+  const Views = { start: Start, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Live;
   return (
     <div className="app" key={lang}>
@@ -834,9 +835,9 @@ export default function App() {
         <nav aria-label={t("Sections")}>
           {NAV.map((g) => (
             <div className="nav-group" key={g.group}>
-              <span className="nav-label">{t(g.group)}</span>
+              {g.group && <span className="nav-label">{t(g.group)}</span>}
               {g.items.map(([id, label]) => (
-                <button key={id} aria-current={view === id ? "page" : undefined} className={view === id ? "is-on" : ""} onClick={() => setView(id)}>{t(label)}</button>
+                <button key={id} aria-current={view === id ? "page" : undefined} className={`${view === id ? "is-on" : ""} ${id === "start" ? "nav-start" : ""}`} onClick={() => setView(id)}>{t(label)}</button>
               ))}
             </div>
           ))}
@@ -850,9 +851,11 @@ export default function App() {
         </div>
       </header>
       <Posture />
+      <DisabledBanner />
       <main>
         <h1>{t(TITLES[view])}</h1>
-        <View key={view} />
+        <PageHelp view={view} go={setView} />
+        <View key={view} go={setView} />
       </main>
     </div>
   );

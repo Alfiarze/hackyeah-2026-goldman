@@ -31,8 +31,8 @@ export function Level({ v }) {
 
 export function describe(f) {
   const d = f.detail || {};
-  if (d.entities) return t("found {list}", { list: d.entities.join(", ") });
-  if (d.types) return t("found {list}", { list: d.types.join(", ") });
+  if (d.entities) return t("found {list}", { list: d.entities.map(human).join(", ") });
+  if (d.types) return t("found {list}", { list: d.types.map(human).join(", ") });
   if (d.patterns) return t("matched {list}", { list: d.patterns.map(human).join(", ") });
   if (d.risk !== undefined) return t("risk {risk} from {backend}", { risk: d.risk, backend: t(d.backend) }) + (d.reason ? `: ${d.reason}` : "");
   if (d.task_classification) return t("{level} data cannot go to {sink} (cleared for {clearance})", { level: lvl(d.task_classification), sink: d.sink, clearance: lvl(d.sink_clearance) });

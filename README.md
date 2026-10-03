@@ -140,9 +140,9 @@ model/tool `502`, and auth failures `401`.
 | `mandate`: tools, resources, recipients, TTL | deterministic | block | LLM06 Excessive Agency, Agentic: privilege compromise |
 | `ifc_taint`: data flow by classification | deterministic | block | LLM02 Sensitive Information Disclosure |
 | `model_allowlist` | deterministic | block | LLM03 Supply Chain |
-| `pii`: PESEL (checksum), card (Luhn), IBAN (mod-97), e-mail, phone | deterministic | redact (strict: block) | LLM02 |
-| `secrets`: cloud keys, private keys, tokens, password assignments | deterministic | block | LLM02 |
-| `injection_heuristics`: override phrases, hidden markup, concealment | deterministic | redact (strict: block) | LLM01 Prompt Injection |
+| `pii`: PESEL (checksum), NIP (mod-11), ID card and passport (check digit), address, card (Luhn), IBAN (mod-97), e-mail, phone | deterministic | redact (strict: block) | LLM02 |
+| `secrets`: cloud keys, private keys, tokens, database URLs with credentials, passwords and PINs written in a sentence ("moje hasło to …") | deterministic | block | LLM02 |
+| `injection_heuristics`: override phrases (EN/PL), jailbreak and role-play, markdown-image exfiltration, hidden markup, concealment; also after de-obfuscation (zero-width, homoglyphs, leetspeak, spaced letters, base64) | deterministic | redact (strict: block) | LLM01 Prompt Injection |
 | `semantic`: LLM risk score on the main model server (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | LLM01, Agentic: goal manipulation |
 | `attack_signatures`: external feed | deterministic | block | LLM03, LLM05 |
 | Budget escrow (tokens, calls, concurrency, guard budget) | deterministic | block (429) | LLM10 Unbounded Consumption |
@@ -221,6 +221,9 @@ It has three groups:
   executed), `Budget` (limits, reservations, spend).
 
 ### Guide for the jury
+
+The console opens on **Start here**: six guided steps with clickable example prompts, a live on/off demo of a
+control, and a tip panel on every page with what to try next. The steps below are the same, in long form.
 
 1. **Run a scenario.** Each button drives a scripted agent through the real gateway, database and tool service:
    `clean` (all ALLOW), `injection` (exfiltration attempt, mail counter stays 0), `detector_miss`,

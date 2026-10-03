@@ -77,16 +77,16 @@ const owasp = [
 ---
 <section class="section" id="scenarios">
   <div class="wrap">
-    <h2><L en="Try to break it" pl="Spróbuj to obejść" /></h2>
-    <p class="lede">
+    <h2 data-reveal><L en="Try to break it" pl="Spróbuj to obejść" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
       <L
         en="Each scenario runs a scripted agent through the real gateway, against the real policy and the real backends. Watch the counters while you do it."
         pl="Każdy scenariusz przepuszcza skryptowanego agenta przez prawdziwą bramkę, prawdziwą politykę i prawdziwe backendy. Patrz przy tym na liczniki."
       />
     </p>
-    <div class="runs">
+    <div class="runs" data-reveal-group>
       {runs.map((r) => (
-        <div class="run">
+        <div class="run" data-reveal>
           <h3><L en={r.title[0]} pl={r.title[1]} /></h3>
           <p><L en={r.en} pl={r.pl} /></p>
           <div class="run-result">
@@ -96,17 +96,17 @@ const owasp = [
         </div>
       ))}
     </div>
-    <div class="runs-note">
+    <div class="runs-note" data-reveal>
       <a class="console-btn" href={`${dashboardUrl}#scenarios`} data-dashboard="#scenarios"><L en="Run the scenarios" pl="Uruchom scenariusze" /></a>
       <span class="hint">
         <L en="Dashboard, Prove, Run a scenario. No keys, no cloud, everything runs locally." pl="Dashboard, Dowody, Scenariusze. Bez kluczy i chmury, wszystko działa lokalnie." />
       </span>
     </div>
-    <div class="owasp">
+    <div class="owasp" data-reveal-group>
       <h3><L en="Controls mapped to the OWASP Top 10 for LLM applications" pl="Kontrole przypisane do OWASP Top 10 dla aplikacji LLM" /></h3>
       <ul>
         {owasp.map(([id, en, pl]) => (
-          <li>{id} <span><L en={en} pl={pl} /></span></li>
+          <li data-reveal>{id} <span><L en={en} pl={pl} /></span></li>
         ))}
       </ul>
     </div>

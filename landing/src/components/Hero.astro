@@ -1,6 +1,7 @@
 ---
 import { dashboardUrl } from "../config";
 import L from "./L.astro";
+import Rosette from "./Rosette.astro";
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 
@@ -17,21 +18,21 @@ const pillars = [
 ---
 <section class="hero">
   <div class="wrap hero-grid">
-    <div class="hero-copy">
+    <div class="hero-copy" data-reveal-group>
       <h1>
-        <span class="hero-name">Aegis</span>
-        <span class="hero-tag"><L en="Control gateway for AI agents." pl="Bramka kontroli dla agentów AI." /></span>
+        <span class="hero-name" data-reveal>Aegis</span>
+        <span class="hero-tag" data-reveal><L en="Control gateway for AI agents." pl="Bramka kontroli dla agentów AI." /></span>
       </h1>
-      <p class="hero-claim">
+      <p class="hero-claim" data-reveal>
         <L en="Define what an agent may do. Enforce it on every call." pl="Określ, co agent może zrobić. Egzekwuj to przy każdym wywołaniu." />
       </p>
-      <p class="lede">
+      <p class="lede" data-reveal>
         <L
           en="Aegis sits between AI agents and everything they touch: models, tools, MCP servers, documents and other agents. Before anything runs, it checks whether this agent was authorized to do it, with this data, for this task."
           pl="Aegis stoi między agentami AI a wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, dokumentami i innymi agentami. Zanim cokolwiek się wykona, sprawdza, czy ten agent był do tego upoważniony, z tymi danymi i w tym zadaniu."
         />
       </p>
-      <div class="hero-ctas">
+      <div class="hero-ctas" data-reveal>
         <a class="console-btn big" href={`${dashboardUrl}`} data-dashboard=""><L en="Open the dashboard" pl="Otwórz dashboard" /></a>
         <a class="ghost-btn" href="#scenarios"><L en="Run the attacks yourself" pl="Sprawdź ataki sam" /></a>
       </div>
@@ -44,13 +45,16 @@ const pillars = [
         decoding="async"
         fetchpriority="high"
       />
+      <!-- a live guilloché layer over the engraved one: draws itself in, then turns very slowly -->
+      <Rosette size={64} class="hero-rosette" />
+      <span class="hero-serial" aria-hidden="true" data-serial="4817">Nº AE·26 <b>{"004817".split("").map((d) => <i>{d}</i>)}</b></span>
     </figure>
   </div>
 
   <div class="wrap">
-    <ul class="pillars">
+    <ul class="pillars" data-reveal-group>
       {pillars.map((p) => (
-        <li>
+        <li data-reveal>
           <h2><L en={p.en[0]} pl={p.pl[0]} /></h2>
           <p><L en={p.en[1]} pl={p.pl[1]} /></p>
         </li>

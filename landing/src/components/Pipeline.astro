@@ -38,22 +38,27 @@ const stages = [
 ---
 <section class="section" id="how">
   <div class="wrap">
-    <h2 class="display"><L en="Eight checks before anything runs" pl="Osiem kontroli, zanim cokolwiek się wykona" /></h2>
-    <p class="lede">
+    <h2 class="display" data-reveal><L en="Eight checks before anything runs" pl="Osiem kontroli, zanim cokolwiek się wykona" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
       <L
         en="The gateway sits between agents and everything they touch: models, tools, MCP servers, other agents. Every call walks the same pipeline."
         pl="Bramka stoi między agentami i wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, innymi agentami. Każde wywołanie przechodzi ten sam ciąg kontroli."
       />
     </p>
-    <div class="stages">
+    <div class="pipe-req" aria-hidden="true">
+      <span class="pipe-call" data-pipe-call></span>
+      <span class="pipe-out" data-pipe-out></span>
+    </div>
+    <div class="stages" data-pipeline data-reveal-group>
+      <span class="pipe-token" aria-hidden="true"></span>
       {stages.map((s, i) => (
-        <div class="stage">
-          <span class="stage-no">{String(i + 1).padStart(2, "0")}</span>
+        <div class="stage" data-reveal>
+          <span class="stage-no">{String(i + 1).padStart(2, "0")}<span class="stage-v" aria-hidden="true"><span class="v-pass">PASS</span><span class="v-block">BLOCK</span></span></span>
           <h3><L en={s.en[0]} pl={s.pl[0]} /></h3>
           <p><L en={s.en[1]} pl={s.pl[1]} /></p>
         </div>
       ))}
-      <div class="stage-last">
+      <div class="stage-last" data-reveal>
         <p>
           <L
             en="<b>Then it runs.</b> The response passes output filter and taint update before release, and every decision lands in an audit log the database will not let anyone update or delete."
@@ -64,3 +69,85 @@ const stages = [
     </div>
   </div>
 </section>
+
+<script>
+  // While the pipeline is on screen, a request walks it: each check lights up in turn. Runs
+  // alternate between a clean call that executes and an exfiltration stopped at the data-flow check.
+  const box = document.querySelector<HTMLElement>("[data-pipeline]");
+  if (box && document.documentElement.classList.contains("motion")) {
+    const stages = Array.from(box.querySelectorAll<HTMLElement>(".stage"));
+    const last = box.querySelector<HTMLElement>(".stage-last");
+    const token = box.querySelector<HTMLElement>(".pipe-token")!;
+    const call = document.querySelector<HTMLElement>("[data-pipe-call]")!;
+    const out = document.querySelector<HTMLElement>("[data-pipe-out]")!;
+    const runs = [
+      { call: "model.chat · summarize contract · lawyer_anna", blockAt: -1, out: "→ executed" },
+      { call: "mail.send → partner@client-A.example", blockAt: 4, out: "→ BLOCKED · IFC-001" },
+      { call: "code.exec · parse_invoice.py", blockAt: -1, out: "→ executed in sandbox" },
+      { call: "model.pull · hf.co/deepseek-al/V4", blockAt: 2, out: "→ BLOCKED · ATK-SUPPLY-001" },
+    ];
+    const STEP = 520;
+    let run = 0;
+    let visible = false;
+    let busy = false;
+    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+    const place = (el: HTMLElement) => {
+      // the token is a 100px bar scaled to the height of the stage it is reading
+      const top = el.offsetTop;
+      const h = el.offsetHeight;
+      token.style.transform = `translateY(${top}px) scaleY(${(h / 100).toFixed(3)})`;
+    };
+
+    const reset = () => {
+      stages.forEach((s) => s.classList.remove("is-active", "is-pass", "is-block"));
+      last?.classList.remove("is-run");
+      box.classList.remove("is-running", "is-blocked");
+      out.textContent = "";
+      out.className = "pipe-out";
+    };
+
+    const loop = async () => {
+      if (busy) return;
+      busy = true;
+      while (visible && !document.hidden) {
+        const r = runs[run++ % runs.length];
+        reset();
+        call.textContent = r.call;
+        box.classList.add("is-running");
+        for (let i = 0; i < stages.length && visible; i++) {
+          const s = stages[i];
+          place(s);
+          s.classList.add("is-active");
+          await wait(STEP);
+          s.classList.remove("is-active");
+          if (i === r.blockAt) {
+            s.classList.add("is-block");
+            box.classList.add("is-blocked");
+            out.textContent = r.out;
+            out.classList.add("is-block", "is-shown");
+            break;
+          }
+          s.classList.add("is-pass");
+        }
+        if (r.blockAt < 0 && last) {
+          place(last);
+          last.classList.add("is-run");
+          out.textContent = r.out;
+          out.classList.add("is-shown");
+        }
+        await wait(2600);
+        box.classList.remove("is-running");
+        await wait(500);
+      }
+      reset();
+      busy = false;
+    };
+
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible) window.setTimeout(loop, 900);
+    }, { threshold: 0.25 }).observe(box);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && visible) loop(); });
+  }
+</script>

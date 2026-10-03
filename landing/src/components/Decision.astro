@@ -1,26 +1,51 @@
 ---
 import L from "./L.astro";
 import Rosette from "./Rosette.astro";
+
+// A few lines of an audit feed, rendered statically; with motion on, a script keeps it running.
+const seed = [
+  { t: "14:02:07", tool: "doc.read", d: "contracts/client-A/msa.pdf", a: "allow" },
+  { t: "14:02:09", tool: "model.chat", d: "PESEL <span class='pii is-done'>[REDACTED:PESEL]</span>", a: "redact" },
+  { t: "14:02:11", tool: "notes.write", d: "memo/client-A.md", a: "allow" },
+  { t: "14:02:12", tool: "mail.send", d: "partner@client-A.example · IFC-001", a: "block" },
+];
 ---
 <section class="section" id="proof">
   <div class="wrap decision-grid">
     <div>
-      <h2 class="display"><L en="One request, from mandate to evidence" pl="Jedno żądanie, od mandatu do dowodu" /></h2>
-      <p class="lede">
+      <h2 class="display" data-reveal><L en="One request, from mandate to evidence" pl="Jedno żądanie, od mandatu do dowodu" /></h2>
+      <p class="lede" data-reveal style="--i: 1">
         <L
           en="A lawyer’s assistant reads a confidential contract, then tries to mail it to the client. The recipient is allowed. The mail is still stopped, because the task now carries confidential data and external mail is cleared for public data only."
           pl="Asystent prawnika czyta poufną umowę, a potem próbuje wysłać ją mailem do klienta. Odbiorca jest dozwolony. Mail i tak zostaje zatrzymany, bo zadanie niesie już poufne dane, a mail na zewnątrz jest dopuszczony tylko dla danych publicznych."
         />
       </p>
-      <p class="decision-note">
+      <p class="decision-note" data-reveal style="--i: 2">
         <L
           en="The stamp is not a warning in a user interface. It means the mail server never received the call: its own counter stays at zero, and the attempt is written to an audit log the database will not let anyone change."
           pl="Pieczątka to nie ostrzeżenie w interfejsie. Oznacza, że serwer poczty nigdy nie dostał wywołania: jego własny licznik zostaje na zerze, a próba trafia do dziennika audytu, którego baza nie pozwala nikomu zmienić."
         />
       </p>
+      <figure class="feed" aria-hidden="true" data-reveal style="--i: 3">
+        <figcaption>
+          <span class="feed-live"></span>
+          <L en="Decision log, sample" pl="Dziennik decyzji, przykład" />
+        </figcaption>
+        <div class="feed-view">
+          <ol class="feed-list" data-feed>
+            {seed.map((r) => (
+              <li class="feed-row">
+                <span class="feed-t">{r.t}</span>
+                <span class="feed-d"><b>{r.tool}</b> <span set:html={r.d} /></span>
+                <span class:list={["mark", `mark-${r.a}`]}>{r.a.toUpperCase()}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </figure>
     </div>
 
-    <aside class="contract" aria-label="Example execution contract">
+    <aside class="contract" data-reveal style="--i: 1" aria-label="Example execution contract">
       <header class="contract-head">
         <Rosette size={42} />
         <div>
@@ -63,3 +88,86 @@ import Rosette from "./Rosette.astro";
     </aside>
   </div>
 </section>
+
+<script>
+  // Keeps the sample decision log ticking while it is on screen: a new line scrolls in every couple
+  // of seconds, and personal data is struck through with a redaction bar before it is replaced.
+  const list = document.querySelector<HTMLOListElement>("[data-feed]");
+  if (list && document.documentElement.classList.contains("motion")) {
+    type Row = { tool: string; d: string; a: "allow" | "redact" | "block"; pii?: [string, string] };
+    const rows: Row[] = [
+      { tool: "model.chat", d: "risk summary · 1 204 tokens", a: "allow" },
+      { tool: "model.chat", d: "PESEL ", a: "redact", pii: ["44051401458", "[REDACTED:PESEL]"] },
+      { tool: "doc.read", d: "clients/B/nda.pdf · MANDATE-RES", a: "block" },
+      { tool: "search.caselaw", d: "“force majeure” SN 2024", a: "allow" },
+      { tool: "tool.result", d: "IBAN ", a: "redact", pii: ["PL61 1090 1014", "[REDACTED:IBAN]"] },
+      { tool: "mail.send", d: "x@evil.example · MANDATE-RCPT", a: "block" },
+      { tool: "notes.write", d: "memo/client-A.md", a: "allow" },
+      { tool: "model.chat", d: "", a: "redact", pii: ["4111 1111 1111 1111", "[REDACTED:CARD]"] },
+      { tool: "model.pull", d: "hf.co/deepseek-al/… · ATK-SUPPLY-001", a: "block" },
+      { tool: "code.exec", d: "sandbox · no network · exit 0", a: "allow" },
+    ];
+    const view = list.parentElement as HTMLElement;
+    let k = 0;
+    let clock = new Date();
+    clock.setHours(14, 2, 12, 0);
+    let visible = false;
+    let timer = 0;
+
+    const stamp = () => {
+      clock = new Date(clock.getTime() + (1 + Math.floor(Math.random() * 3)) * 1000);
+      return clock.toTimeString().slice(0, 8);
+    };
+
+    const make = (r: Row) => {
+      const li = document.createElement("li");
+      li.className = "feed-row is-new";
+      const t = document.createElement("span");
+      t.className = "feed-t";
+      t.textContent = stamp();
+      const d = document.createElement("span");
+      d.className = "feed-d";
+      const b = document.createElement("b");
+      b.textContent = r.tool;
+      d.append(b, " " + r.d);
+      if (r.pii) {
+        const pii = document.createElement("span");
+        pii.className = "pii";
+        pii.textContent = r.pii[0];
+        d.append(pii);
+        // bar slides over the raw value, then the value is swapped for its redaction tag
+        window.setTimeout(() => pii.classList.add("is-struck"), 700);
+        window.setTimeout(() => {
+          pii.textContent = r.pii![1];
+          pii.classList.add("is-done");
+        }, 1250);
+      }
+      const m = document.createElement("span");
+      m.className = `mark mark-${r.a}`;
+      m.textContent = r.a.toUpperCase();
+      li.append(t, d, m);
+      return li;
+    };
+
+    const push = () => {
+      if (!visible || document.hidden) return;
+      const row = make(rows[k++ % rows.length]);
+      list.append(row);
+      // the list is pinned to the bottom of its window: shift it down by one row, then glide up
+      const h = row.getBoundingClientRect().height;
+      list.style.transition = "none";
+      list.style.transform = `translateY(${h}px)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        list.style.transition = "";
+        list.style.transform = "";
+      }));
+      while (list.children.length > 7) list.firstElementChild?.remove();
+    };
+
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      window.clearInterval(timer);
+      if (visible) timer = window.setInterval(push, 2100);
+    }).observe(view);
+  }
+</script>

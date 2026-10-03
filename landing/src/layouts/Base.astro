@@ -40,6 +40,12 @@ const baseUrl = import.meta.env.BASE_URL;
         } catch { /* private mode */ }
         document.documentElement.dataset.lang = lang;
         document.documentElement.lang = lang;
+        // Motion is opt-in: content is fully visible without JS or with reduced motion.
+        try {
+          if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            document.documentElement.classList.add("motion");
+          }
+        } catch { /* old browser: no motion */ }
       })();
     </script>
   </head>
@@ -52,6 +58,9 @@ const baseUrl = import.meta.env.BASE_URL;
         const base = url.endsWith("/") ? url : url + "/";
         document.querySelectorAll("a[data-dashboard]").forEach((a) => { a.href = base + a.dataset.dashboard; });
       })();
+    </script>
+    <script>
+      import "../scripts/motion";
     </script>
   </body>
 </html>

@@ -19,8 +19,8 @@ const outer = [0, 1, 2, 3].map((k) => ring(26, 3.4, 12, (k * Math.PI) / 6));
 const middle = [0, 1, 2].map((k) => ring(17, 4.2, 9, (k * Math.PI) / 4.5));
 const inner = [0, 1].map((k) => ring(8, 2.6, 7, k * Math.PI));
 ---
-<svg class:list={["rosette", className]} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-  <g class="r-outer">{outer.map((d) => <path d={d} />)}</g>
-  <g class="r-middle">{middle.map((d) => <path d={d} />)}</g>
-  <g class="r-inner">{inner.map((d) => <path d={d} />)}</g>
+<svg class:list={["rosette", className]} data-draw width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+  <g class="r-outer">{outer.map((d) => <path d={d} pathLength="1" />)}</g>
+  <g class="r-middle">{middle.map((d) => <path d={d} pathLength="1" />)}</g>
+  <g class="r-inner">{inner.map((d) => <path d={d} pathLength="1" />)}</g>
 </svg>

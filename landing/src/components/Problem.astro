@@ -22,17 +22,17 @@ const acts = [
 ---
 <section class="section" id="why">
   <div class="wrap">
-    <h2 class="display"><L en="Agents don’t just answer. They act." pl="Agenci nie tylko odpowiadają. Działają." /></h2>
-    <p class="lede">
+    <h2 class="display" data-reveal><L en="Agents don’t just answer. They act." pl="Agenci nie tylko odpowiadają. Działają." /></h2>
+    <p class="lede" data-reveal style="--i: 1">
       <L
         en="Security tools were built for software that responds. An agent with a task reads documents, calls tools, spends money and hands work to other agents, and a single poisoned document can tell it to do something nobody asked for."
         pl="Narzędzia bezpieczeństwa powstały dla oprogramowania, które odpowiada. Agent z zadaniem czyta dokumenty, wywołuje narzędzia, wydaje pieniądze i przekazuje pracę innym agentom, a jeden zatruty dokument może kazać mu zrobić coś, o co nikt nie prosił."
       />
     </p>
 
-    <ol class="acts">
+    <ol class="acts" data-reveal-group>
       {acts.map((a) => (
-        <li>
+        <li data-reveal>
           <h3><L en={a.en[0]} pl={a.pl[0]} /></h3>
           <p><L en={a.en[1]} pl={a.pl[1]} /></p>
           <p class="answer"><L en={a.en[2]} pl={a.pl[2]} /></p>
@@ -40,7 +40,7 @@ const acts = [
       ))}
     </ol>
 
-    <div class="question">
+    <div class="question" data-reveal>
       <div>
         <p class="q-who"><L en="A typical guardrail asks" pl="Typowe zabezpieczenie pyta" /></p>
         <p class="q-text"><L en="Does this action look dangerous?" pl="Czy ta akcja wygląda groźnie?" /></p>
@@ -50,7 +50,7 @@ const acts = [
         <p class="q-text q-ours"><L en="Was this agent ever authorized to do it, with this data, for this task?" pl="Czy ten agent w ogóle miał prawo to zrobić, z tymi danymi, w tym zadaniu?" /></p>
       </div>
     </div>
-    <p class="q-note">
+    <p class="q-note" data-reveal style="--i: 1">
       <L
         en="An attacker can make text look harmless, and a model can miss it. Authorization cannot be talked around: it depends on the task, not on how the request is worded."
         pl="Atakujący potrafi sprawić, że tekst wygląda niewinnie, a model może go przeoczyć. Uprawnień nie da się przegadać: zależą od zadania, a nie od tego, jak sformułowano prośbę."

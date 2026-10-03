@@ -8,8 +8,8 @@ const sheets = [
     en: ["The model: DeepSeek V4 Flash on two GB10", "The agent console and the AI review run on our own hardware, so prompts, documents and risk scores never leave the firm’s network."],
     pl: ["Model: DeepSeek V4 Flash na dwóch GB10", "Konsola agenta i ocena AI działają na naszym sprzęcie, więc prompty, dokumenty i oceny ryzyka nie opuszczają sieci firmy."],
     rows: [
-      [["Model", "Model"], ["DeepSeek V4 Flash, mixture of experts: 284 billion parameters, 13 billion active per token", "DeepSeek V4 Flash, mixture of experts: 284 mld parametrów, 13 mld aktywnych na token"]],
-      [["Hardware", "Sprzęt"], ["Two NVIDIA GB10 machines linked together, 2 × 128 GB of unified memory", "Dwie maszyny NVIDIA GB10 połączone ze sobą, 2 × 128 GB pamięci zunifikowanej"]],
+      [["Model", "Model"], ["DeepSeek V4 Flash, mixture of experts: <span class='count' data-count='284'>284</span> billion parameters, <span class='count' data-count='13'>13</span> billion active per token", "DeepSeek V4 Flash, mixture of experts: <span class='count' data-count='284'>284</span> mld parametrów, <span class='count' data-count='13'>13</span> mld aktywnych na token"]],
+      [["Hardware", "Sprzęt"], ["Two NVIDIA GB10 machines linked together, 2 × <span class='count' data-count='128'>128</span> GB of unified memory", "Dwie maszyny NVIDIA GB10 połączone ze sobą, 2 × <span class='count' data-count='128'>128</span> GB pamięci zunifikowanej"]],
       [["Interface", "Interfejs"], ["OpenAI-compatible API, so the gateway can point at any compatible server by changing four environment variables", "API zgodne z OpenAI, więc bramkę można przepiąć na dowolny zgodny serwer, zmieniając cztery zmienne środowiskowe"]],
       [["Trust level", "Poziom zaufania"], ["On-premises: confidential data may reach it. A cloud model would be cleared for public data only.", "Na miejscu: dane poufne mogą do niego trafić. Model w chmurze dostałby dostęp tylko do danych publicznych."]],
       [["Role", "Rola"], ["Scores untrusted text for manipulation. It can only tighten a decision; if it is unreachable, requests are blocked.", "Ocenia niezaufaną treść pod kątem manipulacji. Może tylko zaostrzyć decyzję, a gdy jest niedostępny, żądania są blokowane."]],
@@ -21,8 +21,8 @@ const sheets = [
     pl: ["Piaskownica: kod działa tam, gdzie nic nie zepsuje", "Gdy agent chce uruchomić kod, Aegis startuje świeży kontener na to jedno uruchomienie, a potem go usuwa. Jeśli kod jest złośliwy, pada w środku pudełka."],
     rows: [
       [["Network", "Sieć"], ["None. Attempts to connect out are recorded as evidence.", "Brak. Próby połączenia na zewnątrz są zapisywane jako dowód."]],
-      [["Filesystem", "System plików"], ["Read-only, with 16 MB of scratch space that cannot hold executables", "Tylko do odczytu, z 16 MB miejsca roboczego, w którym nie da się uruchomić plików"]],
-      [["Limits", "Limity"], ["256 MB of memory, half a CPU, 64 processes, killed after 10 seconds", "256 MB pamięci, pół procesora, 64 procesy, zabicie po 10 sekundach"]],
+      [["Filesystem", "System plików"], ["Read-only, with <span class='count' data-count='16'>16</span> MB of scratch space that cannot hold executables", "Tylko do odczytu, z <span class='count' data-count='16'>16</span> MB miejsca roboczego, w którym nie da się uruchomić plików"]],
+      [["Limits", "Limity"], ["<span class='count' data-count='256'>256</span> MB of memory, half a CPU, <span class='count' data-count='64'>64</span> processes, killed after <span class='count' data-count='10'>10</span> seconds", "<span class='count' data-count='256'>256</span> MB pamięci, pół procesora, <span class='count' data-count='64'>64</span> procesy, zabicie po <span class='count' data-count='10'>10</span> sekundach"]],
       [["Privileges", "Uprawnienia"], ["Runs as an unprivileged user with every Linux capability dropped", "Działa jako użytkownik bez uprawnień, ze zrzuconymi wszystkimi uprawnieniami Linuksa"]],
       [["Isolation", "Izolacja"], ["Only the sandbox service can start containers; the gateway asks it over an authenticated channel and never touches Docker itself.", "Tylko usługa piaskownicy może startować kontenery; bramka prosi ją przez uwierzytelniony kanał i sama nigdy nie dotyka Dockera."]],
       [["Cost", "Koszt"], ["About 0.3 to 0.5 seconds per run, measured", "Około 0,3–0,5 sekundy na uruchomienie, zmierzone"]],
@@ -46,7 +46,7 @@ const sheets = [
     pl: ["Uruchomienie", "Wszystko jest dostarczane jako kontenery i startuje jedną komendą."],
     rows: [
       [["Deployment", "Wdrożenie"], ["Docker Compose locally; a separate compose file for Coolify with generated secrets and no published ports", "Docker Compose lokalnie; osobny plik compose dla Coolify z generowanymi sekretami i bez wystawionych portów"]],
-      [["Tests", "Testy"], ["104 automated tests, a positive and a negative case for every control, against a real database", "104 testy automatyczne, przypadek pozytywny i negatywny dla każdej kontroli, na prawdziwej bazie"]],
+      [["Tests", "Testy"], ["<span class='count' data-count='104'>104</span> automated tests, a positive and a negative case for every control, against a real database", "<span class='count' data-count='104'>104</span> testy automatyczne, przypadek pozytywny i negatywny dla każdej kontroli, na prawdziwej bazie"]],
       [["Console", "Konsola"], ["A React dashboard in English and Polish: live decisions, policy editing with rollback, and a view where you act as the agent", "Dashboard w React po angielsku i po polsku: decyzje na żywo, edycja polityki z cofaniem i widok, w którym sam jesteś agentem"]],
     ],
   },
@@ -54,8 +54,8 @@ const sheets = [
 ---
 <section class="section" id="tech">
   <div class="wrap">
-    <h2 class="display"><L en="Under the hood" pl="Jak to jest zbudowane" /></h2>
-    <p class="lede">
+    <h2 class="display" data-reveal><L en="Under the hood" pl="Jak to jest zbudowane" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
       <L
         en="Four parts, each doing one job. The rules decide; the model advises; the sandbox contains; the database remembers."
         pl="Cztery części, każda z jednym zadaniem. Reguły decydują, model doradza, piaskownica izoluje, baza pamięta."
@@ -63,17 +63,17 @@ const sheets = [
     </p>
 
     <figure class="flow" aria-label="How a request travels through Aegis">
-      <ol>
-        <li><span class="flow-k"><L en="Caller" pl="Wywołujący" /></span><span><L en="An app creates a task; the agent works under its mandate" pl="Aplikacja tworzy zadanie, agent działa w ramach jego mandatu" /></span></li>
-        <li class="flow-gate"><span class="flow-k">Aegis</span><span><L en="Checks the mandate, data flow, known attacks, personal data, the AI review and the budget" pl="Sprawdza mandat, przepływ danych, znane ataki, dane osobowe, ocenę AI i budżet" /></span></li>
-        <li><span class="flow-k"><L en="Only then" pl="Dopiero wtedy" /></span><span><L en="The model on the GB10s, a tool, an MCP server or the sandbox does the work" pl="Model na GB10, narzędzie, serwer MCP albo piaskownica wykonuje pracę" /></span></li>
-        <li><span class="flow-k"><L en="Afterwards" pl="Po wszystkim" /></span><span><L en="The answer is checked before release and the decision is written to the audit log" pl="Odpowiedź jest sprawdzana przed wydaniem, a decyzja trafia do dziennika audytu" /></span></li>
+      <ol data-reveal-group>
+        <li data-reveal><span class="flow-k"><L en="Caller" pl="Wywołujący" /></span><span><L en="An app creates a task; the agent works under its mandate" pl="Aplikacja tworzy zadanie, agent działa w ramach jego mandatu" /></span></li>
+        <li class="flow-gate" data-reveal><span class="flow-k">Aegis</span><span><L en="Checks the mandate, data flow, known attacks, personal data, the AI review and the budget" pl="Sprawdza mandat, przepływ danych, znane ataki, dane osobowe, ocenę AI i budżet" /></span></li>
+        <li data-reveal><span class="flow-k"><L en="Only then" pl="Dopiero wtedy" /></span><span><L en="The model on the GB10s, a tool, an MCP server or the sandbox does the work" pl="Model na GB10, narzędzie, serwer MCP albo piaskownica wykonuje pracę" /></span></li>
+        <li data-reveal><span class="flow-k"><L en="Afterwards" pl="Po wszystkim" /></span><span><L en="The answer is checked before release and the decision is written to the audit log" pl="Odpowiedź jest sprawdzana przed wydaniem, a decyzja trafia do dziennika audytu" /></span></li>
       </ol>
     </figure>
 
-    <div class="sheets">
+    <div class="sheets" data-reveal-group>
       {sheets.map((s) => (
-        <article class="sheet" id={`tech-${s.id}`}>
+        <article class="sheet" data-reveal id={`tech-${s.id}`}>
           <h3><L en={s.en[0]} pl={s.pl[0]} /></h3>
           <p class="sheet-lede"><L en={s.en[1]} pl={s.pl[1]} /></p>
           <dl>

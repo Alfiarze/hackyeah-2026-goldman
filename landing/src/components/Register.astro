@@ -31,16 +31,16 @@ const entries = [
 ---
 <section class="section" id="proof">
   <div class="wrap">
-    <h2><L en="What makes it different" pl="Co go wyróżnia" /></h2>
-    <p class="lede">
+    <h2 data-reveal><L en="What makes it different" pl="Co go wyróżnia" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
       <L
         en="Guardrails that pattern-match output stop some attacks. Authority, lineage and budgets stop the rest, and leave evidence."
         pl="Zabezpieczenia szukające wzorców w odpowiedziach zatrzymują część ataków. Uprawnienia, pochodzenie danych i budżety zatrzymują resztę i zostawiają po sobie dowody."
       />
     </p>
-    <div class="register">
+    <div class="register" data-reveal-group>
       {entries.map((e) => (
-        <div class="entry">
+        <div class="entry" data-reveal>
           <h3><L en={e.en[0]} pl={e.pl[0]} /></h3>
           <p><L en={e.en[1]} pl={e.pl[1]} /></p>
           <span class="ref">{e.ref}</span>

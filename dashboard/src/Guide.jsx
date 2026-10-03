@@ -103,7 +103,7 @@ export function Verdict({ res, onRecheck }) {
                 <li key={i}>
                   <Mark a={f.action} />
                   <div>
-                    <b>{t(WHY[c] || human(f.reason_code))}</b>
+                    <b>{t(c === "semantic" && f.detail?.label === "credential" ? "The AI review found a password or key in it." : (WHY[c] || human(f.reason_code)))}</b>
                     <span className="muted"> {describe(f)}</span>
                     <div className="small muted">{t("Control")}: {t(CONTROL_NAMES[c] || c || f.stage)} <Id>{f.rule_id}</Id></div>
                   </div>

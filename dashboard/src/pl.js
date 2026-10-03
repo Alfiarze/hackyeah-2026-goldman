@@ -670,4 +670,5 @@ export default {
   "Pick an example or write your own prompt, then press “Check it”. You get the decision, the reason in plain words, and exactly what the model would receive.": "Wybierz przykład albo wpisz własny prompt i naciśnij „Sprawdź”. Dostaniesz decyzję, powód prostymi słowami i dokładnie to, co dostałby model.",
   "Try this": "Spróbuj",
   "{n} requests were refused before the budget check:": "Zapytania odrzucone przed sprawdzeniem budżetu ({n}):",
+  "The AI review found a password or key in it.": "Ocena AI znalazła w tym hasło albo klucz.",
 };

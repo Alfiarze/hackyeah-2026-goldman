@@ -118,9 +118,40 @@ def _looks_like_password(v: str) -> bool:
     return has_digit or (has_alpha and has_symbol) or (inner_upper and any(c.islower() for c in v))
 
 
+# Strong context: the sentence clearly states the value ("moje hasło X", "hasło to X", "password is X",
+# "hasło: X"). Then any single word counts, even plain letters ("kacperkochamame"), unless it is an ordinary word.
+_PASSWORD_STRONG = re.compile(
+    r"(?i)(?:\b(?:moje|mój|moim|twoje|nowe|stare|my|your|new|old)\s+(?:has(?:ł|l)(?:o|em)?|password|passwd|pin)"
+    r"(?:\s+(?:to|jest|brzmi|is|was|=|:))?"
+    r"|\b(?:has(?:ł|l)o|password|passwd|pin)\s*(?:to|jest|brzmi|is|was|[:=])"
+    r"|\b(?:has(?:ł|l)o|password)\s+(?:do|dla|for|to)\s+\S+\s*(?:to|jest|brzmi|is|[:=]))"
+    r"\s*[:=]?\s*[\"'“„`]?(?P<value>[^\s\"'”`,;.!?]{4,64})"
+)
+# words that commonly follow "hasło" in a question or a statement about a password, not a password value
+_NOT_A_PASSWORD = set("""
+do dla na w we z ze i a o od po przez przy jak czy jest to nie się sie mi mnie ci tak też tez już juz
+jeszcze bardzo zbyt za że ze żeby zeby bo ale lub albo oraz który która które ktore jakie jaki jaka
+wygasło wygaslo wygasa wygaśnie wygasnie wygasło. zostało zostalo zostanie został zostal musi musiało powinno
+powinien może moze można mozna działa dziala nie działa zadziała zmienić zmienic zmieniłem zmienilem zmienione
+zresetować zresetowac zresetowane resetować odzyskać odzyskac zapomniałem zapomnialem zapomniałam
+zgubiłem zgubilem wpisałem wpisalem wpisać wpisac podać podac ustawić ustawic ustawione nowe stare
+konta konto banku bank poczty maila email e-mail wifi wi-fi komputera telefonu aplikacji systemu
+the a an is was to for of my your and or not has have had expired expires reset change changed
+changing forgot forgotten lost wrong incorrect invalid doesnt doesn't does did must should will
+policy requirements rules manager strength length again please here there this that what how
+""".split())
+
+
+def _plain_password_ok(v: str) -> bool:
+    w = v.lower().rstrip(".!?)")
+    return len(w) >= 4 and w not in _NOT_A_PASSWORD and not re.fullmatch(r"\w+(?:ć|łem|łam|ło|ła|ły|li)", w)
+
+
 def find_password_phrases(text: str) -> list[tuple[int, int, str]]:
     spans = [(m.start("value"), m.end("value"), "PASSWORD") for m in _PASSWORD_PHRASE.finditer(text)
              if _looks_like_password(m.group("value"))]
+    spans += [(m.start("value"), m.end("value"), "PASSWORD") for m in _PASSWORD_STRONG.finditer(text)
+              if _plain_password_ok(m.group("value"))]
     spans += [(m.start("value"), m.end("value"), "PIN") for m in _PIN_PHRASE.finditer(text)]
     return spans
 

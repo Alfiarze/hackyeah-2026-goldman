@@ -595,3 +595,91 @@ async def list_scenarios():
     from mandate.scenarios import SCENARIOS
 
     return {name: (fn.__doc__ or "").strip() for name, fn in SCENARIOS.items()}
+
+
+# ==================================================================== agent console ("be the agent")
+# The operator acts as an agent from the dashboard. Every action goes through the SAME pipeline as a
+# real agent (gw.tool_call / gw.chat with the task's lease); only authentication is the admin key, so
+# no agent credentials ever live in the browser.
+
+CONSOLE_AGENT = "console-agent"
+
+
+class ConsoleTask(BaseModel):
+    profile: str = "contract_review"
+    client: str = "A"
+    principal: str = "lawyer_anna"
+
+
+async def _console_task(gw: Gateway, task_id: str):
+    task = await gw.tasks.get(task_id)
+    if task is None or task.agent_id != CONSOLE_AGENT:
+        raise GatewayError(404, "NOT_FOUND", "not a console task")
+    return task
+
+
+async def _backend_counts(gw: Gateway) -> dict[str, Any] | None:
+    try:
+        r = await gw.tools_http.get("/stats", headers={"X-Backend-Secret": gw.settings.tool_backend_secret})
+        s = r.json()
+        return {"mail_sent": s["mail_sent"], "http_posts": s["http_posts"], "notes_saved": s["notes_saved"],
+                "calls": s["calls"]}
+    except Exception:  # noqa: BLE001
+        return None
+
+
+@router.post("/console/tasks", status_code=201)
+async def console_create(request: Request, body: ConsoleTask):
+    gw = _gw(request)
+    task = await gw.tasks.create(gw.policy.active, principal=body.principal, agent_id=CONSOLE_AGENT,
+                                 profile=body.profile, params={"client": body.client}, purpose="agent console")
+    await gw.audit.system("TASK_CREATED", actor=body.principal, task_id=task.id,
+                          evidence={"profile": body.profile, "agent_id": CONSOLE_AGENT, "mandate": task.mandate})
+    return task.view() | {"lease": gw.tasks.lease_for(task)}
+
+
+@router.get("/console/tasks/{task_id}")
+async def console_task(request: Request, task_id: str):
+    gw = _gw(request)
+    task = await _console_task(gw, task_id)
+    budget = await gw.pool.fetchrow("SELECT spent, reserved, token_limit, calls_used, calls_limit FROM budgets "
+                                    "WHERE scope_id=$1", f"task:{task_id}")
+    return task.view() | {"budget": dict(budget) if budget else None, "backend": await _backend_counts(gw)}
+
+
+class ConsoleAction(BaseModel):
+    kind: str  # tool | chat | complete | mcp_list
+    tool: str | None = None
+    args: dict[str, Any] = {}
+    content: str | None = None
+    model: str | None = None
+
+
+@router.post("/console/tasks/{task_id}/act")
+async def console_act(request: Request, task_id: str, body: ConsoleAction):
+    gw = _gw(request)
+    task = await _console_task(gw, task_id)
+    lease = gw.tasks.lease_for(task)
+    before = await _backend_counts(gw)
+    try:
+        if body.kind == "tool":
+            status, payload = await gw.tool_call(CONSOLE_AGENT, lease, body.tool or "", body.args)
+        elif body.kind == "chat":
+            model = body.model or ("ollama/qwen2.5:3b" if gw.semantic.ollama_available else "mock/echo")
+            status, payload = await gw.chat(CONSOLE_AGENT, lease, {
+                "model": model, "max_tokens": 300, "messages": [{"role": "user", "content": body.content or ""}]})
+        elif body.kind == "mcp_list":
+            res = await gw.mcp(CONSOLE_AGENT, lease, {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+            status, payload = 200, {"tools": [x["name"] for x in res["result"]["tools"]]}
+        elif body.kind == "complete":
+            await gw.tasks.set_status(task_id, "completed")
+            await gw.audit.system("TASK_COMPLETED", actor=task.principal, task_id=task_id, evidence={})
+            status, payload = 200, {"completed": True}
+        else:
+            raise GatewayError(422, "UNKNOWN_ACTION")
+    except GatewayError as exc:  # e.g. lease no longer valid
+        status, payload = exc.status, {"error": {"reason_code": exc.reason_code, "message": exc.message}}
+    after = await _backend_counts(gw)
+    fresh = await gw.tasks.get(task_id)
+    return {"http_status": status, "response": payload, "backend_before": before, "backend_after": after,
+            "task": fresh.view() if fresh else None}

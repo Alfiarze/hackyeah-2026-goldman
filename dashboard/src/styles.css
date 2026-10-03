@@ -435,3 +435,43 @@ textarea.code, .mono-input { font: 13px/1.6 var(--mono); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------------ be the agent */
+
+.agent-grid { display: grid; grid-template-columns: 340px 1fr; gap: 40px; align-items: start; margin-bottom: 40px; }
+.pass { position: sticky; top: 16px; display: grid; gap: 22px; }
+.pass-card {
+  position: relative; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 22px 22px 20px;
+}
+.pass-card::before { content: ""; position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--intaglio) 30%, transparent); border-radius: 2px; pointer-events: none; }
+.pass-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.pass-head h2 { font-size: 18px; }
+.pass-level { display: grid; gap: 6px; padding: 12px 0 14px; border-bottom: 1px dashed var(--rule); margin-bottom: 4px; }
+.pass-level .level { font-size: 17px; font-weight: 600; }
+.pass-level .level i { width: 34px; height: 13px; }
+.pass-proof { padding: 0 4px; }
+
+.actions-panel { position: relative; }
+.actions-panel.is-disabled .action-group { opacity: 0.45; }
+.overlay-hint { position: absolute; top: 4px; right: 0; color: var(--intaglio); font-weight: 600; }
+.action-group { margin-bottom: 26px; }
+.action-group h3 { font-size: 13px; color: var(--ink-3); font-weight: 500; margin-bottom: 6px; }
+.action-group ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.action-group li { display: flex; gap: 18px; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.action-main { display: grid; gap: 8px; min-width: 0; flex: 1; }
+.action-label { font-weight: 500; }
+.outside { margin-left: 10px; font-size: 12.5px; color: var(--block); font-weight: 400; }
+.action-fields { display: flex; flex-wrap: wrap; gap: 8px; }
+.action-fields input, .action-fields select { padding: 6px 9px; font-size: 13.5px; min-width: 150px; }
+.action-fields input.grow { flex: 1; min-width: 220px; }
+.agent-log .step { align-items: flex-start; }
+.agent-log .step-body p { color: var(--ink-2); }
+.agent-log .excerpt { margin-top: 10px; max-height: 200px; font-size: 12.5px; }
+
+@media (max-width: 1100px) {
+  .agent-grid { grid-template-columns: 1fr; }
+  .pass { position: static; }
+}
+@media (max-width: 760px) {
+  .action-group li { flex-direction: column; align-items: stretch; }
+}

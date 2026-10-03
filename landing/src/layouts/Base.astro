@@ -1,0 +1,41 @@
+---
+import "@fontsource/schibsted-grotesk/400.css";
+import "@fontsource/schibsted-grotesk/600.css";
+import "@fontsource/schibsted-grotesk/800.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/600.css";
+import "../styles/global.css";
+
+interface Props { title?: string; description?: string }
+const {
+  title = "MANDATE: zero-trust execution contracts for AI agents",
+  description = "A gateway between AI agents and everything they touch. Every task gets a short-lived mandate, every call is checked before it runs, every decision leaves evidence.",
+} = Astro.props;
+
+const baseUrl = import.meta.env.BASE_URL;
+---
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
+    <script is:inline>
+      (() => {
+        let lang = "en";
+        try {
+          const saved = localStorage.getItem("mandate-lang");
+          if (saved === "pl" || saved === "en") lang = saved;
+          else if ((navigator.language || "").toLowerCase().startsWith("pl")) lang = "pl";
+        } catch { /* private mode */ }
+        document.documentElement.dataset.lang = lang;
+        document.documentElement.lang = lang;
+      })();
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

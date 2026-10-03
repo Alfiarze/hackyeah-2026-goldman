@@ -1,0 +1,65 @@
+---
+import L from "./L.astro";
+import Rosette from "./Rosette.astro";
+---
+<section class="hero section">
+  <div class="wrap">
+    <div>
+      <h1>
+        <L
+          en="Zero-trust execution contracts for AI agents."
+          pl="Kontrakty wykonawcze zero-trust dla agentów AI."
+        />
+      </h1>
+      <p class="lede">
+        <L
+          en="Other guardrails ask whether an action looks dangerous. MANDATE asks whether this agent was ever authorized to do it, with this data, for this task. Every call passes a short-lived mandate before it runs."
+          pl="Inne zabezpieczenia pytają, czy akcja wygląda na niebezpieczną. MANDATE pyta, czy ten agent w ogóle był upoważniony do tego kroku, z tymi danymi i w tym zadaniu. Każde wywołanie przechodzi przez krótkotrwały mandat, zanim się wykona."
+        />
+      </p>
+      <div class="hero-ctas">
+        <a class="console-btn big" href="/dashboard/"><L en="Open the dashboard" pl="Otwórz dashboard" /></a>
+        <a class="ghost-btn" href="#scenarios"><L en="See the scenarios" pl="Zobacz scenariusze" /></a>
+      </div>
+      <p class="hero-note">
+        <L
+          en="Built at HackYeah 2026 for the Goldman Sachs AI Control Layer challenge."
+          pl="Zbudowane na HackYeah 2026 na wyzwanie Goldman Sachs AI Control Layer."
+        />
+      </p>
+    </div>
+
+    <aside class="contract" aria-label="Example execution contract">
+      <div class="contract-mark"><Rosette size={340} /></div>
+      <div class="contract-head">
+        <span><b><L en="Execution contract" pl="Kontrakt wykonawczy" /> No. HY26-0347</b></span>
+        <span>profile: contract_review</span>
+      </div>
+      <dl class="contract-rows">
+        <div><dt>principal</dt><dd>lawyer_anna</dd></div>
+        <div><dt>agent</dt><dd>demo-agent</dd></div>
+        <div><dt><L en="task" pl="zadanie" /></dt>
+          <dd><L en="Summarize contract A before the client call" pl="Podsumuj umowę A przed rozmową z klientem" /></dd>
+        </div>
+        <div><dt>mandate</dt><dd>doc.read, mail.send(internal), 15 min, 20k tokens</dd></div>
+      </dl>
+      <div class="attempt">
+        <div><span class="k">attempt</span><span class="to">mail.send to g.salem@maildrop.co</span></div>
+        <div><span class="k"><L en="task data" pl="dane zadania" /></span><span class="confidential">CONFIDENTIAL</span></div>
+        <div class="stamp stamp-block" role="img" aria-label="Decision: blocked">
+          <span class="stamp-word">BLOCKED</span>
+          <span class="stamp-rule">IFC-TAINT-001</span>
+        </div>
+      </div>
+      <div class="proof">
+        <span class="counter">mail_sent = 0</span>
+        <p class="verdict">
+          <L
+            en="The backend counter never moved. The mail was blocked before it left, and the attempt is in the append-only audit log."
+            pl="Licznik backendu nie drgnął. Mail został zablokowany, zanim wyszedł, a próba trafiła do rejestru audytu bez możliwości dopisywania."
+          />
+        </p>
+      </div>
+    </aside>
+  </div>
+</section>

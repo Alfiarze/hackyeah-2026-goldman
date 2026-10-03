@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
+import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num } from "./ui.jsx";
+import Agent from "./Agent.jsx";
 
 const NAV = [
   { group: "Watch", items: [["live", "Live"], ["tasks", "Tasks"], ["audit", "Audit log"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
-  { group: "Prove", items: [["scenarios", "Run a scenario"], ["playground", "Test an input"], ["budget", "Budget"]] },
+  { group: "Prove", items: [["agent", "Be the agent"], ["scenarios", "Run a scenario"], ["playground", "Test an input"], ["budget", "Budget"]] },
 ];
 const TITLES = Object.fromEntries(NAV.flatMap((g) => g.items));
-const LEVELS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET"];
-const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked" };
 
 // ------------------------------------------------------------------ data hooks
 
@@ -71,32 +71,6 @@ function useAction() {
 }
 
 // ------------------------------------------------------------------ primitives
-
-const locale = () => (getLang() === "pl" ? "pl-PL" : "en-GB");
-const num = (n, d = 0) => (n === null || n === undefined ? "—" : Number(n).toLocaleString(locale(), { maximumFractionDigits: d }));
-const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString(locale()) : "");
-const Id = ({ children }) => (children ? <span className="id">{children}</span> : null);
-const lvl = (v) => t(v.toLowerCase());
-
-function Mark({ a }) {
-  if (!a) return null;
-  return <span className={`mark mark-${a.toLowerCase()}`}>{t(WORD[a] || a)}</span>;
-}
-
-function Stamp({ a, rule }) {
-  if (!a) return null;
-  return (
-    <span className={`stamp stamp-${a.toLowerCase()}`}>
-      <span className="stamp-word">{t(WORD[a])}</span>
-      {rule && <span className="stamp-rule">{rule}</span>}
-    </span>
-  );
-}
-
-function Level({ v }) {
-  const i = LEVELS.indexOf(v);
-  return <span className={`level level-${i}`} title={lvl(v)}><i style={{ "--n": i + 1 }} />{lvl(v)}</span>;
-}
 
 function Section({ title, aside, children, className = "" }) {
   return (
@@ -425,16 +399,6 @@ function Findings({ findings }) {
   );
 }
 
-function describe(f) {
-  const d = f.detail || {};
-  if (d.entities) return t("found {list}", { list: d.entities.join(", ") });
-  if (d.types) return t("found {list}", { list: d.types.join(", ") });
-  if (d.patterns) return t("matched {list}", { list: d.patterns.map(human).join(", ") });
-  if (d.risk !== undefined) return t("risk {risk} from {backend}", { risk: d.risk, backend: t(d.backend) }) + (d.reason ? `: ${d.reason}` : "");
-  if (d.task_classification) return t("{level} data cannot go to {sink} (cleared for {clearance})", { level: lvl(d.task_classification), sink: d.sink, clearance: lvl(d.sink_clearance) });
-  if (d.title) return d.title;
-  return Object.entries(d).map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ");
-}
 
 // ------------------------------------------------------------------ controls
 
@@ -851,7 +815,7 @@ export default function App() {
   useEffect(() => { location.hash = view; }, [view]);
   useEffect(() => { document.title = `${t(TITLES[view])} | Mandate`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
-  const Views = { live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
+  const Views = { agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Live;
   return (
     <div className="app" key={lang}>

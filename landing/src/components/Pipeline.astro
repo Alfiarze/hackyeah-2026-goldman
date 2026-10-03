@@ -1,0 +1,62 @@
+---
+import L from "./L.astro";
+
+const stages = [
+  {
+    en: ["Mandate and lease", "Which tools, resources and recipients this task may use, for how long and for how much. The HMAC lease is bound to the agent and the principal, and dies on completion, revocation or expiry."],
+    pl: ["Mandat i lease", "Jakich narzędzi, zasobów i odbiorców może użyć to zadanie, na jak długo i za ile. Lease z HMAC jest związany z agentem i principalu i wygasa po zakończeniu, cofnięciu lub po upływie czasu."],
+  },
+  {
+    en: ["Allowlists", "Approved models and MCP tool hashes. An unknown tool or model fails closed, never open."],
+    pl: ["Białe listy", "Zatwierdzone modele i hasze narzędzi MCP. Nieznane narzędzie czy model zamyka dostęp, nigdy go nie otwiera."],
+  },
+  {
+    en: ["Attack signatures", "A live feed of historical attacks: pickle opcodes, reverse shells, typosquatted model hosts, poisoned MCP tools. Edits are picked up within about a second."],
+    pl: ["Sygnatury ataków", "Na żywo aktualizowany feed znanych ataków: opkody pickle, reverse shelle, podszywające się hosty modeli, zatrute narzędzia MCP. Zmiany działają w około sekundę."],
+  },
+  {
+    en: ["Deterministic checks", "PESEL with checksum, Luhn cards, IBAN mod-97, e-mails, phones, cloud keys, private keys, injection heuristics. Each control blocks or redacts, per profile."],
+    pl: ["Kontrole deterministyczne", "PESEL z sumą kontrolną, karty po Luhn, IBAN mod-97, e-maile, telefony, klucze chmurowe, klucze prywatne, heurystyki prompt injection. Każda kontrola blokuje lub redaguje, zależnie od profilu."],
+  },
+  {
+    en: ["Data flow", "Reading a CONFIDENTIAL document taints the whole task. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance: mail to an external recipient is PUBLIC business."],
+    pl: ["Przepływ danych", "Przeczytanie poufnego dokumentu znaczy całe zadanie. Parafraza, tłumaczenie czy kodowanie tego nie obniża. Ujścia mają poziom dostępu: mail na zewnętrzny adres wymaga PUBLIC."],
+  },
+  {
+    en: ["Semantic guard", "A local LLM scores the risk, thresholds come from the profile. It can only tighten a decision. If the guard is unreachable, the treatment gets stricter, never looser."],
+    pl: ["Strażnik semantyczny", "Lokalny model LLM ocenia ryzyko, progi zależy od profilu. Może tylko zaostrzyć decyzję. Gdy strażnik jest niedostępny, obsługa staje się ostrzejsza, nigdy luźniejsza."],
+  },
+  {
+    en: ["Budget escrow", "Tokens, calls and concurrency are reserved before execution, atomically in Postgres, across task, parent, principal and global. Thirty concurrent agents, zero overspend."],
+    pl: ["Escrow budżetu", "Tokeny, wywołania i współbieżność są rezerwowane przed wykonaniem, atomowo w Postgresie, wzdłuż zadania, rodzica, principalu i globu. Trzydzieści równoległych agentów, zero przekroczeń."],
+  },
+];
+---
+<section class="section" id="how">
+  <div class="wrap">
+    <h2><L en="Seven checks before anything runs" pl="Siedem kontroli, zanim cokolwiek się wykona" /></h2>
+    <p class="lede">
+      <L
+        en="The gateway sits between agents and everything they touch: models, tools, MCP servers, other agents. Every call walks the same pipeline."
+        pl="Bramka stoi między agentami i wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, innymi agentami. Każde wywołanie przechodzi ten sam ciąg kontroli."
+      />
+    </p>
+    <div class="stages">
+      {stages.map((s, i) => (
+        <div class="stage">
+          <span class="stage-no">{String(i + 1).padStart(2, "0")}</span>
+          <h3><L en={s.en[0]} pl={s.pl[0]} /></h3>
+          <p><L en={s.en[1]} pl={s.pl[1]} /></p>
+        </div>
+      ))}
+      <div class="stage-last">
+        <p>
+          <L
+            en="<b>Then it runs.</b> The response passes output filter and taint update before release, and every decision lands in an audit log the database will not let anyone update or delete."
+            pl="<b>Dopiero wtedy się wykonuje.</b> Odpowiedź przechodzi filtr wyjściowy i aktualizację zanieczyszczenia przed zwolnieniem, a każda decyzja trafia do dziennika audytu, którego baza nie pozwala nikomu zmieniać ani usuwać."
+          />
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

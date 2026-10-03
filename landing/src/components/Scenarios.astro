@@ -1,0 +1,93 @@
+---
+import L from "./L.astro";
+
+const runs = [
+  {
+    name: "injection",
+    en: "A hidden instruction tells the agent to mail a confidential contract out. The mail backend never fires.",
+    pl: "Ukryta instrukcja każe agentowi wysłać poufną umowę mailem. Backend poczty nigdy nie odpala.",
+    word: "BLOCKED", tone: "block",
+  },
+  {
+    name: "detector_miss",
+    en: "The semantic detector calls the request safe. The data-flow rule blocks it anyway.",
+    pl: "Detektor semantyczny uznaje żądanie za bezpieczne. Reguła przepływu danych i tak je blokuje.",
+    word: "BLOCKED", tone: "block",
+  },
+  {
+    name: "cross_client",
+    en: "The agent tries to reuse one client's document inside another client's task.",
+    pl: "Agent próbuje użyć dokumentu jednego klienta w zadaniu innego klienta.",
+    word: "BLOCKED", tone: "block",
+  },
+  {
+    name: "expired_lease",
+    en: "A finished task is replayed with its old lease. The gate treats it as if it never existed.",
+    pl: "Zakończone zadanie jest odtwarzane ze starym lease'em. Bramka traktuje go, jakby nigdy nie istniał.",
+    word: "BLOCKED", tone: "block",
+  },
+  {
+    name: "mcp_poison",
+    en: "An MCP tool changes its definition after approval. It lands in quarantine before the next call.",
+    pl: "Narzędzie MCP zmienia definicję po zatwierdzeniu. Trafia do kwarantanny przed kolejnym wywołaniem.",
+    word: "QUARANTINED", tone: "redact",
+  },
+  {
+    name: "supply_chain",
+    en: "A model arrives from a host that is not on the allowlist, one letter away from the real one.",
+    pl: "Model przychodzi z hosta, którego nie ma na białej liście, jedną literą od prawdziwego.",
+    word: "BLOCKED", tone: "block",
+  },
+  {
+    name: "budget_race",
+    en: "Thirty agents spend at once. Reservations settle in Postgres, overspend stays at zero.",
+    pl: "Trzydzieści agentów wydaje jednocześnie. Rezerwacje rozlicza Postgres, przekroczenie zostaje na zerze.",
+    word: "429", tone: "redact",
+  },
+];
+
+const owasp = [
+  ["LLM01", "Prompt Injection", "Prompt Injection"],
+  ["LLM02", "Sensitive Disclosure", "Ujawnienie danych wrażliwych"],
+  ["LLM03", "Supply Chain", "Łańcuch dostaw"],
+  ["LLM05", "Insecure Output", "Niebezpieczne wyjście"],
+  ["LLM06", "Excessive Agency", "Nadmierna autonomia"],
+  ["LLM10", "Unbounded Consumption", "Nieograniczone zużycie"],
+];
+---
+<section class="section" id="scenarios">
+  <div class="wrap">
+    <h2><L en="Try to break it" pl="Spróbuj to obejść" /></h2>
+    <p class="lede">
+      <L
+        en="Each scenario runs a scripted agent through the real gateway, against the real policy and the real backends. Watch the counters while you do it."
+        pl="Każdy scenariusz przepuszcza skryptowanego agenta przez prawdziwą bramkę, prawdziwą politykę i prawdziwe backendy. Patrz przy tym na liczniki."
+      />
+    </p>
+    <div class="runs">
+      {runs.map((r) => (
+        <div class="run">
+          <span class="name">{r.name}</span>
+          <p><L en={r.en} pl={r.pl} /></p>
+          <div class:list={["stamp", `stamp-${r.tone}`]} role="img" aria-label={`Result: ${r.word}`}>
+            <span class="stamp-word">{r.word}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div class="runs-note">
+      <a class="console-btn" href="/dashboard/"><L en="Run the scenarios" pl="Uruchom scenariusze" /></a>
+      <span class="hint">
+        <L en="Dashboard, Demo scenarios. No keys, no cloud, everything runs locally." pl="Dashboard, Demo scenarios. Bez kluczy i chmury, wszystko działa lokalnie." />
+      </span>
+    </div>
+    <div class="owasp">
+      <h3><L en="Controls mapped to the OWASP Top 10 for LLM applications" pl="Kontrole przypisane do OWASP Top 10 dla aplikacji LLM" /></h3>
+      <ul>
+        {owasp.map(([id, en, pl]) => (
+          <li>{id} <span><L en={en} pl={pl} /></span></li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>

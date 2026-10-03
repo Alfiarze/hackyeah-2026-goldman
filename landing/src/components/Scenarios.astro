@@ -12,8 +12,8 @@ const runs = [
   },
   {
     title: ["Poisoned contract", "Zatruta umowa"],
-    en: "A hidden instruction tells the agent to mail the contract to an outside address. The mail backend never fires.",
-    pl: "Ukryta instrukcja każe agentowi wysłać umowę na obcy adres. Backend poczty nigdy nie odpala.",
+    en: "A hidden instruction tells the agent to mail the contract to an outside address. 0 e-mails sent: the mail backend never fires.",
+    pl: "Ukryta instrukcja każe agentowi wysłać umowę na obcy adres. 0 wysłanych maili: backend poczty nigdy nie odpala.",
     action: "block", rule: "MANDATE-RCPT",
   },
   {
@@ -54,9 +54,15 @@ const runs = [
   },
   {
     title: ["Thirty agents, one budget", "Trzydziestu agentów, jeden budżet"],
-    en: "Thirty agents spend at once. Reservations settle in Postgres, overspend stays at zero.",
-    pl: "Trzydziestu agentów wydaje jednocześnie. Rezerwacje rozlicza Postgres, przekroczenie zostaje na zerze.",
+    en: "Thirty agents spend from one budget at once. Reservations settle in Postgres: 0 tokens over budget.",
+    pl: "Trzydziestu agentów wydaje z jednego budżetu naraz. Rezerwacje rozlicza Postgres: 0 tokenów ponad budżet.",
     action: "block", rule: "BUD-001",
+  },
+  {
+    title: ["Agent in a loop", "Agent w pętli"],
+    en: "A runaway agent fires request after request. Past the per-minute limit it gets 429; after 10 blocks in 60 s the breaker cuts the task off.",
+    pl: "Agent wpada w pętlę i wysyła żądanie za żądaniem. Ponad limit na minutę dostaje 429, a po 10 blokadach w 60 s bezpiecznik odcina zadanie.",
+    action: "block", rule: "RATE-001 · CIRCUIT-001",
   },
 ];
 
@@ -72,6 +78,7 @@ const owasp = [
   ["LLM03", "Supply Chain", "Łańcuch dostaw"],
   ["LLM05", "Insecure Output", "Niebezpieczne wyjście"],
   ["LLM06", "Excessive Agency", "Nadmierna autonomia"],
+  ["LLM07", "System Prompt Leakage", "Wyciek promptu systemowego"],
   ["LLM10", "Unbounded Consumption", "Nieograniczone zużycie"],
 ];
 ---
@@ -80,8 +87,8 @@ const owasp = [
     <h2 data-reveal><L en="Try to break it" pl="Spróbuj to obejść" /></h2>
     <p class="lede" data-reveal style="--i: 1">
       <L
-        en="Each scenario runs a scripted agent through the real gateway, against the real policy and the real backends. Watch the counters while you do it."
-        pl="Każdy scenariusz przepuszcza skryptowanego agenta przez prawdziwą bramkę, prawdziwą politykę i prawdziwe backendy. Patrz przy tym na liczniki."
+        en="Ten scenarios run a scripted agent through the real gateway, against the real policy and the real backends. Watch the counters while you do it."
+        pl="Dziesięć scenariuszy przepuszcza skryptowanego agenta przez prawdziwą bramkę, prawdziwą politykę i prawdziwe backendy. Patrz przy tym na liczniki."
       />
     </p>
     <div class="runs" data-reveal-group>
@@ -99,7 +106,7 @@ const owasp = [
     <div class="runs-note" data-reveal>
       <a class="console-btn" href={`${dashboardUrl}#scenarios`} data-dashboard="#scenarios"><L en="Run the scenarios" pl="Uruchom scenariusze" /></a>
       <span class="hint">
-        <L en="Dashboard, Prove, Run a scenario. No keys, no cloud, everything runs locally." pl="Dashboard, Dowody, Scenariusze. Bez kluczy i chmury, wszystko działa lokalnie." />
+        <L en="Start with “Start here”: 3 guided steps. Each scenario replays its run through the pipeline, live. Then be the agent yourself." pl="Zacznij od „Zacznij tutaj”: 3 prowadzone kroki. Każdy scenariusz odtwarza swój przebieg przez pipeline na żywo. Potem sam bądź agentem." />
       </span>
     </div>
     <div class="owasp" data-reveal-group>

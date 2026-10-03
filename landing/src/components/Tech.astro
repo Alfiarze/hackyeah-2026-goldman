@@ -5,13 +5,13 @@ import L from "./L.astro";
 const sheets = [
   {
     id: "model",
-    en: ["The model: DeepSeek V4 Flash on two GB10", "The agent console and the AI review run on our own hardware, so prompts, documents and risk scores never leave the firm’s network."],
-    pl: ["Model: DeepSeek V4 Flash na dwóch GB10", "Konsola agenta i ocena AI działają na naszym sprzęcie, więc prompty, dokumenty i oceny ryzyka nie opuszczają sieci firmy."],
+    en: ["The model: on-prem, on our own GB10", "The agent console and the AI review run on our own hardware, so prompts, documents and risk scores never leave the firm’s network."],
+    pl: ["Model: on-prem, na naszym GB10", "Konsola agenta i ocena AI działają na naszym sprzęcie, więc prompty, dokumenty i oceny ryzyka nie opuszczają sieci firmy."],
     rows: [
-      [["Model", "Model"], ["DeepSeek V4 Flash, mixture of experts: <span class='count' data-count='284'>284</span> billion parameters, <span class='count' data-count='13'>13</span> billion active per token", "DeepSeek V4 Flash, mixture of experts: <span class='count' data-count='284'>284</span> mld parametrów, <span class='count' data-count='13'>13</span> mld aktywnych na token"]],
-      [["Hardware", "Sprzęt"], ["Two NVIDIA GB10 machines linked together, 2 × <span class='count' data-count='128'>128</span> GB of unified memory", "Dwie maszyny NVIDIA GB10 połączone ze sobą, 2 × <span class='count' data-count='128'>128</span> GB pamięci zunifikowanej"]],
-      [["Interface", "Interfejs"], ["OpenAI-compatible API, so the gateway can point at any compatible server by changing four environment variables", "API zgodne z OpenAI, więc bramkę można przepiąć na dowolny zgodny serwer, zmieniając cztery zmienne środowiskowe"]],
+      [["Hardware", "Sprzęt"], ["NVIDIA GB10 with <span class='count' data-count='128'>128</span> GB of unified memory, in the building", "NVIDIA GB10 ze <span class='count' data-count='128'>128</span> GB pamięci zunifikowanej, na miejscu"]],
+      [["Interface", "Interfejs"], ["OpenAI-compatible API: the gateway points at any compatible server through environment variables", "API zgodne z OpenAI: bramkę przepina się na dowolny zgodny serwer zmiennymi środowiskowymi"]],
       [["Trust level", "Poziom zaufania"], ["On-premises: confidential data may reach it. A cloud model would be cleared for public data only.", "Na miejscu: dane poufne mogą do niego trafić. Model w chmurze dostałby dostęp tylko do danych publicznych."]],
+      [["Pinning", "Przypięcie"], ["Model weights and LoRA adapters are pinned by hash; a mismatch is refused (<span class='id'>MODEL-HASH-001/002</span>)", "Wagi modelu i adaptery LoRA są przypięte hashem; niezgodność jest odrzucana (<span class='id'>MODEL-HASH-001/002</span>)"]],
       [["Role", "Rola"], ["Scores untrusted text for manipulation. It can only tighten a decision; if it is unreachable, requests are blocked.", "Ocenia niezaufaną treść pod kątem manipulacji. Może tylko zaostrzyć decyzję, a gdy jest niedostępny, żądania są blokowane."]],
     ],
   },
@@ -34,20 +34,22 @@ const sheets = [
     pl: ["Bramka i jej zapisy", "Mała, bezstanowa usługa przed wszystkim, a stan, którego nie wolno zgubić, trzymany w PostgreSQL."],
     rows: [
       [["Gateway", "Bramka"], ["Python and FastAPI. One entry point for models, tools, MCP servers and delegation between agents.", "Python i FastAPI. Jedno wejście dla modeli, narzędzi, serwerów MCP i delegacji między agentami."]],
+      [["Speed", "Szybkość"], ["p50 decision 0.3 ms; a tool call through the gate about <span class='count' data-count='9'>9</span> ms", "p50 decyzji 0,3 ms; wywołanie narzędzia przez bramkę około <span class='count' data-count='9'>9</span> ms"]],
       [["Budgets", "Budżety"], ["Reserved before execution in a single PostgreSQL transaction across task, parent, user and global limits", "Rezerwowane przed wykonaniem w jednej transakcji PostgreSQL, wzdłuż limitów zadania, rodzica, użytkownika i globalnego"]],
       [["Audit", "Audyt"], ["Append-only: the database rejects edits and deletions. Exports to JSONL and CSV carry no raw content.", "Tylko dopisywanie: baza odrzuca edycję i usuwanie. Eksport do JSONL i CSV nie zawiera surowej treści."]],
-      [["Policy", "Polityka"], ["One YAML file, validated and versioned. Edits apply in about a second; a broken file is rejected and the last good version stays.", "Jeden plik YAML, walidowany i wersjonowany. Zmiany działają w około sekundę, a błędny plik jest odrzucany i zostaje ostatnia dobra wersja."]],
+      [["Policy", "Polityka"], ["One YAML file, hot-reloaded in under a second. An invalid file is rejected and the last good one stays; every version can be rolled back.", "Jeden plik YAML, przeładowywany w mniej niż sekundę. Błędny plik jest odrzucany i zostaje ostatni dobry; każdą wersję można przywrócić."]],
       [["Tools", "Narzędzia"], ["Credentials live in the gateway. A direct call to a tool backend without it is refused.", "Dane dostępowe są w bramce. Bezpośrednie wywołanie backendu narzędzia bez niej jest odrzucane."]],
     ],
   },
   {
     id: "ops",
-    en: ["Running it", "Everything ships as containers and starts with one command."],
-    pl: ["Uruchomienie", "Wszystko jest dostarczane jako kontenery i startuje jedną komendą."],
+    en: ["Plugging it in and running it", "Point your agents at the gateway, start everything with one command."],
+    pl: ["Podłączenie i uruchomienie", "Skieruj agentów na bramkę i uruchom wszystko jedną komendą."],
     rows: [
-      [["Deployment", "Wdrożenie"], ["Docker Compose locally; a separate compose file for Coolify with generated secrets and no published ports", "Docker Compose lokalnie; osobny plik compose dla Coolify z generowanymi sekretami i bez wystawionych portów"]],
-      [["Tests", "Testy"], ["<span class='count' data-count='104'>104</span> automated tests, a positive and a negative case for every control, against a real database", "<span class='count' data-count='104'>104</span> testy automatyczne, przypadek pozytywny i negatywny dla każdej kontroli, na prawdziwej bazie"]],
-      [["Console", "Konsola"], ["A React dashboard in English and Polish: live decisions, policy editing with rollback, and a view where you act as the agent", "Dashboard w React po angielsku i po polsku: decyzje na żywo, edycja polityki z cofaniem i widok, w którym sam jesteś agentem"]],
+      [["Integration", "Integracja"], ["Swap the OpenAI-compatible <span class='id'>base_url</span>; or the Python SDK 0.2.0 with typed <span class='id'>Blocked</span>, <span class='id'>ApprovalRequired</span>, <span class='id'>RateLimited</span>; or the MCP proxy", "Podmień <span class='id'>base_url</span> zgodny z OpenAI; albo Python SDK 0.2.0 z wyjątkami <span class='id'>Blocked</span>, <span class='id'>ApprovalRequired</span>, <span class='id'>RateLimited</span>; albo proxy MCP"]],
+      [["Deployment", "Wdrożenie"], ["<span class='id'>make run</span> or Docker Compose locally; a Coolify compose file with generated secrets; the model on-prem on GB10", "<span class='id'>make run</span> albo Docker Compose lokalnie; plik compose dla Coolify z generowanymi sekretami; model on-prem na GB10"]],
+      [["Tests", "Testy"], ["<span class='count' data-count='246'>246</span> automated tests, <span class='count' data-count='82'>82</span> YAML content cases and <span class='count' data-count='10'>10</span> end-to-end scenarios against a real database", "<span class='count' data-count='246'>246</span> testów automatycznych, <span class='count' data-count='82'>82</span> przypadki treści w YAML i <span class='count' data-count='10'>10</span> scenariuszy end-to-end na prawdziwej bazie"]],
+      [["Console", "Konsola"], ["React dashboard in English and Polish: a guided “Start here” in 3 steps, scenarios with live pipeline replay, “Be the agent”, approvals, audit, policy with rollback", "Dashboard w React po angielsku i po polsku: prowadzone „Zacznij tutaj” w 3 krokach, scenariusze z odtworzeniem pipeline’u na żywo, „Bądź agentem”, zatwierdzenia, audyt, polityka z cofaniem"]],
     ],
   },
 ];
@@ -65,9 +67,9 @@ const sheets = [
     <figure class="flow" aria-label="How a request travels through Aegis">
       <ol data-reveal-group>
         <li data-reveal><span class="flow-k"><L en="Caller" pl="Wywołujący" /></span><span><L en="An app creates a task; the agent works under its mandate" pl="Aplikacja tworzy zadanie, agent działa w ramach jego mandatu" /></span></li>
-        <li class="flow-gate" data-reveal><span class="flow-k">Aegis</span><span><L en="Checks the mandate, data flow, known attacks, personal data, the AI review and the budget" pl="Sprawdza mandat, przepływ danych, znane ataki, dane osobowe, ocenę AI i budżet" /></span></li>
+        <li class="flow-gate" data-reveal><span class="flow-k">Aegis</span><span><L en="Ten checks: rate, mandate, attacks, patterns, data flow, approval, AI review, budget" pl="Dziesięć kontroli: limit, mandat, ataki, wzorce, przepływ danych, zgoda, ocena AI, budżet" /></span></li>
         <li data-reveal><span class="flow-k"><L en="Only then" pl="Dopiero wtedy" /></span><span><L en="The model on the GB10s, a tool, an MCP server or the sandbox does the work" pl="Model na GB10, narzędzie, serwer MCP albo piaskownica wykonuje pracę" /></span></li>
-        <li data-reveal><span class="flow-k"><L en="Afterwards" pl="Po wszystkim" /></span><span><L en="The answer is checked before release and the decision is written to the audit log" pl="Odpowiedź jest sprawdzana przed wydaniem, a decyzja trafia do dziennika audytu" /></span></li>
+        <li data-reveal><span class="flow-k"><L en="Afterwards" pl="Po wszystkim" /></span><span><L en="Output DLP before the agent sees the answer; the decision goes to the audit log" pl="DLP na wyjściu, zanim agent zobaczy odpowiedź; decyzja trafia do dziennika audytu" /></span></li>
       </ol>
     </figure>
 

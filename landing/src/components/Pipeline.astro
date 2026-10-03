@@ -3,48 +3,68 @@ import L from "./L.astro";
 
 const stages = [
   {
-    en: ["Mandate and lease", "Which tools, resources and recipients this task may use, for how long and for how much. The HMAC lease is bound to the agent and the principal, and dies on completion, revocation or expiry."],
-    pl: ["Mandat i lease", "Jakich narzędzi, zasobów i odbiorców może użyć to zadanie, na jak długo i za ile. Lease oparty na HMAC jest związany z agentem i principalem i wygasa po zakończeniu, cofnięciu lub po upływie czasu."],
+    en: ["Rate limit", "Per agent, per user and global, per minute. Over the limit: 429. Ten blocks in 60 seconds trip a circuit breaker for the task."],
+    pl: ["Limit częstości", "Na agenta, użytkownika i globalnie, na minutę. Ponad limit: 429. Dziesięć blokad w 60 sekund otwiera bezpiecznik dla zadania."],
   },
   {
-    en: ["Allowlists", "Approved models and MCP tool hashes. An unknown tool or model fails closed, never open."],
-    pl: ["Białe listy", "Zatwierdzone modele i hasze narzędzi MCP. Nieznane narzędzie czy model zamyka dostęp, nigdy go nie otwiera."],
+    en: ["Mandate", "A task pass signed with HMAC, with a TTL: which tools, files and recipients, bound to one agent and one principal. Delegation depth ≤ 3, a subset of the parent's rights."],
+    pl: ["Mandat", "Przepustka zadania podpisana HMAC, z TTL: jakie narzędzia, pliki i odbiorcy, związana z jednym agentem i principalem. Delegacja do głębokości 3, tylko podzbiór praw rodzica."],
   },
   {
-    en: ["Attack signatures", "A live feed of historical attacks: pickle opcodes, reverse shells, typosquatted model hosts, poisoned MCP tools. Edits are picked up within about a second."],
-    pl: ["Sygnatury ataków", "Na żywo aktualizowany feed znanych ataków: opkody pickle, reverse shelle, podszywające się hosty modeli, zatrute narzędzia MCP. Zmiany działają w około sekundę."],
+    en: ["Known attacks", "13 signatures from <span class='id'>feeds/attacks.yaml</span>: pickle, reverse shells, <span class='id'>rm -rf</span>, XSS, SQLi, SSRF, path traversal, vulnerable components, typosquats."],
+    pl: ["Znane ataki", "13 sygnatur z <span class='id'>feeds/attacks.yaml</span>: pickle, reverse shelle, <span class='id'>rm -rf</span>, XSS, SQLi, SSRF, path traversal, podatne komponenty, typosquaty."],
   },
   {
-    en: ["Deterministic checks", "PESEL with checksum, Luhn cards, IBAN mod-97, e-mails, phones, cloud keys, private keys, injection heuristics. Each control blocks or redacts, per profile."],
-    pl: ["Kontrole deterministyczne", "PESEL z sumą kontrolną, karty po Luhn, IBAN mod-97, e-maile, telefony, klucze chmurowe, klucze prywatne, heurystyki prompt injection. Każda kontrola blokuje lub redaguje, zależnie od profilu."],
+    en: ["Patterns", "Polish PII with checksums, passwords written in a sentence, API keys, connection strings, prompt injection. Text is de-obfuscated first."],
+    pl: ["Wzorce", "Polskie dane osobowe z sumami kontrolnymi, hasła wpisane w zdanie, klucze API, connection stringi, prompt injection. Tekst jest najpierw odszyfrowywany z maskowania."],
   },
   {
-    en: ["Data flow", "Reading a confidential document taints the whole task. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance: mail to an external recipient is cleared for public data only."],
-    pl: ["Przepływ danych", "Przeczytanie poufnego dokumentu zanieczyszcza całe zadanie. Parafraza, tłumaczenie czy kodowanie tego nie obniża. Ujścia mają poziom dostępu: mail na zewnętrzny adres jest dopuszczony tylko dla danych publicznych."],
+    en: ["Data flow", "Reading a confidential file taints the whole task. Paraphrase or encoding does not launder it. External mail is cleared for public data only."],
+    pl: ["Przepływ danych", "Przeczytanie poufnego pliku zanieczyszcza całe zadanie. Parafraza ani kodowanie tego nie czyszczą. Mail na zewnątrz jest dopuszczony tylko dla danych publicznych."],
   },
   {
-    en: ["AI review", "DeepSeek V4 Flash on our GB10s scores untrusted text for manipulation; the thresholds come from the profile. It can only tighten a decision. If it is unreachable, the request is blocked."],
-    pl: ["Ocena AI", "DeepSeek V4 Flash na naszych GB10 ocenia niezaufaną treść pod kątem manipulacji, a progi zależą od profilu. Może tylko zaostrzyć decyzję. Gdy jest niedostępny, żądanie jest blokowane."],
+    en: ["Human approval", "Risky tools such as <span class='id'>http.post</span> wait for a person. The call runs once, and only if approved."],
+    pl: ["Zgoda człowieka", "Ryzykowne narzędzia, jak <span class='id'>http.post</span>, czekają na człowieka. Wywołanie wykona się raz i tylko po akceptacji."],
   },
   {
-    en: ["Code sandbox", "Code an agent wants to run goes to a throw-away container with no network, a read-only disk and hard limits on memory, CPU and time. Strict profiles block code outright."],
-    pl: ["Piaskownica kodu", "Kod, który agent chce uruchomić, trafia do jednorazowego kontenera bez sieci, z dyskiem tylko do odczytu i twardymi limitami pamięci, procesora i czasu. Profil rygorystyczny blokuje kod całkowicie."],
+    en: ["AI review", "An on-prem model scores untrusted text for manipulation. It can only tighten a decision; if it is down, the request is blocked."],
+    pl: ["Ocena AI", "Model on-prem ocenia niezaufaną treść pod kątem manipulacji. Może tylko zaostrzyć decyzję, a gdy nie odpowiada, żądanie jest blokowane."],
   },
   {
-    en: ["Budget escrow", "Tokens, calls and concurrency are reserved before execution, atomically in Postgres, across task, parent, principal and global. Thirty concurrent agents, zero overspend."],
-    pl: ["Escrow budżetu", "Tokeny, wywołania i współbieżność są rezerwowane przed wykonaniem, atomowo w Postgresie, wzdłuż zadania, rodzica, principalu i globu. Trzydzieści równoległych agentów, zero przekroczeń."],
+    en: ["Budget escrow", "Tokens and calls are reserved before the call, atomically in Postgres, across task, parent, user and global."],
+    pl: ["Escrow budżetu", "Tokeny i wywołania są rezerwowane przed wywołaniem, atomowo w Postgresie, dla zadania, rodzica, użytkownika i globalnie."],
   },
+  {
+    en: ["Execute", "Only now does the model or tool run. <span class='id'>code.run</span> goes to a throw-away sandbox with no network."],
+    pl: ["Wykonanie", "Dopiero teraz działa model albo narzędzie. <span class='id'>code.run</span> trafia do jednorazowej piaskownicy bez sieci."],
+  },
+  {
+    en: ["Output check", "DLP on the response before the agent sees it: secrets and personal data are redacted or the result is withheld."],
+    pl: ["Kontrola wyjścia", "DLP na odpowiedzi, zanim zobaczy ją agent: sekrety i dane osobowe są redagowane albo wynik jest wstrzymany."],
+  },
+];
+
+const stats = [
+  ["10", "stages, cheapest first", "etapów, najtańsze najpierw"],
+  ["0.3 ms", "p50 decision", "p50 decyzji"],
+  ["~9 ms", "tool call through the gate", "wywołanie narzędzia przez bramkę"],
+  ["3", "outcomes: ALLOW, REDACT, BLOCK", "werdykty: ALLOW, REDACT, BLOCK"],
 ];
 ---
 <section class="section" id="how">
   <div class="wrap">
-    <h2 class="display" data-reveal><L en="Eight checks before anything runs" pl="Osiem kontroli, zanim cokolwiek się wykona" /></h2>
+    <h2 class="display" data-reveal><L en="Ten checks, cheapest first" pl="Dziesięć kontroli, najtańsze najpierw" /></h2>
     <p class="lede" data-reveal style="--i: 1">
       <L
-        en="The gateway sits between agents and everything they touch: models, tools, MCP servers, other agents. Every call walks the same pipeline."
-        pl="Bramka stoi między agentami i wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, innymi agentami. Każde wywołanie przechodzi ten sam ciąg kontroli."
+        en="Every call to a model, tool, MCP server or another agent walks the same pipeline. Cheap checks run first, so most attacks stop in microseconds."
+        pl="Każde wywołanie modelu, narzędzia, serwera MCP czy innego agenta przechodzi ten sam ciąg kontroli. Tanie kontrole idą pierwsze, więc większość ataków odpada w mikrosekundach."
       />
     </p>
+    <dl class="stats" data-reveal-group>
+      {stats.map(([n, en, pl]) => (
+        <div data-reveal><dt>{n}</dt><dd><L en={en} pl={pl} /></dd></div>
+      ))}
+    </dl>
     <div class="pipe-req" aria-hidden="true">
       <span class="pipe-call" data-pipe-call></span>
       <span class="pipe-out" data-pipe-out></span>
@@ -61,8 +81,8 @@ const stages = [
       <div class="stage-last" data-reveal>
         <p>
           <L
-            en="<b>Then it runs.</b> The response passes output filter and taint update before release, and every decision lands in an audit log the database will not let anyone update or delete."
-            pl="<b>Dopiero wtedy się wykonuje.</b> Odpowiedź przechodzi filtr wyjściowy i aktualizację zanieczyszczenia przed zwolnieniem, a każda decyzja trafia do dziennika audytu, którego baza nie pozwala nikomu zmieniać ani usuwać."
+            en="<b>ALLOW, REDACT or BLOCK.</b> Every decision lands with its rule and reason in an audit log the database will not let anyone update or delete."
+            pl="<b>ALLOW, REDACT albo BLOCK.</b> Każda decyzja trafia z regułą i powodem do dziennika audytu, którego baza nie pozwala nikomu zmieniać ani usuwać."
           />
         </p>
       </div>
@@ -81,12 +101,14 @@ const stages = [
     const call = document.querySelector<HTMLElement>("[data-pipe-call]")!;
     const out = document.querySelector<HTMLElement>("[data-pipe-out]")!;
     const runs = [
-      { call: "model.chat · summarize contract · lawyer_anna", blockAt: -1, out: "→ executed" },
+      { call: "model.chat · summarize contract · lawyer_anna", blockAt: -1, out: "→ ALLOW · executed" },
       { call: "mail.send → partner@client-A.example", blockAt: 4, out: "→ BLOCKED · IFC-001" },
-      { call: "code.exec · parse_invoice.py", blockAt: -1, out: "→ executed in sandbox" },
-      { call: "model.pull · hf.co/deepseek-al/V4", blockAt: 2, out: "→ BLOCKED · ATK-SUPPLY-001" },
+      { call: "code.run · rm -rf / --no-preserve-root", blockAt: 2, out: "→ BLOCKED · ATK-EXEC-003" },
+      { call: "code.run · parse_invoice.py", blockAt: -1, out: "→ ALLOW · executed in sandbox" },
+      { call: "doc.read × 400 / min · runaway loop", blockAt: 0, out: "→ BLOCKED · RATE-001 (429)" },
+      { call: "model.pull · hf.co/meta-llarna/…", blockAt: 2, out: "→ BLOCKED · ATK-SUPPLY-001" },
     ];
-    const STEP = 520;
+    const STEP = 420;
     let run = 0;
     let visible = false;
     let busy = false;

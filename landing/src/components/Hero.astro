@@ -6,14 +6,14 @@ import Rosette from "./Rosette.astro";
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 
 const pillars = [
-  { en: ["Policy enforcement", "One policy file decides what every task may do. Changes apply within a second."],
-    pl: ["Egzekwowanie polityki", "Jeden plik polityki decyduje, co wolno każdemu zadaniu. Zmiany działają w sekundę."] },
-  { en: ["Data boundaries", "Confidential data read by a task cannot leave for a less trusted place."],
-    pl: ["Granice danych", "Poufne dane przeczytane przez zadanie nie wyjdą w mniej zaufane miejsce."] },
-  { en: ["Audit trail", "Every decision is recorded with its rule and reason. Nobody can edit the record."],
-    pl: ["Ślad audytowy", "Każda decyzja jest zapisana z regułą i powodem. Nikt nie może zmienić zapisu."] },
-  { en: ["Tool controls", "Tools, recipients and code execution are granted per task, never by default."],
-    pl: ["Kontrola narzędzi", "Narzędzia, odbiorcy i uruchamianie kodu są przyznawane per zadanie, nigdy domyślnie."] },
+  { en: ["Task mandates", "A signed, expiring pass per task: tools, files, recipients, budget. Sub-agents get a subset, never more."],
+    pl: ["Mandaty zadań", "Podpisana, wygasająca przepustka na zadanie: narzędzia, pliki, odbiorcy, budżet. Podagent dostaje podzbiór, nigdy więcej."] },
+  { en: ["Data boundaries", "Polish PII, passwords and secrets are redacted; confidential data cannot leave for a less trusted place."],
+    pl: ["Granice danych", "Polskie dane osobowe, hasła i sekrety są redagowane, a dane poufne nie wyjdą w mniej zaufane miejsce."] },
+  { en: ["Attacks and documents", "Injection in any disguise, 13 attack signatures, hidden text and macros in PDF, Office files and scans."],
+    pl: ["Ataki i dokumenty", "Injection w każdym przebraniu, 13 sygnatur ataków, ukryty tekst i makra w PDF, plikach Office i skanach."] },
+  { en: ["People and evidence", "Risky tools wait for human approval. Every decision is in an audit log nobody can edit."],
+    pl: ["Ludzie i dowody", "Ryzykowne narzędzia czekają na zgodę człowieka. Każda decyzja trafia do dziennika, którego nikt nie zmieni."] },
 ];
 ---
 <section class="hero">
@@ -28,8 +28,8 @@ const pillars = [
       </p>
       <p class="lede" data-reveal>
         <L
-          en="Aegis sits between AI agents and everything they touch: models, tools, MCP servers, documents and other agents. Before anything runs, it checks whether this agent was authorized to do it, with this data, for this task."
-          pl="Aegis stoi między agentami AI a wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, dokumentami i innymi agentami. Zanim cokolwiek się wykona, sprawdza, czy ten agent był do tego upoważniony, z tymi danymi i w tym zadaniu."
+          en="Aegis sits between AI agents and everything they touch: models, tools, MCP servers, documents and other agents. Ten checks in about 0.3 ms decide whether this agent was authorized to do it, with this data, for this task. Swap one <span class='id'>base_url</span> to put it in front of your agents."
+          pl="Aegis stoi między agentami AI a wszystkim, czego dotykają: modelami, narzędziami, serwerami MCP, dokumentami i innymi agentami. Dziesięć kontroli w około 0,3 ms rozstrzyga, czy ten agent był do tego upoważniony, z tymi danymi i w tym zadaniu. Wystarczy podmienić jeden <span class='id'>base_url</span>."
         />
       </p>
       <div class="hero-ctas" data-reveal>

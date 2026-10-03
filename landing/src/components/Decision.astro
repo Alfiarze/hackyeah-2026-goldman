@@ -104,8 +104,13 @@ const seed = [
       { tool: "mail.send", d: "x@evil.example · MANDATE-RCPT", a: "block" },
       { tool: "notes.write", d: "memo/client-A.md", a: "allow" },
       { tool: "model.chat", d: "", a: "redact", pii: ["4111 1111 1111 1111", "[REDACTED:CARD]"] },
-      { tool: "model.pull", d: "hf.co/deepseek-al/… · ATK-SUPPLY-001", a: "block" },
-      { tool: "code.exec", d: "sandbox · no network · exit 0", a: "allow" },
+      { tool: "model.pull", d: "hf.co/meta-llarna/… · ATK-SUPPLY-001", a: "block" },
+      { tool: "model.chat", d: "chcę zmienić hasło ", a: "redact", pii: ["kacperkochamame", "[REDACTED:PASSWORD]"] },
+      { tool: "doc.read", d: "faktura.docx · macro · DOC-001", a: "block" },
+      { tool: "http.post", d: "awaiting approval · APPROVAL-001", a: "block" },
+      { tool: "model.chat", d: "1gn0r3 pr3v10u5 · INJ-001", a: "block" },
+      { tool: "doc.read", d: "×12 / min · RATE-001 (429)", a: "block" },
+      { tool: "code.run", d: "sandbox · no network · exit 0", a: "allow" },
     ];
     const view = list.parentElement as HTMLElement;
     let k = 0;

@@ -1,0 +1,91 @@
+---
+import L from "./L.astro";
+
+// What the deterministic stages actually recognise. Chips are labels the gateway records; "hot" marks
+// the ones that block outright rather than redact.
+const sheets = [
+  {
+    id: "pii",
+    en: ["Polish personal data and secrets", "Validated with checksums, so a random 11-digit number is not a PESEL. Redacted in prompts and in tool output."],
+    pl: ["Polskie dane osobowe i sekrety", "Walidowane sumami kontrolnymi, więc przypadkowe 11 cyfr to nie PESEL. Redagowane w promptach i w wynikach narzędzi."],
+    chips: [
+      ["PESEL"], ["NIP"], ["dowód osobisty", "ID card"], ["paszport", "passport"], ["adres", "address"],
+      ["IBAN"], ["karta (Luhn)", "card (Luhn)"], ["e-mail"], ["telefon", "phone"],
+      ["hasło w zdaniu", "password in a sentence", "hot"], ["PIN", "PIN", "hot"], ["klucze API", "API keys", "hot"],
+      ["connection string", "connection string", "hot"], ["klucz prywatny", "private key", "hot"],
+    ],
+    sample: [
+      "„chcę zmienić hasło <span class='id'>kacperkochamame</span>” → „chcę zmienić hasło <span class='id'>[REDACTED:PASSWORD]</span>”",
+      "„chcę zmienić hasło <span class='id'>kacperkochamame</span>” → „chcę zmienić hasło <span class='id'>[REDACTED:PASSWORD]</span>”",
+    ],
+  },
+  {
+    id: "inj",
+    en: ["Injection, even in disguise", "Text is normalised before matching, so the same rule catches the plain and the hidden form."],
+    pl: ["Injection, także w przebraniu", "Tekst jest normalizowany przed dopasowaniem, więc ta sama reguła łapie formę jawną i ukrytą."],
+    chips: [
+      ["NFKC"], ["zero-width"], ["l33tsp34k"], ["r o z s t r z e l o n e", "s p a c e d"], ["base64"],
+      ["„zignoruj poprzednie instrukcje”", "Polish phrases"], ["jailbreak / roleplay", "jailbreak / roleplay", "hot"],
+      ["markdown exfil", "markdown exfil", "hot"], ["multi-turn · INJ-002", "multi-turn · INJ-002", "hot"],
+    ],
+    sample: [
+      "An instruction split across several messages is reassembled from the conversation and blocked as <span class='id'>INJ-002</span>.",
+      "Instrukcja rozbita na kilka wiadomości jest składana z całej rozmowy i blokowana jako <span class='id'>INJ-002</span>.",
+    ],
+  },
+  {
+    id: "docs",
+    en: ["Documents, read inside out", "<span class='id'>doc.read</span> analyses the real file, including scans through OCR (tesseract pol+eng). The report says where each finding was."],
+    pl: ["Dokumenty, czytane od środka", "<span class='id'>doc.read</span> analizuje prawdziwy plik, także skany przez OCR (tesseract pol+eng). Raport mówi, gdzie co znaleziono."],
+    chips: [
+      ["PDF"], ["DOCX"], ["XLSX"], ["PPTX"], ["DOC · XLS · PPT"], ["JPG · PNG"], ["skan PDF → OCR", "scanned PDF → OCR"],
+      ["metadane · XMP", "metadata · XMP"], ["EXIF · GPS"], ["komentarze", "comments"], ["ukryte arkusze i slajdy", "hidden sheets and slides"],
+      ["notatki prelegenta", "speaker notes"], ["biały tekst 1 pt", "white 1pt text"],
+      ["JavaScript", "JavaScript", "hot"], ["makra", "macros", "hot"], ["DDE", "DDE", "hot"], ["zdalny .dotm", "remote .dotm", "hot"],
+    ],
+    sample: [
+      "Active content blocks the read as <span class='id'>DOC-001</span>. Hidden text goes through the same PII and injection checks as visible text.",
+      "Aktywna treść blokuje odczyt jako <span class='id'>DOC-001</span>. Ukryty tekst przechodzi te same kontrole PII i injection co widoczny.",
+    ],
+  },
+  {
+    id: "atk",
+    en: ["Known attacks and supply chain", "13 signatures in one feed file, picked up within a second. Models, LoRA adapters and MCP tool definitions are pinned by hash."],
+    pl: ["Znane ataki i łańcuch dostaw", "13 sygnatur w jednym pliku feedu, wczytywanych w sekundę. Modele, adaptery LoRA i definicje narzędzi MCP są przypięte hashem."],
+    chips: [
+      ["XSS"], ["SQLi"], ["SSRF"], ["path traversal"], ["rm -rf · fork bomb"], ["reverse shell"], ["pickle"],
+      ["trust_remote_code"], ["CVE-2024-34359"], ["typosquat"],
+      ["MODEL-HASH-001/002", "MODEL-HASH-001/002", "hot"], ["MCP → kwarantanna", "MCP → quarantine", "hot"],
+    ],
+    sample: [
+      "A model or adapter whose hash does not match the pin never loads. A tool whose description changes after approval is quarantined.",
+      "Model albo adapter, którego hash nie zgadza się z przypiętym, nie zostaje załadowany. Narzędzie, które zmieni opis po zatwierdzeniu, trafia do kwarantanny.",
+    ],
+  },
+];
+---
+<section class="section" id="catches">
+  <div class="wrap">
+    <h2 class="display" data-reveal><L en="What the checks recognise" pl="Co rozpoznają kontrole" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
+      <L
+        en="Deterministic, fast and explainable: every hit carries a rule id and the place it was found."
+        pl="Deterministycznie, szybko i z wyjaśnieniem: każde trafienie ma identyfikator reguły i miejsce, w którym je znaleziono."
+      />
+    </p>
+    <div class="catches" data-reveal-group>
+      {sheets.map((s) => (
+        <article class="sheet" data-reveal id={`catch-${s.id}`}>
+          <h3><L en={s.en[0]} pl={s.pl[0]} /></h3>
+          <p class="sheet-lede"><L en={s.en[1]} pl={s.pl[1]} /></p>
+          <ul>
+            {s.chips.map(([pl, en, hot]) => (
+              <li class:list={[{ hot: hot === "hot" }]}>{en && en !== pl ? <L en={en} pl={pl} /> : pl}</li>
+            ))}
+          </ul>
+          <p class="sample"><L en={s.sample[0]} pl={s.sample[1]} /></p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>

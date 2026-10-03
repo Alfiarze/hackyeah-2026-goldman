@@ -52,6 +52,33 @@ async with AsyncAegis("http://localhost:8000", app_key="...", agent_key="...") a
 | `task.complete()` / `with task:` | ends the task and kills the lease |
 | `task.info()` | the mandate, the classification read so far, the status |
 | `task.openai_client()` | an `openai.OpenAI` client whose calls go through Aegis |
+| `task.call_approved(tool, timeout=, **args)` | like `call`, but waits until a person approves the call (then it runs once) |
+| `aegis.register_model(name, source_url=, files=, packages=)` | `POST /v1/models/register`: supply-chain check, weights and LoRA compared with the sha256 pinned in the policy |
+| `aegis.request(method, path, task=)` | any endpoint without a helper yet; errors still map to the exceptions below |
+
+## Admin client
+
+```python
+from aegis_sdk import Admin
+
+admin = Admin("http://localhost:8000", admin_key="dev-admin-key")
+for a in admin.approvals():                 # pending people's approvals (APPROVAL-001)
+    admin.approve(a["id"])                  # or admin.deny(...)
+admin.check("Mój PESEL to 44051401359").redacted        # dry run: 'Mój PESEL to [REDACTED:PESEL]'
+admin.check_document(open("umowa.pdf", "rb").read(), "umowa.pdf").hidden_parts   # metadata, XMP, comments...
+admin.update_policy(new_yaml)               # broken YAML -> AegisError(422), the previous version stays active
+admin.rollback(seq); admin.revoke_task(task_id); admin.export_audit("csv")
+admin.request("GET", "/admin/memory")       # anything not wrapped yet
+```
+
+`AsyncAdmin` has the same methods.
+
+## Does the SDK keep up with the gateway?
+
+New rules, reason codes and findings need no SDK change: the SDK carries the gateway's decision as it is
+(`e.decision.rule_id`, `findings`, `detail`). Code is needed only for a new endpoint (until then, `request()`
+reaches it) or for a new exception type. `tests/test_sdk.py::test_sdk_covers_every_agent_endpoint` fails when a
+`/v1` or `/mcp` route has no SDK method, so a gap cannot slip through.
 
 Every response carries a `Decision` with these fields: `action` (`ALLOW` / `REDACT` / `BLOCK`), `rule_id`,
 `reason_code`, `stage`, `policy_version`, `tool_invoked`, `findings`, `timings`.

@@ -344,6 +344,11 @@ On Coolify, no ports are published and the Coolify proxy routes traffic. The gat
 every start (idempotent). The policy and the attack feed live in volumes, seeded from the image on first start by
 `docker/entrypoint.sh`, so console edits survive redeploys. The dev keys from `.env.example` are never used there.
 
+**"Bind for 0.0.0.0:8000 failed: port is already allocated"**: Coolify's own panel listens on port 8000 of the
+server. No compose file in this repo publishes host ports any more (local ports live in
+`docker-compose.override.yml`, which Coolify does not load), so redeploy after pulling. Still pointing Coolify at
+`docker-compose.yml` works, but `docker-compose.coolify.yml` is the one that wires the generated domains and secrets.
+
 ## Repo map
 
 ```

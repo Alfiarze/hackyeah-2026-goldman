@@ -1,3 +1,6 @@
+# Base stack. Publishes no host ports, so it can never collide with a port already taken on the server
+# (Coolify's own panel listens on 8000). Local host ports live in docker-compose.override.yml, which
+# `docker compose up` / `make run` load automatically; `docker compose -f docker-compose.yml` (Coolify) does not.
 services:
   db:
     image: postgres:17-alpine
@@ -7,8 +10,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-goldman}
       POSTGRES_USER: ${POSTGRES_USER:-goldman}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goldman}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
@@ -48,8 +49,6 @@ services:
       LLM_MODEL: ${LLM_MODEL:-deepseek/deepseek-v4.1-flash}
       LLM_LOCATION: ${LLM_LOCATION:-onprem}
       LLM_EXTRA_BODY: ${LLM_EXTRA_BODY:-}
-    ports:
-      - "${GATEWAY_PORT:-8000}:8000"
     volumes:
       # Mounted from host so jury edits are picked up by hot-reload without rebuild
       - ./policy:/app/policy
@@ -81,8 +80,6 @@ services:
     command: ["uvicorn", "aegis.backends:app", "--host", "0.0.0.0", "--port", "8001"]
     environment:
       TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
-    ports:
-      - "${TOOLS_PORT:-8001}:8001"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
@@ -96,8 +93,6 @@ services:
     container_name: goldman-landing
     profiles: ["landing"]
     restart: unless-stopped
-    ports:
-      - "${LANDING_PORT:-8080}:80"
 
   # Local model server. Not started by `make run` or `docker compose up` (profile); the gateway does not use it.
   # Start only on purpose: docker compose --profile ollama up -d ollama

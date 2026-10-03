@@ -17,6 +17,9 @@ tools run behind the gateway.
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import time
 from typing import Any
 
 import httpx
@@ -85,6 +88,22 @@ def _mcp_result(body: dict[str, Any]) -> dict[str, Any]:
     return body.get("result") or {}
 
 
+def _model_body(name: str, source_url: str | None, files: dict[str, bytes] | None,
+                packages: dict[str, str] | None, gguf_metadata: dict[str, Any] | None) -> dict[str, Any]:
+    body: dict[str, Any] = {"name": name, "packages": packages or {},
+                            "files": {k: base64.b64encode(v).decode() for k, v in (files or {}).items()}}
+    if source_url:
+        body["source_url"] = source_url
+    if gguf_metadata:
+        body["gguf_metadata"] = gguf_metadata
+    return body
+
+
+def _model_result(body: dict[str, Any]) -> dict[str, Any]:
+    return {"accepted": body.get("accepted", False), "sha256": body.get("sha256") or {},
+            "decision": Decision.from_json(body.get("mandate"))}
+
+
 def _rpc(method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}}
 
@@ -138,6 +157,22 @@ class Aegis:
         """Attach to a task whose lease the app handed to this agent."""
         return Task(self, task_id, lease, agent_key or self.agent_key, None)
 
+    def register_model(self, name: str, *, source_url: str | None = None, files: dict[str, bytes] | None = None,
+                       packages: dict[str, str] | None = None,
+                       gguf_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Supply-chain check before a model or LoRA adapter is used (app key). Weights are compared with the
+        sha256 pinned in the policy; a refused artifact raises `Blocked` (e.g. MODEL-HASH-001, ATK-SUPPLY-001)."""
+        if not self.app_key:
+            raise ValueError("register_model needs app_key")
+        return _model_result(_check(self._http.post(
+            "/v1/models/register", headers={"X-App-Key": self.app_key},
+            json=_model_body(name, source_url, files, packages, gguf_metadata))))
+
+    def request(self, method: str, path: str, *, task: "Task | None" = None, **kwargs: Any) -> dict[str, Any]:
+        """Raw call for an endpoint without a helper yet; errors still map to the SDK exceptions."""
+        headers = dict(kwargs.pop("headers", None) or {}) | (task._h if task else {})
+        return _check(self._http.request(method, path, headers=headers, **kwargs))
+
 
 class Task:
     """One task under one mandate. All calls carry the task's lease."""
@@ -177,6 +212,18 @@ class Task:
     def call(self, tool: str, **args: Any) -> ToolResult:
         return _tool_result(_check(self._c._http.post(f"/v1/tools/{tool}/call", headers=self._h,
                                                       json={"args": args})))
+
+    def call_approved(self, tool: str, *, timeout: float = 300.0, interval: float = 2.0, **args: Any) -> ToolResult:
+        """Like `call`, for tools that need a person's approval: retries the identical call until it is approved
+        (then it runs once) or `timeout` passes, when the last `ApprovalRequired` is raised."""
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                return self.call(tool, **args)
+            except ApprovalRequired:
+                if time.monotonic() + interval > deadline:
+                    raise
+                time.sleep(interval)
 
     def tool(self, name: str):
         """A callable bound to one tool: `send = task.tool("mail.send"); send(to=..., subject=..., body=...)`."""
@@ -250,6 +297,20 @@ class AsyncAegis:
     def task(self, task_id: str, lease: str, *, agent_key: str | None = None) -> "AsyncTask":
         return AsyncTask(self, task_id, lease, agent_key or self.agent_key, None)
 
+    async def register_model(self, name: str, *, source_url: str | None = None,
+                             files: dict[str, bytes] | None = None, packages: dict[str, str] | None = None,
+                             gguf_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not self.app_key:
+            raise ValueError("register_model needs app_key")
+        return _model_result(_check(await self._http.post(
+            "/v1/models/register", headers={"X-App-Key": self.app_key},
+            json=_model_body(name, source_url, files, packages, gguf_metadata))))
+
+    async def request(self, method: str, path: str, *, task: "AsyncTask | None" = None,
+                      **kwargs: Any) -> dict[str, Any]:
+        headers = dict(kwargs.pop("headers", None) or {}) | (task._h if task else {})
+        return _check(await self._http.request(method, path, headers=headers, **kwargs))
+
 
 class AsyncTask:
     def __init__(self, client: AsyncAegis, task_id: str, lease: str, agent_key: str | None, created: dict | None):
@@ -287,6 +348,17 @@ class AsyncTask:
     async def call(self, tool: str, **args: Any) -> ToolResult:
         return _tool_result(_check(await self._c._http.post(f"/v1/tools/{tool}/call", headers=self._h,
                                                             json={"args": args})))
+
+    async def call_approved(self, tool: str, *, timeout: float = 300.0, interval: float = 2.0,
+                            **args: Any) -> ToolResult:
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                return await self.call(tool, **args)
+            except ApprovalRequired:
+                if time.monotonic() + interval > deadline:
+                    raise
+                await asyncio.sleep(interval)
 
     def tool(self, name: str):
         async def bound(**args: Any) -> ToolResult:

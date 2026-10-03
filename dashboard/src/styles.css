@@ -18,10 +18,10 @@
   --focus: #23457a;
   --sans: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
+@media all {
   :root {
     --paper: #11161d;
     --sheet: #18202a;
@@ -94,7 +94,7 @@ button { font: inherit; color: inherit; }
 .stamp-allow { --c: var(--allow); } .stamp-redact { --c: var(--redact); } .stamp-block { --c: var(--block); }
 .stamp-word { font-weight: 800; font-size: 17px; letter-spacing: 0.01em; line-height: 1.1; }
 .stamp-rule { font-family: var(--mono); font-size: 10.5px; opacity: 0.85; }
-@media (prefers-color-scheme: dark) { .stamp { mix-blend-mode: normal; } }
+@media all { .stamp { mix-blend-mode: normal; } }
 
 .level { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; }
 .level i {
@@ -433,7 +433,7 @@ textarea.code, .mono-input { font: 13px/1.6 var(--mono); }
   --radius: 14px;
   --shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent), 0 8px 24px -16px color-mix(in srgb, var(--ink) 30%, transparent);
 }
-@media (prefers-color-scheme: dark) {
+@media all {
   :root { --side: #0b1118; --side-2: #142030; --side-ink: #e3e8e2; --side-ink-2: #9aa7b6; --side-ink-3: #66727f; --side-accent: #86a8e3; }
 }
 
@@ -564,7 +564,7 @@ table.audit th { padding-top: 12px; }
   padding: 11px 44px; background: var(--block); color: #fff; font-size: 14px; font-weight: 500;
 }
 .banner-off .btn { background: #fff; color: var(--block); border-color: #fff; }
-@media (prefers-color-scheme: dark) { .banner-off { color: #1a0d0b; } .banner-off .btn { background: #1a0d0b; color: var(--block); border-color: #1a0d0b; } }
+@media all { .banner-off { color: #1a0d0b; } .banner-off .btn { background: #1a0d0b; color: var(--block); border-color: #1a0d0b; } }
 
 /* ============================================================ tips */
 

@@ -38,11 +38,10 @@ const pillars = [
       </div>
     </div>
     <figure class="hero-art">
-      <!-- transparent line-work in two inks: no blend modes, so no backdrop can show through in any browser -->
+      <!-- transparent light line-work: no blend modes, so no backdrop can show through in any browser -->
       <picture>
-        <source srcset={`${base}art/engraving-hero-dark.webp`} media="(prefers-color-scheme: dark)" />
         <img
-          src={`${base}art/engraving-hero-light.webp`}
+          src={`${base}art/engraving-hero-dark.webp`}
           width="780" height="740"
           alt=""
           decoding="async"

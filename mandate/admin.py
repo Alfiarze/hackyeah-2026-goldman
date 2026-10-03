@@ -652,6 +652,7 @@ class ConsoleAction(BaseModel):
     tool: str | None = None
     args: dict[str, Any] = {}
     content: str | None = None
+    context: str | None = None  # e.g. the document the agent just read
     model: str | None = None
 
 
@@ -666,8 +667,12 @@ async def console_act(request: Request, task_id: str, body: ConsoleAction):
             status, payload = await gw.tool_call(CONSOLE_AGENT, lease, body.tool or "", body.args)
         elif body.kind == "chat":
             model = body.model or ("ollama/qwen2.5:3b" if gw.semantic.ollama_available else "mock/echo")
-            status, payload = await gw.chat(CONSOLE_AGENT, lease, {
-                "model": model, "max_tokens": 300, "messages": [{"role": "user", "content": body.content or ""}]})
+            messages = [{"role": "system", "content": "You are a legal assistant. Answer briefly, in the user's language."}]
+            if body.context:  # what a tool returned goes in as a tool message: checked like any untrusted input
+                messages.append({"role": "tool", "content": body.context})
+            messages.append({"role": "user", "content": body.content or ""})
+            status, payload = await gw.chat(CONSOLE_AGENT, lease, {"model": model, "max_tokens": 300,
+                                                                    "messages": messages})
         elif body.kind == "mcp_list":
             res = await gw.mcp(CONSOLE_AGENT, lease, {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
             status, payload = 200, {"tools": [x["name"] for x in res["result"]["tools"]]}

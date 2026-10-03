@@ -56,7 +56,7 @@ def create_app(settings: Settings | None = None,
         feed = FeedStore(settings.feed_path, audit, settings.feed_url)
         await feed.load_initial()
         semantic = SemanticGuard(settings.ollama_base_url)
-        await semantic.probe()
+        await semantic.probe(policy.active.controls.semantic.model)
         tool_client = (tool_client_factory() if tool_client_factory
                        else httpx.AsyncClient(base_url=settings.tools_base_url, timeout=10))
         app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client)
@@ -64,8 +64,8 @@ def create_app(settings: Settings | None = None,
         if settings.background_tasks:
             async def probe_loop():
                 while True:
-                    await asyncio.sleep(30)
-                    await semantic.probe()
+                    await asyncio.sleep(10)
+                    await semantic.probe(policy.active.controls.semantic.model)
             background = [asyncio.create_task(c) for c in
                           (policy.watch(settings.poll_interval), feed.watch(settings.poll_interval), probe_loop())]
         try:

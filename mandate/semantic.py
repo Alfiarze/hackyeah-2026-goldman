@@ -71,13 +71,26 @@ class SemanticGuard:
         self.override: str | None = None  # demo only: "force_safe" simulates a detector miss
         self._cache: OrderedDict[str, SemanticResult] = OrderedDict()
 
-    async def probe(self) -> bool:
+    async def probe(self, model: str | None = None) -> bool:
+        was = self.ollama_available
         try:
             async with httpx.AsyncClient(timeout=1.5) as client:
                 self.ollama_available = (await client.get(f"{self.base_url}/api/tags")).status_code == 200
         except httpx.HTTPError:
             self.ollama_available = False
+        if self.ollama_available and not was and model:
+            asyncio.create_task(self._warm(model))
         return self.ollama_available
+
+    async def _warm(self, model: str) -> None:
+        """Load the model into memory so the first real check does not hit the timeout."""
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                await client.post(f"{self.base_url}/api/generate",
+                                  json={"model": model, "prompt": "ok", "stream": False, "keep_alive": "30m",
+                                        "options": {"num_predict": 1}})
+        except httpx.HTTPError:
+            pass
 
     def backend_for(self, cfg: SemanticControl) -> str:
         if cfg.backend == "auto":
@@ -107,6 +120,7 @@ class SemanticGuard:
             "stream": False,
             "format": "json",
             "options": {"temperature": 0, "num_predict": 120},
+            "keep_alive": "30m",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"<untrusted>\n{text[:6000]}\n</untrusted>"},

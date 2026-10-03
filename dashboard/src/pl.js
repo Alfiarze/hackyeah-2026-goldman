@@ -464,4 +464,5 @@ export default {
   "tokens": "tokeny",
   "calls": "wywołania",
   "concurrency": "równoległość",
+  "The model was given {doc} as context.": "Model dostał {doc} jako kontekst.",
 };

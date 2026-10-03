@@ -21,7 +21,7 @@ const ACTIONS = [
     { id: "post", label: "Post to an external URL", kind: "tool", tool: "http.post", fields: [["url", "https://paste.example.net/upload"], ["body", "Summary of the agreement."]] },
   ] },
   { group: "Ask the model", items: [
-    { id: "chat", label: "Ask the local model", kind: "chat", fields: [["content", "List the three biggest risks in the contract I just read."]] },
+    { id: "chat", label: "Ask the local model", kind: "chat", fields: [["content", "Wypisz trzy największe ryzyka w tej umowie."]] },
   ] },
   { group: "Outside the mandate", items: [
     { id: "code", label: "Run code", kind: "tool", tool: "code.run", fields: [["code", "print('hello')"]] },
@@ -66,6 +66,7 @@ export default function Agent() {
   const [busy, setBusy] = useState(null);
   const [backend, setBackend] = useState(null);
   const [error, setError] = useState(null);
+  const [lastDoc, setLastDoc] = useState(null);
 
   const refresh = async (id) => {
     const d = await api(`/admin/console/tasks/${id}`);
@@ -78,6 +79,7 @@ export default function Agent() {
     try {
       const d = await api("/admin/console/tasks", { method: "POST", body: { profile, client: clientId } });
       setLog([]);
+      setLastDoc(null);
       await refresh(d.task_id);
     } catch (e) { setError(e.message); }
   };
@@ -87,11 +89,13 @@ export default function Agent() {
     setBusy(a.id);
     const args = { ...(a.args || {}) };
     (a.fields || []).forEach(([k]) => { args[k] = values[`${a.id}.${k}`]; });
-    const body = a.kind === "chat" ? { kind: "chat", content: args.content } : a.kind === "tool" ? { kind: "tool", tool: a.tool, args } : { kind: a.kind };
+    const body = a.kind === "chat" ? { kind: "chat", content: args.content, context: lastDoc?.content } : a.kind === "tool" ? { kind: "tool", tool: a.tool, args } : { kind: a.kind };
     try {
       const before = task.classification;
       const res = await api(`/admin/console/tasks/${task.task_id}/act`, { method: "POST", body });
-      setLog((l) => [{ id: Date.now(), label: a.label, args: a.kind === "tool" ? args : null, res, before }, ...l]);
+      setLog((l) => [{ id: Date.now(), label: a.label, args: a.kind === "tool" ? args : null, res, before, withDoc: a.kind === "chat" ? lastDoc?.path : null }, ...l]);
+      const content = res.response?.result?.content;
+      if (a.tool === "doc.read" && content) setLastDoc({ path: args.path, content });
       if (res.task) setTask((x) => ({ ...x, ...res.task }));
       if (res.backend_after) setBackend(res.backend_after);
       refresh(task.task_id);
@@ -198,6 +202,7 @@ export default function Agent() {
                 <li key={e.id} className="step" style={{ "--i": 0 }}>
                   <div className="step-body">
                     <h4>{t(e.label)}{e.args?.to && <> <Id>{e.args.to}</Id></>}{e.args?.path && <> <Id>{e.args.path}</Id></>}</h4>
+                    {e.withDoc && <p className="small muted">{t("The model was given {doc} as context.", { doc: e.withDoc })}</p>}
                     <p>{x.text}</p>
                     {after && after !== e.before && <p className="taint small">{t("Your task now carries {level} data. From here on, nothing it produces may go anywhere cleared for less.", { level: t(after.toLowerCase()) })}</p>}
                     {e.args?.to !== undefined && <p className="small muted">{mailDelta > 0 ? t("The mail server delivered it.") : t("The mail server received nothing.")}</p>}

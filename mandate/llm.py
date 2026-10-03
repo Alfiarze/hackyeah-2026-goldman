@@ -34,7 +34,8 @@ async def complete(model: str, messages: list[dict], max_tokens: int, ollama_bas
         completion = min(max_tokens, estimate_tokens(content))
         return Completion(content, estimate_tokens(prompt_text), completion)
     if provider == "ollama":
-        payload = {"model": name, "messages": messages, "stream": False, "options": {"num_predict": max_tokens}}
+        payload = {"model": name, "messages": messages, "stream": False, "keep_alive": "30m",
+                   "options": {"num_predict": max_tokens}}
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(f"{ollama_base_url.rstrip('/')}/api/chat", json=payload)

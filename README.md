@@ -12,16 +12,19 @@ central policy and the data the task has already seen. Only then does it run.
 
 ## Quick start
 
-Requirements: Docker Desktop. No API keys and no paid services. Everything runs locally.
+Requirements: Docker Desktop with **at least 3 GB of memory** (Settings > Resources > Memory). No API keys and no
+paid services. Everything runs locally.
 
 ```bash
 cp .env.example .env
-make run                 # postgres + gateway + mock tool backends
+make run                 # postgres + gateway + tool backends + Ollama, and pulls qwen2.5:3b (~2 GB, first run only)
 open http://localhost:8000/dashboard/
 ```
 
-Optional: install [Ollama](https://ollama.com) on the host and run `ollama pull qwen2.5:3b`. The semantic guard
-then uses the local model. Without Ollama it falls back to a local heuristic scorer, and the dashboard says so.
+The first start downloads the model into a Docker volume. Until the model is ready the semantic guard uses a local
+heuristic scorer, and the dashboard says so. After that it switches to the model by itself. Inside Docker on macOS
+the model runs on CPU only, so one check takes about 5 s. For Metal speed, run Ollama on the host and set
+`OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`.
 
 | Command | What it does |
 |---|---|

@@ -75,8 +75,12 @@ class SemanticGuard:
         was = self.ollama_available
         try:
             async with httpx.AsyncClient(timeout=1.5) as client:
-                self.ollama_available = (await client.get(f"{self.base_url}/api/tags")).status_code == 200
-        except httpx.HTTPError:
+                resp = await client.get(f"{self.base_url}/api/tags")
+            names = {m["name"] for m in resp.json().get("models", [])} if resp.status_code == 200 else set()
+            # the server being up is not enough: the model must be pulled, otherwise every check would fail closed
+            wanted = model or ""
+            self.ollama_available = bool(names) and (not wanted or wanted in names or f"{wanted}:latest" in names)
+        except (httpx.HTTPError, ValueError):
             self.ollama_available = False
         if self.ollama_available and not was and model:
             asyncio.create_task(self._warm(model))

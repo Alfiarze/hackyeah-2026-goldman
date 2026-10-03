@@ -45,7 +45,7 @@ controls:
     backend: auto          # auto = Ollama if reachable, otherwise local heuristic scorer
     model: qwen2.5:3b
     on_error: block        # fail-closed
-    timeout_ms: 8000       # 3B model on a laptop: first call can take a few seconds
+    timeout_ms: 20000      # CPU-only 3B model in Docker: a check takes ~5 s, the first one longer
 
 budgets:
   default_max_tokens: 1024     # injected when a request has no max_tokens, so every reservation is bounded

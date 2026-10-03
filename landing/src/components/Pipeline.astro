@@ -4,7 +4,7 @@ import L from "./L.astro";
 const stages = [
   {
     en: ["Mandate and lease", "Which tools, resources and recipients this task may use, for how long and for how much. The HMAC lease is bound to the agent and the principal, and dies on completion, revocation or expiry."],
-    pl: ["Mandat i lease", "Jakich narzędzi, zasobów i odbiorców może użyć to zadanie, na jak długo i za ile. Lease z HMAC jest związany z agentem i principalu i wygasa po zakończeniu, cofnięciu lub po upływie czasu."],
+    pl: ["Mandat i lease", "Jakich narzędzi, zasobów i odbiorców może użyć to zadanie, na jak długo i za ile. Lease oparty na HMAC jest związany z agentem i principalem i wygasa po zakończeniu, cofnięciu lub po upływie czasu."],
   },
   {
     en: ["Allowlists", "Approved models and MCP tool hashes. An unknown tool or model fails closed, never open."],
@@ -19,12 +19,12 @@ const stages = [
     pl: ["Kontrole deterministyczne", "PESEL z sumą kontrolną, karty po Luhn, IBAN mod-97, e-maile, telefony, klucze chmurowe, klucze prywatne, heurystyki prompt injection. Każda kontrola blokuje lub redaguje, zależnie od profilu."],
   },
   {
-    en: ["Data flow", "Reading a CONFIDENTIAL document taints the whole task. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance: mail to an external recipient is PUBLIC business."],
-    pl: ["Przepływ danych", "Przeczytanie poufnego dokumentu znaczy całe zadanie. Parafraza, tłumaczenie czy kodowanie tego nie obniża. Ujścia mają poziom dostępu: mail na zewnętrzny adres wymaga PUBLIC."],
+    en: ["Data flow", "Reading a confidential document taints the whole task. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance: mail to an external recipient is cleared for public data only."],
+    pl: ["Przepływ danych", "Przeczytanie poufnego dokumentu zanieczyszcza całe zadanie. Parafraza, tłumaczenie czy kodowanie tego nie obniża. Ujścia mają poziom dostępu: mail na zewnętrzny adres jest dopuszczony tylko dla danych publicznych."],
   },
   {
     en: ["Semantic guard", "A local LLM scores the risk, thresholds come from the profile. It can only tighten a decision. If the guard is unreachable, the treatment gets stricter, never looser."],
-    pl: ["Strażnik semantyczny", "Lokalny model LLM ocenia ryzyko, progi zależy od profilu. Może tylko zaostrzyć decyzję. Gdy strażnik jest niedostępny, obsługa staje się ostrzejsza, nigdy luźniejsza."],
+    pl: ["Strażnik semantyczny", "Lokalny model LLM ocenia ryzyko, progi zależą od profilu. Może tylko zaostrzyć decyzję. Gdy strażnik jest niedostępny, obsługa staje się ostrzejsza, nigdy luźniejsza."],
   },
   {
     en: ["Budget escrow", "Tokens, calls and concurrency are reserved before execution, atomically in Postgres, across task, parent, principal and global. Thirty concurrent agents, zero overspend."],

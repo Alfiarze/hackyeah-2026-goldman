@@ -87,12 +87,18 @@ button { font: inherit; color: inherit; }
 .console-btn {
   font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap;
   color: var(--sheet); background: var(--intaglio);
-  border: 1px solid var(--intaglio); border-radius: 6px; padding: 6px 13px;
+  border: 1px solid var(--intaglio); border-radius: 7px; padding: 6px 13px;
 }
-.console-btn:hover { background: color-mix(in srgb, var(--intaglio) 85%, black); }
+.console-btn:hover { border-color: var(--ink); background: color-mix(in srgb, var(--intaglio) 85%, var(--ink)); }
 
 @media (max-width: 780px) {
   .top nav { display: none; }
+}
+@media (max-width: 480px) {
+  .top .wrap { gap: 12px; padding-inline: 16px; }
+  .top-tools { gap: 10px; }
+  .wordmark { font-size: 19px; }
+  .top .console-btn { font-size: 13px; padding: 5px 10px; }
 }
 
 /* ------------------------------------------------------------ sections */
@@ -116,76 +122,93 @@ main { display: block; }
 .console-btn.big { font-size: 16px; padding: 10px 18px; }
 .ghost-btn {
   font-size: 16px; font-weight: 600; text-decoration: none; white-space: nowrap;
-  color: var(--ink); border: 1px solid var(--rule); background: var(--sheet);
-  border-radius: 6px; padding: 10px 18px;
+  color: var(--ink); border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent); background: var(--sheet);
+  border-radius: 7px; padding: 10px 18px;
 }
-.ghost-btn:hover { border-color: var(--ink-3); }
-.hero-note { margin-top: 26px; font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
+.ghost-btn:hover { border-color: var(--ink); }
+.hero-note { margin-top: 26px; font-size: 14px; color: var(--ink-3); }
 
 @media (max-width: 900px) {
   .hero .wrap { grid-template-columns: 1fr; }
 }
 
-/* the execution contract: the one loud element */
+/* the execution contract: built like the dashboard's scenario certificate */
 
 .contract {
-  position: relative;
-  background:
-    repeating-linear-gradient(115deg, transparent 0 7px, color-mix(in srgb, var(--intaglio) 4%, transparent) 7px 8px),
-    var(--sheet);
-  border: 1px solid color-mix(in srgb, var(--intaglio) 45%, var(--rule));
-  box-shadow: inset 0 0 0 4px var(--sheet), inset 0 0 0 5px color-mix(in srgb, var(--intaglio) 30%, var(--rule));
-  padding: 26px 26px 22px;
-  overflow: hidden;
+  position: relative; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 28px 30px 24px;
 }
-.contract-mark {
-  position: absolute; top: -110px; right: -110px; width: 340px; height: 340px;
-  opacity: 0.13; pointer-events: none;
+.contract::before {
+  content: ""; position: absolute; inset: 7px; pointer-events: none; border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--intaglio) 30%, transparent);
 }
-.contract-mark .rosette circle { fill: none; stroke: var(--intaglio); stroke-width: 0.5; }
-.contract-mark .rosette path { stroke: var(--intaglio); stroke-width: 0.32; opacity: 1; }
-.contract-head {
-  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 12.5px; color: var(--ink-2);
-  padding-bottom: 12px; border-bottom: 1px solid var(--rule); margin-bottom: 14px;
-}
-.contract b { color: var(--ink); font-weight: 600; }
-.contract-rows { display: grid; gap: 7px; font-family: var(--mono); font-size: 13.5px; }
-.contract-rows > div { display: grid; grid-template-columns: 108px 1fr; gap: 12px; }
-.contract-rows dt { color: var(--ink-3); }
-.contract-rows dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
-.attempt {
-  margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--rule);
-  position: relative; display: grid; gap: 7px; font-family: var(--mono); font-size: 13.5px;
-}
-.attempt .k, .attempt .to, .attempt .confidential { display: inline-block; }
-.attempt .k { color: var(--ink-3); min-width: 96px; }
-.attempt .to { color: var(--block); }
-.confidential { color: var(--redact); font-weight: 600; }
-.contract .stamp { position: absolute; right: 14px; bottom: 96px; }
-.proof {
-  margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
-  display: grid; gap: 4px;
-}
-.proof .counter { font-family: var(--mono); font-size: 13.5px; color: var(--allow); font-weight: 600; }
-.proof .verdict { font-size: 14px; color: var(--ink-2); }
+.contract-head { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.contract-head h2 { font-size: 21px; font-weight: 600; letter-spacing: -0.015em; }
+.contract-head p { font-size: 13.5px; margin-top: 2px; }
+.contract .facts { font-size: 14.5px; margin: 0 0 6px; }
+.contract .step { margin-top: 12px; }
+.contract .step-body h3 { font-size: 15.5px; font-weight: 600; letter-spacing: 0; margin-bottom: 6px; }
+.contract .step-body p { font-size: 14px; line-height: 1.5; }
+.contract .step-body p + p { margin-top: 6px; }
+.proof { padding-top: 14px; border-top: 1px dashed var(--rule); display: grid; gap: 4px; }
+.proof .verdict { font-size: 24px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.25; }
+.proof .verdict b { font-weight: 800; font-size: 1.25em; font-variant-numeric: tabular-nums; }
+.proof .muted { font-size: 14px; }
 
 @media (max-width: 480px) {
-  .contract { padding: 20px 16px 18px; }
-  .contract .stamp { position: static; margin-top: 12px; }
+  .contract { padding: 22px 20px 20px; }
+  .contract .facts { grid-template-columns: 1fr; gap: 2px; }
+  .contract .facts dd { margin-bottom: 8px; }
+  .contract .step { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .contract .stamp { margin-left: 4px; }
 }
 
-/* stamp, same treatment as the dashboard */
+/* ------------------------------------------------------------ primitives, as in the dashboard */
+
+.muted { color: var(--ink-3); }
+.id {
+  font-family: var(--mono); font-size: 0.86em; color: var(--ink);
+  background: color-mix(in srgb, var(--intaglio) 8%, transparent);
+  padding: 1px 5px; border-radius: 4px; white-space: nowrap;
+}
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 7px 18px; }
+.facts dt { color: var(--ink-3); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.facts dd .id { white-space: normal; overflow-wrap: anywhere; }
+
+.step { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 16px 0; border-top: 1px dashed var(--rule); }
+.step-body { min-width: 0; }
+
+/* decision mark: shape and word, never colour alone */
+.mark { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+.mark::before { content: ""; width: 9px; height: 9px; flex: none; }
+.mark-allow { color: var(--allow); } .mark-allow::before { background: var(--allow); border-radius: 50%; }
+.mark-redact { color: var(--redact); }
+.mark-redact::before { border-radius: 50%; background: linear-gradient(90deg, var(--redact) 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--redact); }
+.mark-block { color: var(--block); } .mark-block::before { background: var(--block); border-radius: 1px; }
+
+.level { display: inline-flex; align-items: center; gap: 7px; }
+.level i {
+  width: 22px; height: 10px; flex: none;
+  background: linear-gradient(90deg, currentColor calc(var(--n) * 25%), color-mix(in srgb, currentColor 18%, transparent) 0);
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 4.5px, transparent 4.5px 6px);
+  mask: repeating-linear-gradient(90deg, #000 0 4.5px, transparent 4.5px 6px);
+}
+.level-0 { color: var(--allow); } .level-1 { color: var(--intaglio); } .level-2 { color: var(--redact); } .level-3 { color: var(--block); }
+
+/* the stamp, same treatment as the dashboard. The inner gap ring is painted in --stamp-ground,
+   so it must match the surface the stamp sits on. Multiply only on light paper: on a dark
+   surface it would crush the ink to black. */
 .stamp {
   --c: var(--ink);
+  --stamp-ground: var(--sheet);
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   min-width: 112px; padding: 6px 12px 5px; color: var(--c);
   border: 2px solid var(--c); border-radius: 4px;
-  box-shadow: inset 0 0 0 2px var(--sheet), inset 0 0 0 3px var(--c);
+  box-shadow: inset 0 0 0 2px var(--stamp-ground), inset 0 0 0 3px var(--c);
   transform: rotate(-3deg);
   mix-blend-mode: multiply;
   flex: none;
-  background: color-mix(in srgb, var(--sheet) 78%, transparent);
 }
 .stamp-allow { --c: var(--allow); } .stamp-redact { --c: var(--redact); } .stamp-block { --c: var(--block); }
 .stamp-word { font-weight: 800; font-size: 17px; letter-spacing: 0.01em; line-height: 1.1; }
@@ -230,22 +253,20 @@ main { display: block; }
 
 /* ------------------------------------------------------------ scenarios */
 
-.runs { display: grid; gap: 0; border-top: 1px solid var(--rule); }
+.runs { border-top: 1px solid var(--rule); }
 .run {
-  display: grid; grid-template-columns: 170px 1fr auto; gap: 20px; align-items: center;
-  padding: 13px 0; border-bottom: 1px solid var(--rule);
+  display: grid; grid-template-columns: 250px 1fr 230px; gap: 20px; align-items: baseline;
+  padding: 15px 0; border-bottom: 1px solid var(--rule);
 }
-.run .name { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.run p { font-size: 15px; color: var(--ink-2); }
-.run .stamp { min-width: 96px; padding: 4px 10px 4px; }
-.run .stamp-word { font-size: 13.5px; }
-.run .stamp-rule { display: none; }
+.run h3 { font-size: 16.5px; font-weight: 600; letter-spacing: 0; }
+.run p { font-size: 15px; color: var(--ink-2); max-width: 64ch; }
+.run-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.run-result .id { font-size: 12px; }
 .runs-note { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .runs-note .console-btn { font-size: 15px; padding: 8px 15px; }
 .runs-note .hint { font-size: 14.5px; color: var(--ink-3); }
-@media (max-width: 700px) {
-  .run { grid-template-columns: 1fr auto; }
-  .run p { grid-column: 1 / -1; }
+@media (max-width: 860px) {
+  .run { grid-template-columns: 1fr; gap: 6px; }
 }
 
 /* owasp */
@@ -256,13 +277,13 @@ main { display: block; }
   font-family: var(--mono); font-size: 12.5px; color: var(--ink);
   border: 1px solid var(--rule); background: var(--sheet); border-radius: 4px; padding: 3px 9px;
 }
-.owasp li span { color: var(--ink-3); }
+.owasp li span { color: var(--ink-3); font-family: var(--sans); font-size: 13.5px; }
 
 /* ------------------------------------------------------------ footer */
 
 footer { border-top: 1px solid var(--rule); }
 footer .wrap { padding-block: 36px 64px; display: grid; gap: 10px; }
-.foot-brand { font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+.foot-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
 .foot-line { font-size: 14.5px; color: var(--ink-2); max-width: 70ch; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 6px; font-size: 14.5px; }
 .foot-links a { color: var(--intaglio); text-decoration: none; }

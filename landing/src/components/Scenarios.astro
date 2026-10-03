@@ -1,50 +1,63 @@
 ---
 import L from "./L.astro";
 
+// Titles match the dashboard's "Run a scenario" view; rule ids are the ones the gateway records.
 const runs = [
   {
-    name: "injection",
-    en: "A hidden instruction tells the agent to mail a confidential contract out. The mail backend never fires.",
-    pl: "Ukryta instrukcja każe agentowi wysłać poufną umowę mailem. Backend poczty nigdy nie odpala.",
-    word: "BLOCKED", tone: "block",
+    title: ["A normal day", "Zwykły dzień pracy"],
+    en: "The agent searches case law, reads the client's contract, asks the local model for risks and files a memo. Nothing gets in its way.",
+    pl: "Agent przeszukuje orzecznictwo, czyta umowę klienta, pyta lokalny model o ryzyka i zapisuje notatkę. Nic mu nie przeszkadza.",
+    action: "allow",
   },
   {
-    name: "detector_miss",
-    en: "The semantic detector calls the request safe. The data-flow rule blocks it anyway.",
-    pl: "Detektor semantyczny uznaje żądanie za bezpieczne. Reguła przepływu danych i tak je blokuje.",
-    word: "BLOCKED", tone: "block",
+    title: ["Poisoned contract", "Zatruta umowa"],
+    en: "A hidden instruction tells the agent to mail the contract to an outside address. The mail backend never fires.",
+    pl: "Ukryta instrukcja każe agentowi wysłać umowę na obcy adres. Backend poczty nigdy nie odpala.",
+    action: "block", rule: "MANDATE-RCPT",
   },
   {
-    name: "cross_client",
-    en: "The agent tries to reuse one client's document inside another client's task.",
-    pl: "Agent próbuje użyć dokumentu jednego klienta w zadaniu innego klienta.",
-    word: "BLOCKED", tone: "block",
+    title: ["The AI detector misses", "Detektor AI przeocza atak"],
+    en: "The semantic detector calls the request safe and the recipient is allowed. The data-flow rule blocks it anyway.",
+    pl: "Detektor semantyczny uznaje żądanie za bezpieczne, a odbiorca jest dozwolony. Reguła przepływu danych i tak je blokuje.",
+    action: "block", rule: "IFC-001",
   },
   {
-    name: "expired_lease",
+    title: ["Wrong client's files", "Dokumenty innego klienta"],
+    en: "An agent working for client A reaches for client B's NDA, then tries a path trick.",
+    pl: "Agent pracujący dla klienta A sięga po NDA klienta B, a potem próbuje sztuczki ze ścieżką.",
+    action: "block", rule: "MANDATE-RES",
+  },
+  {
+    title: ["Reused credentials", "Ponowne użycie przepustki"],
     en: "A finished task is replayed with its old lease. The gate treats it as if it never existed.",
     pl: "Zakończone zadanie jest odtwarzane ze starym lease'em. Bramka traktuje go, jakby nigdy nie istniał.",
-    word: "BLOCKED", tone: "block",
+    action: "block", rule: "CAPABILITY_COMPLETED",
   },
   {
-    name: "mcp_poison",
-    en: "An MCP tool changes its definition after approval. It lands in quarantine before the next call.",
-    pl: "Narzędzie MCP zmienia definicję po zatwierdzeniu. Trafia do kwarantanny przed kolejnym wywołaniem.",
-    word: "QUARANTINED", tone: "redact",
+    title: ["Tool changes after approval", "Narzędzie zmienione po zatwierdzeniu"],
+    en: "An MCP tool rewrites its description after approval. It lands in quarantine before the next call.",
+    pl: "Narzędzie MCP zmienia opis po zatwierdzeniu. Trafia do kwarantanny przed kolejnym wywołaniem.",
+    action: "block", rule: "ATK-MCP-POISON-001",
   },
   {
-    name: "supply_chain",
-    en: "A model arrives from a host that is not on the allowlist, one letter away from the real one.",
-    pl: "Model przychodzi z hosta, którego nie ma na białej liście, jedną literą od prawdziwego.",
-    word: "BLOCKED", tone: "block",
+    title: ["Model supply chain", "Łańcuch dostaw modeli"],
+    en: "Models arrive with a pickle that imports os, a vulnerable llama-cpp-python, and a host one letter away from the real one.",
+    pl: "Modele przychodzą z plikiem pickle importującym os, podatnym llama-cpp-python i z hosta różniącego się jedną literą od prawdziwego.",
+    action: "block", rule: "ATK-SUPPLY-001",
   },
   {
-    name: "budget_race",
+    title: ["Thirty agents, one budget", "Trzydziestu agentów, jeden budżet"],
     en: "Thirty agents spend at once. Reservations settle in Postgres, overspend stays at zero.",
-    pl: "Trzydzieści agentów wydaje jednocześnie. Rezerwacje rozlicza Postgres, przekroczenie zostaje na zerze.",
-    word: "429", tone: "redact",
+    pl: "Trzydziestu agentów wydaje jednocześnie. Rezerwacje rozlicza Postgres, przekroczenie zostaje na zerze.",
+    action: "block", rule: "BUD-001",
   },
 ];
+
+const word = {
+  allow: ["Allowed", "Dozwolone"],
+  redact: ["Redacted", "Zredagowane"],
+  block: ["Blocked", "Zablokowane"],
+};
 
 const owasp = [
   ["LLM01", "Prompt Injection", "Prompt Injection"],
@@ -67,18 +80,19 @@ const owasp = [
     <div class="runs">
       {runs.map((r) => (
         <div class="run">
-          <span class="name">{r.name}</span>
+          <h3><L en={r.title[0]} pl={r.title[1]} /></h3>
           <p><L en={r.en} pl={r.pl} /></p>
-          <div class:list={["stamp", `stamp-${r.tone}`]} role="img" aria-label={`Result: ${r.word}`}>
-            <span class="stamp-word">{r.word}</span>
+          <div class="run-result">
+            <span class:list={["mark", `mark-${r.action}`]}><L en={word[r.action][0]} pl={word[r.action][1]} /></span>
+            {r.rule && <span class="id">{r.rule}</span>}
           </div>
         </div>
       ))}
     </div>
     <div class="runs-note">
-      <a class="console-btn" href="/dashboard/"><L en="Run the scenarios" pl="Uruchom scenariusze" /></a>
+      <a class="console-btn" href="/dashboard/#scenarios"><L en="Run the scenarios" pl="Uruchom scenariusze" /></a>
       <span class="hint">
-        <L en="Dashboard, Demo scenarios. No keys, no cloud, everything runs locally." pl="Dashboard, Demo scenarios. Bez kluczy i chmury, wszystko działa lokalnie." />
+        <L en="Dashboard, Prove, Run a scenario. No keys, no cloud, everything runs locally." pl="Dashboard, Dowody, Scenariusze. Bez kluczy i chmury, wszystko działa lokalnie." />
       </span>
     </div>
     <div class="owasp">

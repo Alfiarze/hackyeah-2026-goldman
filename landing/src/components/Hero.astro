@@ -13,8 +13,8 @@ import Rosette from "./Rosette.astro";
       </h1>
       <p class="lede">
         <L
-          en="Other guardrails ask whether an action looks dangerous. MANDATE asks whether this agent was ever authorized to do it, with this data, for this task. Every call passes a short-lived mandate before it runs."
-          pl="Inne zabezpieczenia pytają, czy akcja wygląda na niebezpieczną. MANDATE pyta, czy ten agent w ogóle był upoważniony do tego kroku, z tymi danymi i w tym zadaniu. Każde wywołanie przechodzi przez krótkotrwały mandat, zanim się wykona."
+          en="Other guardrails ask whether an action looks dangerous. Mandate asks whether this agent was ever authorized to do it, with this data, for this task. Every call passes a short-lived mandate before it runs."
+          pl="Inne zabezpieczenia pytają, czy akcja wygląda na niebezpieczną. Mandate pyta, czy ten agent w ogóle był upoważniony do tego kroku, z tymi danymi i w tym zadaniu. Każde wywołanie przechodzi przez krótkotrwały mandat, zanim się wykona."
         />
       </p>
       <div class="hero-ctas">
@@ -30,33 +30,49 @@ import Rosette from "./Rosette.astro";
     </div>
 
     <aside class="contract" aria-label="Example execution contract">
-      <div class="contract-mark"><Rosette size={340} /></div>
-      <div class="contract-head">
-        <span><b><L en="Execution contract" pl="Kontrakt wykonawczy" /> No. HY26-0347</b></span>
-        <span>profile: contract_review</span>
-      </div>
-      <dl class="contract-rows">
-        <div><dt>principal</dt><dd>lawyer_anna</dd></div>
-        <div><dt>agent</dt><dd>demo-agent</dd></div>
-        <div><dt><L en="task" pl="zadanie" /></dt>
-          <dd><L en="Summarize contract A before the client call" pl="Podsumuj umowę A przed rozmową z klientem" /></dd>
+      <header class="contract-head">
+        <Rosette size={40} />
+        <div>
+          <h2><L en="Execution contract" pl="Kontrakt wykonawczy" /></h2>
+          <p class="muted"><L en="Profile" pl="Profil" /> <span class="id">contract_review</span> <span class="id">HY26-0347</span></p>
         </div>
-        <div><dt>mandate</dt><dd>doc.read, mail.send(internal), 15 min, 20k tokens</dd></div>
+      </header>
+      <dl class="facts">
+        <dt>Principal</dt><dd><span class="id">lawyer_anna</span></dd>
+        <dt><L en="Agent" pl="Agent" /></dt><dd><span class="id">demo-agent</span></dd>
+        <dt><L en="Task" pl="Zadanie" /></dt>
+        <dd><L en="Summarize client A's contract before the call" pl="Podsumuj umowę klienta A przed rozmową" /></dd>
+        <dt><L en="Tools" pl="Narzędzia" /></dt>
+        <dd><span class="id">doc.read</span> <span class="id">notes.write</span> <span class="id">mail.send</span></dd>
+        <dt><L en="Recipients" pl="Odbiorcy" /></dt>
+        <dd><span class="id">*@lawfirm.example</span> <span class="id">*@client-A.example</span></dd>
+        <dt><L en="Limits" pl="Limity" /></dt>
+        <dd><L en="15 min, 20,000 tokens" pl="15 min, 20 000 tokenów" /></dd>
+        <dt><L en="Data read" pl="Odczytane dane" /></dt>
+        <dd><span class="level level-2"><i style="--n: 3"></i><L en="Confidential" pl="Poufne" /></span></dd>
       </dl>
-      <div class="attempt">
-        <div><span class="k">attempt</span><span class="to">mail.send to g.salem@maildrop.co</span></div>
-        <div><span class="k"><L en="task data" pl="dane zadania" /></span><span class="confidential">CONFIDENTIAL</span></div>
-        <div class="stamp stamp-block" role="img" aria-label="Decision: blocked">
-          <span class="stamp-word">BLOCKED</span>
-          <span class="stamp-rule">IFC-TAINT-001</span>
+      <div class="step">
+        <div class="step-body">
+          <h3><L en="The agent mails the contract out" pl="Agent wysyła umowę na zewnątrz" /></h3>
+          <p><span class="id">mail.send</span> <L en="to" pl="do" /> <span class="id">partner@client-A.example</span></p>
+          <p class="muted">
+            <L
+              en="The recipient is on the mandate, but confidential data cannot go to <span class='id'>mail.send:external</span>, which is cleared for public."
+              pl="Odbiorca jest w mandacie, ale dane poufne nie mogą trafić do <span class='id'>mail.send:external</span>, dopuszczonego tylko dla publicznych."
+            />
+          </p>
         </div>
+        <span class="stamp stamp-block" role="img" aria-label="Blocked, rule IFC-001">
+          <span class="stamp-word"><L en="Blocked" pl="Zablokowane" /></span>
+          <span class="stamp-rule">IFC-001</span>
+        </span>
       </div>
       <div class="proof">
-        <span class="counter">mail_sent = 0</span>
-        <p class="verdict">
+        <p class="verdict"><b>0</b> <L en="e-mails left the building." pl="e-maili opuściło firmę." /></p>
+        <p class="muted">
           <L
-            en="The backend counter never moved. The mail was blocked before it left, and the attempt is in the append-only audit log."
-            pl="Licznik backendu nie drgnął. Mail został zablokowany, zanim wyszedł, a próba trafiła do rejestru audytu bez możliwości dopisywania."
+            en="The mail backend never received the call, and the attempt is in the append-only audit log."
+            pl="Backend poczty nigdy nie dostał wywołania, a próba trafiła do dziennika audytu, którego nikt nie może zmieniać."
           />
         </p>
       </div>

@@ -1,4 +1,4 @@
-# MANDATE central policy. Single source of truth: the dashboard/admin API rewrites THIS file
+# Aegis central policy. Single source of truth: the dashboard/admin API rewrites THIS file
 # (validated, versioned, atomic write). Edit it by hand and the gateway hot-reloads within ~1 s.
 # An invalid edit is rejected and the last-known-good version stays active.
 version: 1

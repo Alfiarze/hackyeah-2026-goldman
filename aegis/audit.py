@@ -10,7 +10,7 @@ from typing import Any
 
 import asyncpg
 
-from mandate.models import Decision
+from aegis.models import Decision
 
 
 class Audit:

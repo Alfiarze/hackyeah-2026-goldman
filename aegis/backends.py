@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
-from mandate.settings import ROOT
+from aegis.settings import ROOT
 
 DATA_DIR = Path(os.environ.get("DEMO_DATA_DIR", ROOT / "demo" / "data")).resolve()
 
@@ -58,12 +58,12 @@ class State:
 
 
 state = State()
-app = FastAPI(title="MANDATE mock tool backends")
+app = FastAPI(title="Aegis mock tool backends")
 
 
 def require_secret(x_backend_secret: str | None = Header(default=None)) -> None:
     if x_backend_secret != os.environ.get("TOOL_BACKEND_SECRET", "dev-backend-secret"):
-        raise HTTPException(401, "direct access denied: only the MANDATE gateway holds backend credentials")
+        raise HTTPException(401, "direct access denied: only the Aegis gateway holds backend credentials")
 
 
 class Call(BaseModel):

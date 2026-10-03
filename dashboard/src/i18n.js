@@ -2,7 +2,7 @@
 // t("Hello {name}", {name}) interpolates. Missing keys fall back to English.
 import PL from "./pl.js";
 
-const KEY = "mandate.lang";
+const KEY = "aegis.lang";
 let lang = (() => {
   try { return localStorage.getItem(KEY) || (navigator.language || "en").slice(0, 2); } catch { return "en"; }
 })() === "pl" ? "pl" : "en";

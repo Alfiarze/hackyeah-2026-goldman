@@ -1,4 +1,4 @@
--- MANDATE schema (PostgreSQL 17). Loaded by docker-entrypoint-initdb.d on an empty volume
+-- Aegis schema (PostgreSQL 17). Loaded by docker-entrypoint-initdb.d on an empty volume
 -- and by the test suite. Change => `make clean && make run`.
 
 CREATE TABLE IF NOT EXISTS tasks (

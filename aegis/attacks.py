@@ -15,13 +15,13 @@ import httpx
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, field_validator
 
-from mandate.models import Finding
-from mandate.policy import atomic_write, content_hash, roundtrip_edit
+from aegis.models import Finding
+from aegis.policy import atomic_write, content_hash, roundtrip_edit
 
 if TYPE_CHECKING:
-    from mandate.audit import Audit
+    from aegis.audit import Audit
 
-log = logging.getLogger("mandate.attacks")
+log = logging.getLogger("aegis.attacks")
 
 Target = Literal["user_input", "tool_args", "tool_results", "model_output", "file_content"]
 

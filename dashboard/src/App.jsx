@@ -767,8 +767,8 @@ function Audit() {
         <label className="field"><span>{t("Rule")}</span><input value={filters.rule} placeholder="IFC-001" onChange={(e) => setFilters({ ...filters, rule: e.target.value })} /></label>
         <label className="field"><span>{t("Event")}</span><select value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value })}><option value="">{t("Any")}</option>{KINDS.map((k) => <option key={k} value={k}>{human(k)}</option>)}</select></label>
         <span className="actions push">
-          <button className="btn" onClick={() => download("/admin/audit/export?format=jsonl", "mandate-audit.jsonl")}>{t("Download JSONL")}</button>
-          <button className="btn" onClick={() => download("/admin/audit/export?format=csv", "mandate-audit.csv")}>{t("Download CSV")}</button>
+          <button className="btn" onClick={() => download("/admin/audit/export?format=jsonl", "aegis-audit.jsonl")}>{t("Download JSONL")}</button>
+          <button className="btn" onClick={() => download("/admin/audit/export?format=csv", "aegis-audit.csv")}>{t("Download CSV")}</button>
         </span>
       </div>
       <p className="note">{t("Entries can only be added. The database rejects edits and deletions, and evidence never contains the raw text that was checked.")}</p>
@@ -817,14 +817,14 @@ export default function App() {
   const [key, setK] = useState(getKey());
   const [showKey, setShowKey] = useState(false);
   useEffect(() => { location.hash = view; }, [view]);
-  useEffect(() => { document.title = `${t(TITLES[view])} | Mandate`; }, [view, lang]);
+  useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
   const Views = { agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Live;
   return (
     <div className="app" key={lang}>
       <header className="top">
-        <div className="brand"><Rosette /><span className="wordmark">Mandate</span></div>
+        <div className="brand"><Rosette /><span className="wordmark">Aegis</span></div>
         <nav aria-label={t("Sections")}>
           {NAV.map((g) => (
             <div className="nav-group" key={g.group}>

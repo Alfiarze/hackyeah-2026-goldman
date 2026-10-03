@@ -12,8 +12,8 @@ from typing import Any
 
 import asyncpg
 
-from mandate.models import Classification, GatewayError
-from mandate.policy import Limit, Policy
+from aegis.models import Classification, GatewayError
+from aegis.policy import Limit, Policy
 
 
 @dataclass

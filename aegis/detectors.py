@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from mandate.models import Finding
+from aegis.models import Finding
 
 # ---------------------------------------------------------------- validators
 

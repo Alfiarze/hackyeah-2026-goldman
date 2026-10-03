@@ -13,12 +13,12 @@ from asgi_lifespan import LifespanManager
 
 from fastapi import FastAPI
 
-from mandate import backends
-from mandate.app import create_app
-from mandate.settings import ROOT, Settings
+from aegis import backends
+from aegis.app import create_app
+from aegis.settings import ROOT, Settings
 
 # A fake sandbox runner: no Docker. Canned results keyed by a marker in the code, so engine wiring is
-# tested deterministically in CI. The real isolation is exercised live via mandate/sandbox.py.
+# tested deterministically in CI. The real isolation is exercised live via aegis/sandbox.py.
 sandbox_app = FastAPI()
 
 

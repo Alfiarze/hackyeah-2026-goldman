@@ -8,7 +8,7 @@ import "../styles/global.css";
 
 interface Props { title?: string; description?: string }
 const {
-  title = "Mandate: zero-trust execution contracts for AI agents",
+  title = "Aegis: zero-trust execution contracts for AI agents",
   description = "A gateway between AI agents and everything they touch. Every task gets a short-lived mandate, every call is checked before it runs, every decision leaves evidence.",
 } = Astro.props;
 
@@ -31,7 +31,7 @@ const baseUrl = import.meta.env.BASE_URL;
       (() => {
         let lang = "en";
         try {
-          const saved = localStorage.getItem("mandate-lang");
+          const saved = localStorage.getItem("aegis-lang");
           if (saved === "pl" || saved === "en") lang = saved;
           else if ((navigator.language || "").toLowerCase().startsWith("pl")) lang = "pl";
         } catch { /* private mode */ }
@@ -44,7 +44,7 @@ const baseUrl = import.meta.env.BASE_URL;
     <slot />
       <script is:inline>
       (() => {
-        const url = window.MANDATE_DASHBOARD_URL;
+        const url = window.AEGIS_DASHBOARD_URL;
         if (!url) return;
         const base = url.endsWith("/") ? url : url + "/";
         document.querySelectorAll("a[data-dashboard]").forEach((a) => { a.href = base + a.dataset.dashboard; });

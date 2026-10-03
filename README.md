@@ -1,11 +1,11 @@
-# MANDATE — AI Control Layer
+# Aegis — AI Control Layer
 
 **Zero-trust execution contracts for AI agents.** HackYeah 2026 · Goldman Sachs challenge.
 
-> Other guardrails ask whether an action *looks* dangerous. MANDATE asks whether this agent was ever
+> Other guardrails ask whether an action *looks* dangerous. Aegis asks whether this agent was ever
 > **authorized** to do it, with this data, for this task.
 
-MANDATE is a gateway that sits between agents and everything they touch: models, tools, MCP servers
+Aegis is a gateway that sits between agents and everything they touch: models, tools, MCP servers
 and other agents. Every task gets a short-lived **mandate**: which resources it may read, which tools it may call,
 where results may go, how much it may spend and for how long. Every call is checked against the mandate, the
 central policy and the data the task has already seen. Only then does it run.
@@ -53,7 +53,7 @@ Default keys live in `.env.example`: admin `dev-admin-key`, app `dev-app-key`, a
 flowchart LR
   App[Trusted app] -- "POST /v1/tasks (X-App-Key)" --> GW
   Agent -- "chat / tools / MCP / delegate<br/>(agent key + lease)" --> GW
-  subgraph GW[MANDATE gateway]
+  subgraph GW[Aegis gateway]
     direction TB
     M[1 Mandate & lease<br/>tools, resources, recipients, TTL] --> A[2 Allowlists<br/>models, MCP tool hashes]
     A --> S[3 Attack signatures<br/>external feed]
@@ -89,10 +89,10 @@ flowchart LR
 
 | Feature | What it means | Where |
 |---|---|---|
-| **Task mandate + lease** | Capabilities scoped to one task. The HMAC lease is bound to the agent and the principal. It dies on completion, revocation or TTL expiry. | `mandate/tasks.py` |
+| **Task mandate + lease** | Capabilities scoped to one task. The HMAC lease is bound to the agent and the principal. It dies on completion, revocation or TTL expiry. | `aegis/tasks.py` |
 | **Data lineage (taint)** | Reading a `CONFIDENTIAL` document makes the whole task `CONFIDENTIAL`. Paraphrasing, translating or encoding does not lower it. Sinks have a clearance (`mail.send:external` = `PUBLIC`). Labels come from a trusted catalog, never from the model. | `engine.py taint_check` |
 | **Proof of enforcement** | Each decision records `tool_invoked`. Backend counters show that a blocked mail never arrived (`mail_sent` stays 0). | `backends.py`, dashboard |
-| **Budget escrow** | Reserve before execute, across task → parent → principal → global. Tested with 30 concurrent agents: overspend is 0. | `mandate/budget.py` |
+| **Budget escrow** | Reserve before execute, across task → parent → principal → global. Tested with 30 concurrent agents: overspend is 0. | `aegis/budget.py` |
 | **Hybrid defence** | Deterministic rules decide authority. The semantic model can only tighten a decision. The `detector_miss` scenario forces the AI detector to say "safe", and the data-flow rule still blocks. | `semantic.py` |
 
 ## Controls and OWASP mapping
@@ -223,9 +223,9 @@ separately from the gateway:
 
 ```bash
 make landing                                   # local: http://localhost:8080
-docker build -t mandate-landing \
+docker build -t aegis-landing \
   --build-arg PUBLIC_DASHBOARD_URL=https://<your-host>/dashboard/ landing
-docker run -p 8080:80 mandate-landing          # anywhere
+docker run -p 8080:80 aegis-landing          # anywhere
 ```
 
 The "Open the dashboard" links are set at **container start** from `DASHBOARD_URL`, so one image works on any domain
@@ -253,8 +253,8 @@ console edits survive redeploys. The dev keys from `.env.example` are never used
 ## Repo map
 
 ```
-mandate/      gateway (app, engine pipeline, policy, attacks, detectors, semantic, budget, tasks, audit, admin)
-mandate/backends.py   mock tool backends + MCP server with counters
+aegis/       gateway (app, engine pipeline, policy, attacks, detectors, semantic, budget, tasks, audit, admin)
+aegis/backends.py    mock tool backends + MCP server with counters
 dashboard/    React + Vite dashboard, Polish/English (built into the image, served at /dashboard)
 policy/       central policy (single source of truth)
 feeds/        attack signature feed

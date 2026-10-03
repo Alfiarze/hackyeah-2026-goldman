@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(os.environ.get("MANDATE_ROOT", Path(__file__).resolve().parent.parent))
+ROOT = Path(os.environ.get("AEGIS_ROOT", Path(__file__).resolve().parent.parent))
 
 
 def _pairs(raw: str) -> dict[str, str]:

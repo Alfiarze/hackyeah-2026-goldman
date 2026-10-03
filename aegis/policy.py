@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING, Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from mandate.models import Classification
+from aegis.models import Classification
 
 if TYPE_CHECKING:
     import asyncpg
 
-    from mandate.audit import Audit
+    from aegis.audit import Audit
 
-log = logging.getLogger("mandate.policy")
+log = logging.getLogger("aegis.policy")
 
 Mode = Literal["block", "redact"]
 

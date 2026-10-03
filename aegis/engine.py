@@ -18,16 +18,16 @@ from typing import Any
 import asyncpg
 import httpx
 
-from mandate import detectors
-from mandate.attacks import FeedStore
-from mandate.audit import Audit
-from mandate.budget import BudgetExceeded, Escrow, Scope
-from mandate.llm import LLMError, complete, estimate_tokens
-from mandate.models import Classification, Decision, Finding, GatewayError
-from mandate.policy import Limit, Policy, PolicyStore
-from mandate.semantic import SemanticGuard
-from mandate.settings import Settings
-from mandate.tasks import Task, TaskManager
+from aegis import detectors
+from aegis.attacks import FeedStore
+from aegis.audit import Audit
+from aegis.budget import BudgetExceeded, Escrow, Scope
+from aegis.llm import LLMError, complete, estimate_tokens
+from aegis.models import Classification, Decision, Finding, GatewayError
+from aegis.policy import Limit, Policy, PolicyStore
+from aegis.semantic import SemanticGuard
+from aegis.settings import Settings
+from aegis.tasks import Task, TaskManager
 
 
 @dataclass(frozen=True)
@@ -534,7 +534,7 @@ class Gateway:
             return {"jsonrpc": "2.0", "id": rpc_id, "result": result}
 
         if method == "initialize":
-            return ok({"protocolVersion": "2025-06-18", "serverInfo": {"name": "mandate-gateway", "version": "0.1"},
+            return ok({"protocolVersion": "2025-06-18", "serverInfo": {"name": "aegis-gateway", "version": "0.1"},
                        "capabilities": {"tools": {"listChanged": True}}})
         if method in ("notifications/initialized", "ping"):
             return ok({})

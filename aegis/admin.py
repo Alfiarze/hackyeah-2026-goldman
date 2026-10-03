@@ -17,9 +17,9 @@ from fastapi import APIRouter, Body, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
-from mandate.engine import Gateway, gather_limited, tool_def_hash
-from mandate.models import Classification, GatewayError
-from mandate.policy import Limit, disabled_controls, parse_policy
+from aegis.engine import Gateway, gather_limited, tool_def_hash
+from aegis.models import Classification, GatewayError
+from aegis.policy import Limit, disabled_controls, parse_policy
 
 
 def _gw(request: Request) -> Gateway:
@@ -449,7 +449,7 @@ async def audit_export(request: Request, format: str = Query("jsonl", pattern="^
     body = await _gw(request).audit.export(format, include_synthetic=include_synthetic)
     media = "text/csv" if format == "csv" else "application/x-ndjson"
     return PlainTextResponse(body, media_type=media,
-                             headers={"Content-Disposition": f"attachment; filename=mandate-audit.{format}"})
+                             headers={"Content-Disposition": f"attachment; filename=aegis-audit.{format}"})
 
 
 @router.get("/stats")
@@ -599,7 +599,7 @@ async def backend_reset(request: Request):
 
 @router.post("/demo/scenarios/{name}")
 async def run_scenario(request: Request, name: str):
-    from mandate.scenarios import SCENARIOS
+    from aegis.scenarios import SCENARIOS
 
     if name not in SCENARIOS:
         raise GatewayError(404, "UNKNOWN_SCENARIO", f"available: {sorted(SCENARIOS)}")
@@ -608,7 +608,7 @@ async def run_scenario(request: Request, name: str):
 
 @router.get("/demo/scenarios")
 async def list_scenarios():
-    from mandate.scenarios import SCENARIOS
+    from aegis.scenarios import SCENARIOS
 
     return {name: (fn.__doc__ or "").strip() for name, fn in SCENARIOS.items()}
 

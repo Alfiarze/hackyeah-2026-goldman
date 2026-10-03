@@ -48,7 +48,7 @@ class RunResult:
 def _docker_args() -> list[str]:
     """Run flags that box the container in. --network none is the key control for exfiltration via code."""
     return [
-        "docker", "run", "--rm", "-i", "--name", f"mandate-sbx-{uuid.uuid4().hex[:10]}",
+        "docker", "run", "--rm", "-i", "--name", f"aegis-sbx-{uuid.uuid4().hex[:10]}",
         "--network", "none",                 # no outbound connections at all
         "--read-only",                       # root filesystem is immutable
         "--tmpfs", "/tmp:rw,size=16m,noexec", # a small scratch area, no executables
@@ -106,12 +106,12 @@ async def _kill(args: list[str]) -> None:
 
 # ---------------------------------------------------------------- HTTP service
 
-app = FastAPI(title="MANDATE sandbox runner")
+app = FastAPI(title="Aegis sandbox runner")
 
 
 def require_secret(x_sandbox_secret: str | None = Header(default=None)) -> None:
     if x_sandbox_secret != SANDBOX_SECRET:
-        raise HTTPException(401, "only the MANDATE gateway may use the sandbox")
+        raise HTTPException(401, "only the Aegis gateway may use the sandbox")
 
 
 class RunRequest(BaseModel):

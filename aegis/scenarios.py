@@ -9,7 +9,7 @@ import os
 import pickle
 from typing import Any
 
-from mandate.engine import Gateway
+from aegis.engine import Gateway
 
 AGENT = "demo-agent"
 
@@ -179,7 +179,7 @@ async def supply_chain(gw: Gateway):
 
 async def budget_race(gw: Gateway):
     """30 agents race for a 10k-token pool (1k max_tokens each). Overspend must be 0."""
-    from mandate.admin import simulate as _sim  # reuse the admin implementation
+    from aegis.admin import simulate as _sim  # reuse the admin implementation
 
     class _Req:
         class app:  # noqa: N801

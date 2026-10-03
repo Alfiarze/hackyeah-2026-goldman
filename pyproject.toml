@@ -12,6 +12,7 @@ dependencies = [
     "watchfiles>=0.22",
     "asyncpg>=0.29",
     "ruamel.yaml>=0.18",
+    "pypdf>=4.0",
 ]
 
 [project.optional-dependencies]

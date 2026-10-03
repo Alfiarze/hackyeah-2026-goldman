@@ -1,7 +1,7 @@
 // Guided layer of the console: the "Start here" tour, a help panel on every page, ready-made examples and
 // plain-language explanations of a decision. Everything here calls the same admin API as the rest of the console.
 import React, { useEffect, useState } from "react";
-import { api } from "./api.js";
+import { api, getKey } from "./api.js";
 import { human, t } from "./i18n.js";
 import { Id, Mark, Rosette, Stamp, describe, num } from "./ui.jsx";
 import Icon from "./icons.jsx";
@@ -153,46 +153,61 @@ export function DisabledBanner({ onChange }) {
 // ------------------------------------------------------------------ upload
 
 const SAMPLES = [
-  ["samples/umowa-czysta.txt", "Clean contract"],
-  ["samples/umowa-z-defektami.txt", "Contract with planted defects"],
+  ["samples/umowa-czysta.pdf", "Clean contract", "samples/umowa-czysta.txt"],
+  ["samples/umowa-z-defektami.pdf", "Contract with planted defects", "samples/umowa-z-defektami.txt"],
 ];
 
-// Load a text file (a contract, an e-mail, a prompt) as a document the agent would read.
+// The gateway turns the file into the text an agent would read (for a PDF: all of it, hidden text included).
+async function extractText(blob) {
+  const res = await fetch("/admin/playground/extract", {
+    method: "POST", headers: { "X-Admin-Key": getKey(), "Content-Type": blob.type || "application/octet-stream" }, body: blob,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || data?.error?.reason_code || res.statusText);
+  return data;
+}
+
+// Load a document (a PDF contract, an e-mail, a text file) as something the agent reads.
 export function FileLoad({ onText }) {
   const [drag, setDrag] = useState(false);
-  const [name, setName] = useState(null);
-  const read = (file) => {
-    if (!file) return;
-    if (file.size > 500_000) { setName(t("File too large (max 500 KB)")); return; }
-    file.text().then((txt) => { setName(file.name); onText(txt, file.name); });
+  const [info, setInfo] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const load = async (blob, name) => {
+    if (!blob) return;
+    if (blob.size > 10 * 1024 * 1024) { setInfo({ err: t("File too large (max 10 MB)") }); return; }
+    setBusy(true); setInfo(null);
+    try {
+      const d = await extractText(blob);
+      setInfo({ name, pages: d.pages, chars: d.chars });
+      onText(d.text, name);
+    } catch (e) { setInfo({ err: e.message }); }
+    setBusy(false);
   };
-  const sample = async (path) => {
-    const txt = await (await fetch(path)).text();
-    setName(path.split("/").pop());
-    onText(txt, path.split("/").pop());
-  };
+  const sample = async (path) => load(await (await fetch(path)).blob(), path.split("/").pop());
   return (
     <div className={`fileload ${drag ? "is-drag" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
-      onDrop={(e) => { e.preventDefault(); setDrag(false); read(e.dataTransfer.files[0]); }}>
+      onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; load(f, f?.name); }}>
       <div className="fileload-main">
         <Icon name="audit" size={22} />
         <div>
           <b>{t("Check a whole document")}</b>
-          <span className="muted small">{t("Drop a .txt or .md file here (a contract, an e-mail), or pick one. It is checked as a document the agent reads.")}</span>
+          <span className="muted small">{t("Drop a PDF, .txt or .md file here (a contract, an e-mail), or pick one. All of its text is checked as a document the agent reads, including text hidden in a PDF.")}</span>
         </div>
-        <label className="btn small">{t("Choose a file")}<input type="file" accept=".txt,.md,.csv,.json,.eml,text/*" hidden onChange={(e) => read(e.target.files[0])} /></label>
+        <label className="btn small">{busy ? t("Reading…") : t("Choose a file")}<input type="file" accept=".pdf,.txt,.md,.csv,.json,.eml,application/pdf,text/*" hidden onChange={(e) => { const f = e.target.files[0]; load(f, f?.name); e.target.value = ""; }} /></label>
       </div>
       <div className="fileload-samples">
         <span className="label">{t("Sample contracts")}</span>
-        {SAMPLES.map(([p, l]) => (
+        {SAMPLES.map(([p, l, txt]) => (
           <span key={p} className="sample">
-            <button type="button" className="link" onClick={() => sample(p)}>{t("Load")}: {t(l)}</button>
-            <a className="link muted" href={p} download>{t("download")}</a>
+            <button type="button" className="link" onClick={() => sample(p)}>{t("Load")}: {t(l)} (PDF)</button>
+            <a className="link muted" href={p} download>{t("download PDF")}</a>
+            <a className="link muted" href={txt} download>TXT</a>
           </span>
         ))}
       </div>
-      {name && <p className="small t-allow">{t("Loaded: {name}", { name })}</p>}
+      {info?.err && <p className="small t-block">{info.err}</p>}
+      {info?.name && <p className="small t-allow">{info.pages ? t("Loaded {name}: {pages} page(s), {chars} characters of text.", info) : t("Loaded: {name}", info)}</p>}
     </div>
   );
 }

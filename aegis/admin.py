@@ -525,6 +525,43 @@ class Evaluate(BaseModel):
     tool: str | None = None
 
 
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
+
+
+def _pdf_text(data: bytes) -> dict[str, Any]:
+    """Every piece of text in the PDF, visible or not: white or 1-point text is exactly how instructions are
+    smuggled to an agent, and the agent's own PDF reader would extract it too."""
+    import io
+
+    from pypdf import PdfReader
+    from pypdf.errors import PdfReadError
+
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if reader.is_encrypted:
+            raise GatewayError(422, "PDF_ENCRYPTED", "the PDF is password-protected")
+        pages = [page.extract_text() or "" for page in reader.pages]
+    except (PdfReadError, ValueError, KeyError) as exc:
+        raise GatewayError(422, "PDF_UNREADABLE", f"cannot read this PDF: {type(exc).__name__}") from exc
+    text = "\n".join(pages).strip()
+    return {"text": text, "pages": len(pages), "chars": len(text)}
+
+
+@router.post("/playground/extract")
+async def extract(request: Request):
+    """Turn an uploaded document into the text an agent would read (PDF via pypdf, plain text as is)."""
+    data = await request.body()
+    if len(data) > MAX_DOCUMENT_BYTES:
+        raise GatewayError(413, "DOCUMENT_TOO_LARGE", "documents up to 10 MB")
+    if data[:5] == b"%PDF-":
+        return await asyncio.to_thread(_pdf_text, data)
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise GatewayError(415, "UNSUPPORTED_DOCUMENT", "send a PDF or UTF-8 text") from exc
+    return {"text": text, "pages": None, "chars": len(text)}
+
+
 @router.post("/playground/evaluate")
 async def evaluate(request: Request, body: Evaluate):
     return await _gw(request).evaluate(body.text, target=body.target, sink=body.sink,

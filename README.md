@@ -66,6 +66,7 @@ flowchart LR
   end
   GW --> LLM[Model server: GB10 / OpenRouter for tests]
   GW -- "backend secret" --> Tools[Tool backends / MCP server<br/>counters = proof]
+  GW -- "sandbox secret" --> Sbx[Sandbox runner<br/>isolated throw-away containers]
   GW --> PG[(PostgreSQL<br/>tasks, budgets, audit, versions)]
   Policy[policy.yaml] -. hot reload .-> GW
   Feed[attacks.yaml / feed URL] -. hot reload .-> GW
@@ -107,6 +108,7 @@ flowchart LR
 | `semantic`: LLM risk score on the main model server (thresholds per profile) | AI | block ≥ 0.7, flag ≥ 0.5 | LLM01, Agentic: goal manipulation |
 | `attack_signatures`: external feed | deterministic | block | LLM03, LLM05 |
 | Budget escrow (tokens, calls, concurrency, guard budget) | deterministic | block (429) | LLM10 Unbounded Consumption |
+| Sandboxed code execution (`code.run`) | deterministic | sandbox (strict: block) | LLM05 Improper Output Handling, CWE-94 |
 | MCP tool hash pinning and quarantine | deterministic | block | LLM01 / Invariant Labs tool poisoning |
 | Case-scoped memory | deterministic | block | Agentic: memory poisoning |
 
@@ -207,6 +209,9 @@ report them together with the machine and the model.
 * Taint is **conservative**: after a confidential read, the whole task is confidential. This can block harmless
   output (false positive). Per-sentence provenance is future work.
 * Streaming responses are buffered and checked before release.
+* `code.run` executes in a throw-away container (no network, read-only, memory/CPU/pids caps, hard timeout). The
+  sandbox runner is the only service with Docker access. A container shares the host kernel, so production would
+  use gVisor or Firecracker; we state this openly.
 * The heuristic semantic scorer is a fallback, not a replacement for the model; we report which backend is active.
 * Not built in this MVP: multi-instance policy push (`LISTEN/NOTIFY`), automated tests for the secret detectors.
   Redis is the path for very high request rates.

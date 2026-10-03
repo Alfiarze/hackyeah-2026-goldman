@@ -105,8 +105,8 @@ async def call(name: str, body: Call) -> dict[str, Any]:
     if name == "http.post":
         state.http_posts.append({"url": str(a.get("url")), "task_id": body.task_id})
         return {"status": 200}
-    # code.run: never executes anything in the demo
-    return {"stdout": "", "note": "demo sandbox: code recorded, not executed"}
+    # code.run is handled by the gateway via the sandbox runner, never here
+    raise HTTPException(501, "code.run is executed by the sandbox runner, not the tool backend")
 
 
 @app.get("/stats", dependencies=[Depends(require_secret)])

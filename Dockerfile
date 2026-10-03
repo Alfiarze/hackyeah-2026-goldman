@@ -6,8 +6,12 @@ RUN npm ci --silent || npm install --silent
 COPY dashboard/ ./
 RUN npm run build
 
-# --- gateway / tool backends (same image, different command) ---
+# --- docker CLI (so the sandbox runner can launch sibling containers via the mounted socket) ---
+FROM docker:27-cli AS dockercli
+
+# --- gateway / tool backends / sandbox runner (same image, different command) ---
 FROM python:3.12-slim
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

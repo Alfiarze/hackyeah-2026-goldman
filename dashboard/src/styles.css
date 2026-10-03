@@ -475,3 +475,5 @@ textarea.code, .mono-input { font: 13px/1.6 var(--mono); }
 @media (max-width: 760px) {
   .action-group li { flex-direction: column; align-items: stretch; }
 }
+
+.sandbox-line { color: var(--intaglio); margin-top: 4px; }

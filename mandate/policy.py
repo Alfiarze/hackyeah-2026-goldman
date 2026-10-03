@@ -64,6 +64,12 @@ class SemanticControl(_Strict):
         return self
 
 
+class SandboxControl(_Strict):
+    enabled: bool = True
+    mode: Literal["block", "sandbox", "allow"] = "sandbox"  # sandbox = run in an isolated throw-away container
+    wall_seconds: int = Field(10, ge=1, le=60)
+
+
 class Controls(_Strict):
     mandate: Toggle = Toggle()
     ifc_taint: Toggle = Toggle()
@@ -73,6 +79,7 @@ class Controls(_Strict):
     attack_signatures: ModeControl = ModeControl()
     injection_heuristics: ModeControl = ModeControl(mode="redact")
     semantic: SemanticControl = SemanticControl()
+    code_execution: SandboxControl = SandboxControl()
 
 
 class Limit(_Strict):

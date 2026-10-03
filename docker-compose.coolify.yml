@@ -22,6 +22,16 @@ services:
       timeout: 5s
       retries: 10
 
+  sandbox:
+    build: .
+    restart: unless-stopped
+    command: ["uvicorn", "mandate.sandbox:app", "--host", "0.0.0.0", "--port", "8002"]
+    user: "0:0"   # needs the docker socket; this service only launches locked-down containers
+    environment:
+      SANDBOX_SECRET: ${SERVICE_PASSWORD_SANDBOX}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   tools:
     build: .
     restart: unless-stopped
@@ -35,16 +45,22 @@ services:
   gateway:
     build: .
     restart: unless-stopped
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
       tools:
+        condition: service_started
+      sandbox:
         condition: service_started
     environment:
       SERVICE_URL_GATEWAY_8000: /
       DATABASE_URL: postgresql://goldman:${SERVICE_PASSWORD_POSTGRES}@db:5432/goldman
       TOOLS_BASE_URL: http://tools:8001
       TOOL_BACKEND_SECRET: ${SERVICE_PASSWORD_TOOLS}
+      SANDBOX_BASE_URL: http://sandbox:8002
+      SANDBOX_SECRET: ${SERVICE_PASSWORD_SANDBOX}
       # shown in Coolify > Environment Variables; give it to whoever needs the dashboard (jury)
       ADMIN_API_KEY: ${SERVICE_PASSWORD_ADMIN}
       APP_API_KEY: ${SERVICE_PASSWORD_APP}
@@ -66,6 +82,8 @@ services:
   landing:
     build: ./landing
     restart: unless-stopped
+    expose:
+      - "80"
     environment:
       SERVICE_URL_LANDING_80: /
       # where "Open the dashboard" points; override in Coolify if the gateway has a custom domain

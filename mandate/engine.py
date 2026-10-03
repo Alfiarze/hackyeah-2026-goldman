@@ -88,7 +88,8 @@ def tool_def_hash(definition: dict[str, Any]) -> str:
 
 class Gateway:
     def __init__(self, settings: Settings, pool: asyncpg.Pool, policy: PolicyStore, feed: FeedStore,
-                 audit: Audit, semantic: SemanticGuard, tool_client: httpx.AsyncClient):
+                 audit: Audit, semantic: SemanticGuard, tool_client: httpx.AsyncClient,
+                 sandbox_client: httpx.AsyncClient | None = None):
         self.settings = settings
         self.pool = pool
         self.policy = policy
@@ -98,6 +99,7 @@ class Gateway:
         self.tasks = TaskManager(pool, settings.lease_secret)
         self.escrow = Escrow(pool)
         self.tools_http = tool_client
+        self.sandbox_http = sandbox_client
 
     # ================================================================ models
 
@@ -321,6 +323,11 @@ class Gateway:
                         d.add(Finding(action="BLOCK", rule_id="MANDATE-RCPT", reason_code="RECIPIENT_NOT_ALLOWED",
                                       stage="mandate", detail={"recipient": to,
                                                                "allowed": task.mandate["recipients_allow"]}))
+            if tool == "code.run":
+                cx = policy.controls.code_execution
+                if not cx.enabled or cx.mode == "block":
+                    d.add(Finding(action="BLOCK", rule_id="SBX-001", reason_code="CODE_EXECUTION_BLOCKED",
+                                  stage="mandate", detail={"mode": "off" if not cx.enabled else cx.mode}))
             if spec and not spec.internal:
                 status = await self.pool.fetchval("SELECT status FROM tool_registry WHERE name=$1", tool)
                 if status == "quarantined":
@@ -382,6 +389,8 @@ class Gateway:
 
         # ---- post: taint from what was read, then inspect what the agent is about to read
         extra: dict[str, Any] = {"sink": sink}
+        if isinstance(result, dict) and "sandbox" in result:
+            extra["sandbox"] = result["sandbox"]
         label = result.pop("_label", None)
         if spec.reads and label is not None and policy.controls.ifc_taint.enabled:
             new_level = await self.tasks.raise_taint(task.id, Classification(label))
@@ -433,6 +442,8 @@ class Gateway:
                     raise GatewayError(403, "MEMORY_CROSS_CASE", "memory entry belongs to another case")
                 raise GatewayError(404, "MEMORY_NOT_FOUND", "no such memory entry")
             return {"content": row["content"], "_label": row["classification"]}
+        if tool == "code.run":
+            return await self._run_sandboxed(str(args.get("code", "")))
         resp = await self.tools_http.post(
             f"/tools/{tool}", json={"args": args, "task_id": task.id},
             headers={"X-Backend-Secret": self.settings.tool_backend_secret},
@@ -449,6 +460,26 @@ class Gateway:
         return result
 
     # ================================================================ MCP (JSON-RPC over HTTP)
+
+    async def _run_sandboxed(self, code: str) -> dict[str, Any]:
+        """Run agent-proposed code in the isolated sandbox service. Its result is returned as evidence;
+        it never touches the gateway host. If the sandbox is unreachable, fail closed."""
+        cx = self.policy.active.controls.code_execution
+        if cx.mode == "allow" or self.sandbox_http is None:
+            return {"content": None, "sandbox": {"status": "skipped",
+                    "note": "sandbox disabled (mode=allow) or runner not configured; code not executed"}}
+        try:
+            resp = await self.sandbox_http.post("/run", json={"code": code, "wall_seconds": cx.wall_seconds},
+                                                headers={"X-Sandbox-Secret": self.settings.sandbox_secret})
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise GatewayError(502, "SANDBOX_UNAVAILABLE", f"sandbox runner error: {type(exc).__name__}") from exc
+        r = resp.json()
+        summary = {"ok": "ran and exited cleanly", "nonzero_exit": "ran, exited with an error",
+                   "timeout": "killed at the time limit", "oom": "killed at the memory limit",
+                   "runner_error": "could not run"}.get(r["status"], r["status"])
+        content = (r.get("stdout") or "").strip() or f"[no output; {summary}]"
+        return {"content": content, "sandbox": r}
 
     async def sync_tool_registry(self) -> list[dict[str, Any]]:
         """Trust-on-first-use; a changed definition is quarantined until an admin re-approves it."""

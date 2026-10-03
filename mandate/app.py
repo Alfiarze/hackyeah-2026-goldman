@@ -44,7 +44,8 @@ class ToolCall(BaseModel):
 
 
 def create_app(settings: Settings | None = None,
-               tool_client_factory: Callable[[], httpx.AsyncClient] | None = None) -> FastAPI:
+               tool_client_factory: Callable[[], httpx.AsyncClient] | None = None,
+               sandbox_client_factory: Callable[[], httpx.AsyncClient] | None = None) -> FastAPI:
     settings = settings or Settings()
 
     @contextlib.asynccontextmanager
@@ -61,7 +62,10 @@ def create_app(settings: Settings | None = None,
         await semantic.probe()
         tool_client = (tool_client_factory() if tool_client_factory
                        else httpx.AsyncClient(base_url=settings.tools_base_url, timeout=10))
-        app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client)
+        sandbox_client = (sandbox_client_factory() if sandbox_client_factory
+                          else httpx.AsyncClient(base_url=settings.sandbox_base_url, timeout=70)
+                          if settings.sandbox_base_url else None)
+        app.state.gw = Gateway(settings, pool, policy, feed, audit, semantic, tool_client, sandbox_client)
         background = []
         if settings.background_tasks:
             async def probe_loop():
@@ -76,6 +80,8 @@ def create_app(settings: Settings | None = None,
             for t in background:
                 t.cancel()
             await tool_client.aclose()
+            if sandbox_client:
+                await sandbox_client.aclose()
             await pool.close()
 
     app = FastAPI(title="MANDATE - AI Control Layer", version="0.1.0", lifespan=lifespan)

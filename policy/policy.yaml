@@ -51,6 +51,9 @@ controls:
     backend: auto          # auto = main model server (LLM_BASE_URL), otherwise local heuristic scorer
     on_error: block        # fail-closed
     timeout_ms: 20000      # remote model: allow for network and queueing
+  code_execution:          # mode comes from the profile: block | sandbox | allow
+    enabled: true
+    wall_seconds: 10
 
 budgets:
   default_max_tokens: 1024     # injected when a request has no max_tokens, so every reservation is bounded
@@ -66,6 +69,12 @@ task_profiles:
     resources: ["/clients/{client}/*", "/public/*"]
     tools: [doc.read, legal_db.search, notes.write, memory.read, memory.write, mail.send]
     recipients_allow: ["*@lawfirm.example", "*@client-{client}.example"]
+    budget: {tokens: 20000, calls: 30, concurrency: 3}
+    ttl_seconds: 900
+  data_task:
+    description: Prepare data; may run code in the sandbox
+    resources: ["/public/*"]
+    tools: [doc.read, legal_db.search, code.run, notes.write]
     budget: {tokens: 20000, calls: 30, concurrency: 3}
     ttl_seconds: 900
   research:
@@ -89,11 +98,14 @@ profiles:
     semantic: {block_at_risk: 0.4, redact_at_risk: 0.25}
     pii: {mode: block}
     injection_heuristics: {mode: block}
+    code_execution: {mode: block}
   balanced:
     semantic: {block_at_risk: 0.7, redact_at_risk: 0.5}
     pii: {mode: redact}
     injection_heuristics: {mode: redact}
+    code_execution: {mode: sandbox}
   permissive:
     semantic: {block_at_risk: 0.9, redact_at_risk: 0.75}
     pii: {mode: redact}
     injection_heuristics: {mode: redact}
+    code_execution: {mode: sandbox}

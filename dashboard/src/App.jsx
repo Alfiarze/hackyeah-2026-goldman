@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
-import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num } from "./ui.jsx";
+import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
 
 const NAV = [
@@ -242,6 +242,7 @@ const SCENARIO_COPY = {
   expired_lease: ["Reused credentials", "The task ends, the agent keeps its lease and tries to use it again."],
   mcp_poison: ["Tool changes after approval", "The MCP server silently rewrites a tool description to include an exfiltration instruction."],
   supply_chain: ["Model supply chain", "Four models are registered: one clean, one with a pickle that imports os, one hit by CVE-2024-34359, one from a typosquatted host."],
+  code_sandbox: ["Code runs in a sandbox", "An agent is tricked into running code that tries to reach the network and to run forever. Each run happens in an isolated, throw-away container."],
   budget_race: ["Thirty agents, one budget", "Thirty agents race for a 10,000-token pool at 1,000 tokens each."],
 };
 
@@ -317,6 +318,7 @@ function ScenarioResult({ r }) {
               <div className="step-body">
                 <h4>{t(s.step)}</h4><p className="muted">{stepText(s)}</p>
                 {s.findings?.length > 1 && <p className="also">{t("Rules that fired:")} {s.findings.map((f) => <Id key={f}>{f.split(" ")[1]}</Id>)}</p>}
+                {s.sandbox && <p className="small sandbox-line">{sandboxLine(s.sandbox)}</p>}
               </div>
               {action && <Stamp a={action} rule={s.rule_id || (s.rules || []).join(" ")} />}
             </li>
@@ -411,6 +413,7 @@ const CONTROL_COPY = {
   attack_signatures: ["Known attacks", "Signatures from the attack feed: unsafe deserialization, code execution, poisoned tools."],
   injection_heuristics: ["Instruction hijacking", "Phrases and hidden markup that try to override the agent's instructions."],
   semantic: ["AI review", "A local model scores untrusted text for manipulation. It can tighten a decision, never loosen one."],
+  code_execution: ["Code execution", "When an agent runs code: block it, or run it in an isolated throw-away container with no network and tight limits."],
 };
 
 function Controls() {

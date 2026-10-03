@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { human, t } from "./i18n.js";
-import { Id, Mark, Stamp, describe, num } from "./ui.jsx";
+import { Id, Mark, Rosette, Stamp, describe, num } from "./ui.jsx";
+import Icon from "./icons.jsx";
 
 // ------------------------------------------------------------------ examples
 
@@ -156,7 +157,7 @@ export function ExampleChips({ onPick, active }) {
     <div className="examples">
       {EXAMPLES.map((g) => (
         <div key={g.group} className="example-group">
-          <span className="example-label">{t(g.group)}</span>
+          <span className="label">{t(g.group)}</span>
           <div className="chips">
             {g.items.map((x) => (
               <button key={x.label} type="button" className={`chip chip-${x.expect.toLowerCase()} ${active === x.text ? "is-on" : ""}`}
@@ -170,7 +171,7 @@ export function ExampleChips({ onPick, active }) {
 }
 
 function QuickCheck() {
-  const [text, setText] = useState(EXAMPLES[1].items[0].text);
+  const [text, setText] = useState("");
   const [target, setTarget] = useState("user_input");
   const [res, setRes] = useState(null);
   const [err, setErr] = useState(null);
@@ -181,21 +182,27 @@ function QuickCheck() {
     catch (e) { setErr(e.message); }
     finally { setBusy(false); }
   };
-  const pick = (x) => { setText(x.text); setTarget(x.target || "user_input"); check(x.text, x.target || "user_input"); };
+  const pick = (x) => { setText(x.text); setTarget(x.target || "user_input"); setRes(null); };
   return (
     <div className="quick">
-      <div>
+      <div className="quick-input">
         <ExampleChips onPick={pick} active={text} />
-        <label className="field"><span>{t("…or type anything you like")}</span>
-          <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) check(); }} />
+        <label className="field"><span>{t("Text to check")}</span>
+          <textarea rows={4} value={text} placeholder={t("Pick an example above, or type any prompt here…")} onChange={(e) => { setText(e.target.value); setRes(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) check(); }} />
         </label>
         <div className="actions">
-          <button className="btn btn-primary" disabled={busy || !text.trim()} onClick={() => check()}>{busy ? t("Checking…") : t("Check it")}</button>
+          <button className="btn btn-primary btn-lg" disabled={busy || !text.trim()} onClick={() => check()}>{busy ? t("Checking…") : t("Check it")}<Icon name="arrow" size={17} /></button>
           <span className="note">{t("Ctrl+Enter also works. Nothing is executed, the gateway only decides.")}</span>
         </div>
         {err && <p className="t-block">{err}</p>}
       </div>
-      <div>{res ? <Verdict res={res} onRecheck={() => check()} /> : <p className="empty">{t("Click an example on the left. The verdict appears here.")}</p>}</div>
+      <div className="quick-result">{res ? <Verdict res={res} onRecheck={() => check()} /> : (
+        <div className="placeholder">
+          <Rosette size={64} />
+          <p>{text.trim() ? t("Ready. Press “Check it” to see what the gateway decides.") : t("1. Pick an example or type a prompt.  2. Press “Check it”.  The verdict appears here.")}</p>
+        </div>
+      )}</div>
     </div>
   );
 }
@@ -225,11 +232,11 @@ function LiveConfigDemo() {
   return (
     <div className="live-demo">
       <div className="live-demo-input">
-        <span className="example-label">{t("Text being checked")}</span>
+        <span className="label">{t("Text being checked")}</span>
         <pre className="excerpt">{LIVE_TEXT}</pre>
       </div>
       <div className="live-demo-controls">
-        <span className="example-label">{t("Control “Personal data”")}</span>
+        <span className="label">{t("Control “Personal data”")}</span>
         <div className="actions">
           <button className={`btn small ${ctl.enabled ? "" : "btn-primary"}`} disabled={busy} onClick={() => patch({ enabled: !ctl.enabled })}>
             {ctl.enabled ? t("Turn it off") : t("Turn it back on")}
@@ -274,12 +281,37 @@ function useDone() {
   return done;
 }
 
-function Copy({ text }) {
+function Copy({ text, onCopy }) {
   const [ok, setOk] = useState(false);
   return (
     <div className="cmd">
       <code>{text}</code>
-      <button className="btn small quiet" onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 1500); }}>{ok ? t("Copied") : t("Copy")}</button>
+      <button className="btn small quiet" onClick={() => { navigator.clipboard?.writeText(text); onCopy?.(); setOk(true); setTimeout(() => setOk(false), 1500); }}>{ok ? t("Copied") : t("Copy")}</button>
+    </div>
+  );
+}
+
+function StepHead({ n, done, title, proves }) {
+  return (
+    <div className="step-head">
+      <span className={`step-no ${done ? "is-done" : ""}`} aria-hidden="true">{done ? <Icon name="check" size={18} /> : String(n).padStart(2, "0")}</span>
+      <div>
+        <h2>{t(title)}</h2>
+        <p className="step-proves">{t(proves)}</p>
+      </div>
+    </div>
+  );
+}
+
+function Ring({ value, total }) {
+  const r = 34, c = 2 * Math.PI * r;
+  return (
+    <div className="ring" role="img" aria-label={t("{a} of {b} steps done", { a: value, b: total })}>
+      <svg viewBox="0 0 80 80" width="96" height="96">
+        <circle cx="40" cy="40" r={r} className="ring-track" />
+        <circle cx="40" cy="40" r={r} className="ring-fill" strokeDasharray={c} strokeDashoffset={c * (1 - value / total)} />
+      </svg>
+      <span><b>{value}</b>/{total}</span>
     </div>
   );
 }
@@ -287,75 +319,79 @@ function Copy({ text }) {
 export function Start({ go }) {
   const done = useDone();
   const visit = (step, view) => { markDone(step); go(view); };
-  const steps = [
-    { id: "check", title: "Check any text", proves: "Guardrails: deterministic and AI-based", body: (
-      <>
-        <p>{t("This is the fastest way to see the gateway work. Click an example, or write your own prompt. You get a decision (allowed, redacted or blocked), the reason in plain words, and exactly what the model would receive.")}</p>
-        <QuickCheck />
-      </>
-    ) },
-    { id: "config", title: "Change a rule and watch it apply immediately", proves: "Central policy, live configuration", body: (
-      <>
-        <p>{t("All rules live in one policy file. Switch the personal-data control off, or move it from redact to block: the same text is checked again with the new policy version, no restart.")}</p>
-        <LiveConfigDemo />
-        <p className="note">{t("More: “Controls” has every control and the strictness profile; “Policy file” lets you edit the YAML itself, break it on purpose and roll back.")}</p>
-        <div className="actions"><button className="btn" onClick={() => visit("config", "controls")}>{t("Open Controls")}</button><button className="btn quiet" onClick={() => visit("config", "policy")}>{t("Open the policy file")}</button></div>
-      </>
-    ) },
-    { id: "scenario", title: "Run a full attack end to end", proves: "Robustness, agent ↔ tool ↔ MCP", body: (
-      <>
-        <p>{t("A scripted agent goes through the real gateway, database and tool service. Start with “Poisoned contract”: the document tells the agent to e-mail it outside. Watch the mail counter stay at zero.")}</p>
-        <div className="actions"><button className="btn btn-primary" onClick={() => visit("scenario", "scenarios")}>{t("Go to scenarios")}</button><button className="btn" onClick={() => visit("scenario", "agent")}>{t("Or drive the agent yourself")}</button></div>
-      </>
-    ) },
-    { id: "watch", title: "See every decision and export the audit log", proves: "Security reporting", body: (
-      <>
-        <p>{t("“Live” shows decisions as they happen, what reached the tools, spend and the time each check adds. “Audit log” is append-only and exports to JSONL or CSV for the security team.")}</p>
-        <div className="actions"><button className="btn btn-primary" onClick={() => visit("watch", "live")}>{t("Open Live")}</button><button className="btn" onClick={() => visit("watch", "audit")}>{t("Open the audit log")}</button></div>
-      </>
-    ) },
-    { id: "budget", title: "Try to overspend the budget", proves: "Budget and resource governance", body: (
-      <>
-        <p>{t("Thirty agents race for one token pool. Each request reserves its cost before the model is called, so the pool never goes negative.")}</p>
-        <div className="actions"><button className="btn btn-primary" onClick={() => visit("budget", "budget")}>{t("Open Budget")}</button></div>
-      </>
-    ) },
-    { id: "tests", title: "Run the automated test suite", proves: "Self-testing suite", body: (
-      <>
-        <p>{t("Every control has cases that must pass and cases that must be stopped. Run them from the repository root:")}</p>
-        <Copy text="make test-docker" />
-        <p className="note">{t("Without Docker for the app: make venv && make test. The input cases are listed in tests/cases/content.yaml and can be extended without code.")}</p>
-        <div className="actions"><button className="btn" onClick={() => markDone("tests")}>{t("Mark as done")}</button></div>
-      </>
-    ) },
+  const cards = [
+    { id: "scenario", icon: "scenarios", title: "Run a full attack end to end", proves: "Robustness, agent ↔ tool ↔ MCP",
+      text: "A scripted agent goes through the real gateway, database and tool service. Start with “Poisoned contract”: the document tells the agent to e-mail it outside. Watch the mail counter stay at zero.",
+      cta: [["scenarios", "Go to scenarios"], ["agent", "Or drive the agent yourself"]] },
+    { id: "watch", icon: "live", title: "See every decision and export the audit log", proves: "Security reporting",
+      text: "“Live” shows decisions as they happen, what reached the tools, spend and the time each check adds. “Audit log” is append-only and exports to JSONL or CSV for the security team.",
+      cta: [["live", "Open Live"], ["audit", "Open the audit log"]] },
+    { id: "budget", icon: "budget", title: "Try to overspend the budget", proves: "Budget and resource governance",
+      text: "Thirty agents race for one token pool. Each request reserves its cost before the model is called, so the pool never goes negative.",
+      cta: [["budget", "Open Budget"]] },
   ];
-  const count = steps.filter((s) => done.has(s.id)).length;
+  const total = 6;
+  const count = ["check", "config", ...cards.map((c) => c.id), "tests"].filter((x) => done.has(x)).length;
   return (
-    <div className="tour">
-      <p className="lede">{t("Aegis sits between AI agents and everything they touch: models, tools, MCP servers and other agents. Every request is checked against one central policy and is allowed, redacted or blocked. These six steps show all of it in about five minutes.")}</p>
-      <div className="tour-progress" aria-label={t("Progress")}>
-        <div className="meter"><span className="meter-used" style={{ width: `${(count / steps.length) * 100}%` }} /></div>
-        <span className="muted small">{t("{a} of {b} steps done", { a: count, b: steps.length })}</span>
-      </div>
-      <ol className="tour-steps">
-        {steps.map((s, i) => (
-          <li key={s.id} className={done.has(s.id) ? "is-done" : ""}>
-            <div className="tour-num" aria-hidden="true">{done.has(s.id) ? "✓" : i + 1}</div>
-            <div className="tour-body">
-              <h2>{t(s.title)}</h2>
-              <p className="tour-proves">{t("Shows")}: {t(s.proves)}</p>
-              {s.body}
+    <div className="start">
+      <section className="hero card">
+        <div className="hero-text">
+          <p className="eyebrow"><Icon name="start" size={16} />{t("Guide for the jury · about 5 minutes")}</p>
+          <h1>{t("See Aegis stop an attack, step by step")}</h1>
+          <p className="lede">{t("Aegis sits between AI agents and everything they touch: models, tools, MCP servers and other agents. Every request is checked against one central policy and is allowed, redacted or blocked.")}</p>
+          <div className="legend">
+            <span><Mark a="ALLOW" /> {t("goes through unchanged")}</span>
+            <span><Mark a="REDACT" /> {t("goes through with sensitive parts masked")}</span>
+            <span><Mark a="BLOCK" /> {t("never reaches the model or tool")}</span>
+          </div>
+        </div>
+        <div className="hero-side">
+          <Ring value={count} total={total} />
+          <p className="muted small">{t("steps done")}</p>
+        </div>
+        <Rosette size={420} className="hero-art" />
+      </section>
+
+      <section className="card step-card">
+        <StepHead n={1} done={done.has("check")} title="Check any text" proves="Guardrails: deterministic and AI-based" />
+        <p className="step-text">{t("Pick an example or write your own prompt, then press “Check it”. You get the decision, the reason in plain words, and exactly what the model would receive.")}</p>
+        <QuickCheck />
+      </section>
+
+      <section className="card step-card">
+        <StepHead n={2} done={done.has("config")} title="Change a rule and watch it apply immediately" proves="Central policy, live configuration" />
+        <p className="step-text">{t("All rules live in one policy file. Switch the personal-data control off, or move it from redact to block: the same text is checked again with the new policy version, no restart.")}</p>
+        <LiveConfigDemo />
+        <div className="step-foot">
+          <span className="note">{t("More: “Controls” has every control and the strictness profile; “Policy file” lets you edit the YAML itself, break it on purpose and roll back.")}</span>
+          <span className="actions"><button className="btn" onClick={() => visit("config", "controls")}>{t("Open Controls")}</button><button className="btn" onClick={() => visit("config", "policy")}>{t("Open the policy file")}</button></span>
+        </div>
+      </section>
+
+      <div className="step-grid">
+        {cards.map((c, i) => (
+          <section key={c.id} className="card step-card small-card">
+            <StepHead n={i + 3} done={done.has(c.id)} title={c.title} proves={c.proves} />
+            <p className="step-text">{t(c.text)}</p>
+            <div className="actions step-cta">
+              {c.cta.map(([v, l], j) => <button key={v} className={`btn ${j === 0 ? "btn-primary" : ""}`} onClick={() => visit(c.id, v)}>{t(l)}{j === 0 && <Icon name="arrow" size={16} />}</button>)}
             </div>
-          </li>
+          </section>
         ))}
-      </ol>
+        <section className="card step-card small-card">
+          <StepHead n={6} done={done.has("tests")} title="Run the automated test suite" proves="Self-testing suite" />
+          <p className="step-text">{t("Every control has cases that must pass and cases that must be stopped. Run them from the repository root:")}</p>
+          <Copy text="make test-docker" onCopy={() => markDone("tests")} />
+          <p className="note">{t("Without Docker for the app: make venv && make test. The input cases are listed in tests/cases/content.yaml and can be extended without code.")}</p>
+        </section>
+      </div>
     </div>
   );
 }
 
 // ------------------------------------------------------------------ per-page help
 
-const HELP = {
+export const PAGE_INFO = {
   live: { what: "Every decision the gateway makes, as it happens, plus what actually reached the tools, the spend and the time each check adds.",
     try: ["Empty? Open “Run a scenario” or “Test an input”, then come back: the new rows appear here at once.", "A red row means a blocked request; “never reached the tool” is the proof that it did not run."], next: ["scenarios", "Run a scenario"] },
   tasks: { what: "Every agent task has a mandate: which files, tools and recipients it may use, its budget and its expiry.",
@@ -383,19 +419,20 @@ const HELP = {
 const HELP_KEY = "aegis.help";
 
 export function PageHelp({ view, go }) {
-  const h = HELP[view];
+  const h = PAGE_INFO[view];
   const [open, setOpen] = useState(() => { try { return localStorage.getItem(HELP_KEY) !== "off"; } catch { return true; } });
   const set = (v) => { setOpen(v); try { localStorage.setItem(HELP_KEY, v ? "on" : "off"); } catch { /* private mode */ } };
   if (!h) return null;
-  if (!open) return <button className="link help-show" onClick={() => set(true)}>{t("Show tips for this page")}</button>;
+  if (!open) return <button className="help-show" onClick={() => set(true)}><Icon name="info" size={16} />{t("Show tips for this page")}</button>;
   return (
     <aside className="help" aria-label={t("Tips for this page")}>
+      <Icon name="info" size={20} className="help-icon" />
       <div className="help-main">
-        <p className="help-what"><b>{t("What is this?")}</b> {t(h.what)}</p>
+        <p className="label">{t("Try this")}</p>
         <ul className="help-try">{h.try.map((x) => <li key={x}>{t(x)}</li>)}</ul>
       </div>
       <div className="help-side">
-        <button className="btn small" onClick={() => go(h.next[0])}>{t("Next")}: {t(h.next[1])} →</button>
+        <button className="btn small" onClick={() => go(h.next[0])}>{t("Next")}: {t(h.next[1])} <Icon name="arrow" size={15} /></button>
         <button className="link" onClick={() => set(false)}>{t("Hide tips")}</button>
       </div>
     </aside>

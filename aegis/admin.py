@@ -545,13 +545,21 @@ async def simulate(request: Request, n: int = Query(30, ge=1, le=500), pool_toke
     results = await gather_limited(
         [gw.chat("sim-agent", gw.tasks.lease_for(t), body, principal_limit=limit) for t in tasks], limit=n)
     row = await gw.pool.fetchrow("SELECT * FROM budgets WHERE scope_id=$1", f"principal:{principal}")
+    # no row: every request was refused before the budget stage (e.g. mock/echo removed from the allowlist)
+    spent, reserved = (row["spent"], row["reserved"]) if row else (0, 0)
     executed = sum(1 for s, _ in results if s == 200)
+    failures: dict[str, int] = {}
+    for status, resp in results:
+        if status not in (200, 429):
+            err = resp.get("error", {}) if isinstance(resp, dict) else {}
+            reason = err.get("rule_id") or err.get("reason_code") or err.get("type") or "error"
+            failures[f"{status} {reason}"] = failures.get(f"{status} {reason}", 0) + 1
     summary = {"run": run, "agents": n, "pool_tokens": pool_tokens, "max_tokens_per_request": max_tokens,
                "executed": executed, "prevented": sum(1 for s, _ in results if s == 429),
-               "other": sum(1 for s, _ in results if s not in (200, 429)),
-               "spent_tokens": row["spent"], "reserved_tokens": row["reserved"],
-               "committed_tokens": row["spent"] + row["reserved"],
-               "overspend_tokens": max(0, row["spent"] + row["reserved"] - pool_tokens)}
+               "other": sum(failures.values()), "failures": failures,
+               "spent_tokens": spent, "reserved_tokens": reserved,
+               "committed_tokens": spent + reserved,
+               "overspend_tokens": max(0, spent + reserved - pool_tokens)}
     await gw.audit.system("SIMULATION_RUN", actor="admin", evidence=summary)
     return summary
 

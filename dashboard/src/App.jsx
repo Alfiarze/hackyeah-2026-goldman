@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
-import { Id, LEVELS, Level, Mark, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
+import { Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
-import { DisabledBanner, ExampleChips, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
+import Icon from "./icons.jsx";
+import { DisabledBanner, ExampleChips, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
-  { group: "", items: [["start", "Start here"]] },
-  { group: "Watch", items: [["live", "Live"], ["tasks", "Tasks"], ["audit", "Audit log"]] },
+  { group: "Guide", items: [["start", "Start here"]] },
+  { group: "Test it", items: [["playground", "Test an input"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
+  { group: "Monitor", items: [["live", "Live"], ["audit", "Audit log"], ["tasks", "Tasks"], ["budget", "Budget"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
-  { group: "Prove", items: [["agent", "Be the agent"], ["scenarios", "Run a scenario"], ["playground", "Test an input"], ["budget", "Budget"]] },
 ];
+const GROUP_OF = Object.fromEntries(NAV.flatMap((g) => g.items.map(([id]) => [id, g.group])));
 const TITLES = Object.fromEntries(NAV.flatMap((g) => g.items));
 
 // ------------------------------------------------------------------ data hooks
@@ -80,33 +82,6 @@ function Section({ title, aside, children, className = "" }) {
       {(title || aside) && <div className="section-head"><h2>{title}</h2>{aside && <div className="section-aside">{aside}</div>}</div>}
       {children}
     </section>
-  );
-}
-
-// The Aegis mark: guilloche rings drawn as fine intaglio lines (same as the landing page).
-function Rosette({ size = 30 }) {
-  const groups = useMemo(() => {
-    const ring = (base, amp, lobes, phase) => {
-      const pts = [];
-      for (let i = 0; i <= 900; i++) {
-        const a = (i / 900) * Math.PI * 2;
-        const rad = base + amp * Math.sin(lobes * a + phase);
-        pts.push(`${(32 + rad * Math.cos(a)).toFixed(2)},${(32 + rad * Math.sin(a)).toFixed(2)}`);
-      }
-      return `M${pts.join("L")}Z`;
-    };
-    return {
-      outer: [0, 1, 2, 3].map((k) => ring(26, 3.4, 12, (k * Math.PI) / 6)),
-      middle: [0, 1, 2].map((k) => ring(17, 4.2, 9, (k * Math.PI) / 4.5)),
-      inner: [0, 1].map((k) => ring(8, 2.6, 7, k * Math.PI)),
-    };
-  }, []);
-  return (
-    <svg className="rosette" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      {Object.entries(groups).map(([name, ds]) => (
-        <g key={name} className={`r-${name}`}>{ds.map((d, i) => <path key={i} d={d} />)}</g>
-      ))}
-    </svg>
   );
 }
 
@@ -357,8 +332,7 @@ function Playground() {
   const go = (e) => { e?.preventDefault(); return check({ text, target, sink: sink || null, classification: cls }); };
   const pick = (x) => {
     const tg = x.target || "user_input";
-    setText(x.text); setTarget(tg); setSink(""); setCls("PUBLIC");
-    check({ text: x.text, target: tg, sink: null, classification: "PUBLIC" });
+    setText(x.text); setTarget(tg); setSink(""); setCls("PUBLIC"); setRes(null);
   };
   return (
     <div className="two-col">
@@ -366,7 +340,7 @@ function Playground() {
       <form className="sheet form" onSubmit={go}>
         <div className="field"><span>{t("1. Pick an example, or skip and write your own")}</span><ExampleChips onPick={pick} active={text} /></div>
         <label className="field"><span>{t("2. Text to check")}</span>
-          <textarea rows={7} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(); }} />
+          <textarea rows={7} value={text} onChange={(e) => { setText(e.target.value); setRes(null); }} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(); }} />
         </label>
         <details className="more">
           <summary>{t("3. Optional: where the text comes from and where it is going")}</summary>
@@ -381,12 +355,12 @@ function Playground() {
           </label>
           <p className="note">{t("Example: choose “Confidential” and “E-mail outside the firm”: even a harmless sentence is blocked, because confidential data may not leave.")}</p>
         </details>
-        <button className="btn btn-primary" type="submit">{t("Check this input")}</button>
+        <button className="btn btn-primary btn-lg" type="submit" disabled={!text.trim()}>{t("Check this input")}<Icon name="arrow" size={17} /></button>
         <p className="note">{t("A dry run: the gateway decides, but no model or tool is called.")}</p>
       </form>
       <div>
         {res ? <Verdict res={res} onRecheck={go} />
-          : <Empty>{t("Write or paste anything, then check it. Try a PESEL number, a hidden instruction, or confidential data heading to an outside address.")}</Empty>}
+          : <div className="placeholder"><Rosette size={64} /><p>{t("1. Pick an example or type a prompt.  2. Press “Check it”.  The verdict appears here.")}</p></div>}
       </div>
     </div>
   );
@@ -733,6 +707,7 @@ function Budget() {
               <dt>{t("Stopped before the model call")}</dt><dd>{res.prevented}</dd>
               <dt>{t("Committed")}</dt><dd>{t("{a} of {b} tokens", { a: num(res.committed_tokens), b: num(res.pool_tokens) })}</dd>
             </dl>
+            {res.other > 0 && <p className="warn">{t("{n} requests were refused before the budget check:", { n: res.other })} {Object.entries(res.failures || {}).map(([k, v]) => `${k} ×${v}`).join(", ")}</p>}
           </article>
         ) : <Empty>{t("Start a race to see how many agents get through and whether the pool ever goes negative.")}</Empty>}
         <Section title={t("Budgets")}>
@@ -798,65 +773,108 @@ function Audit() {
 
 // ------------------------------------------------------------------ shell
 
-function Posture() {
-  const [s] = usePoll(() => api("/admin/stats"), 4000);
-  const [health] = usePoll(() => fetch("/health").then((r) => r.json()), 5000);
+function SideStatus({ stats, health }) {
   const ok = health?.status === "ok";
   return (
-    <div className="posture" aria-label={t("Current security posture")}>
-      <span className={`health ${ok ? "is-ok" : "is-bad"}`}>{health ? (ok ? t("Gateway healthy") : t("Gateway degraded")) : t("Connecting")}</span>
-      {s && <>
-        <span>{t("Policy")} <Id>{s.policy.version}</Id></span>
-        <span>{t("Profile")} <b>{t(s.policy.profile)}</b></span>
-        <span>{s.semantic.backend === "main" ? t("AI review on {model}", { model: s.llm.model.replace("main/", "") }) : t("AI review on the local scorer")}</span>
-        {s.llm.configured && s.llm.server && s.llm.server.includes("openrouter.ai") && <span className="alert">{t("Test mode: prompts go to OpenRouter (cloud)")}</span>}
-        <span>{t("{n} attack signatures", { n: s.feed.signatures })}</span>
-        {s.semantic.override && <span className="alert">{t("AI review forced to “safe” (demo)")}</span>}
-        {s.policy.disabled_controls.length > 0 && <span className="alert">{t("Off: {list}", { list: s.policy.disabled_controls.map((c) => t(CONTROL_COPY[c]?.[0] || c)).join(", ") })}</span>}
-      </>}
+    <div className="side-status">
+      <div className={`side-health ${health ? (ok ? "is-ok" : "is-bad") : ""}`}>
+        <span className="dot" />{health ? (ok ? t("Gateway healthy") : t("Gateway degraded")) : t("Connecting")}
+      </div>
+      {stats && (
+        <dl>
+          <dt>{t("Policy")}</dt><dd><code>{stats.policy.version}</code></dd>
+          <dt>{t("Profile")}</dt><dd>{t(stats.policy.profile)}</dd>
+          <dt>{t("AI review")}</dt><dd title={stats.llm.model}>{stats.semantic.backend === "main" ? stats.llm.model.replace("main/", "").split("/").pop() : t("local scorer")}</dd>
+          <dt>{t("Signatures")}</dt><dd>{stats.feed.signatures}</dd>
+        </dl>
+      )}
+      {stats?.llm.configured && stats.llm.server?.includes("openrouter.ai") && <p className="side-alert">{t("Test mode: prompts go to OpenRouter (cloud)")}</p>}
+      {stats?.semantic.override && <p className="side-alert">{t("AI review forced to “safe” (demo)")}</p>}
     </div>
+  );
+}
+
+function Sidebar({ view, go, open, close, stats, health, lang, switchLang }) {
+  const [key, setK] = useState(getKey());
+  const [showKey, setShowKey] = useState(false);
+  const off = stats?.policy.disabled_controls.length || 0;
+  const badge = { controls: off ? { n: t("{n} off", { n: off }), bad: true } : null };
+  return (
+    <aside className={`side ${open ? "is-open" : ""}`} aria-label={t("Sections")}>
+      <div className="side-brand">
+        <Rosette size={34} />
+        <div><span className="wordmark">Aegis</span><span className="side-tag">{t("AI control layer")}</span></div>
+        <button className="side-close" onClick={close} aria-label={t("Close menu")}><Icon name="close" /></button>
+      </div>
+      <nav className="side-nav">
+        {NAV.map((g) => (
+          <div className="side-group" key={g.group}>
+            <span className="side-label">{t(g.group)}</span>
+            {g.items.map(([id, label]) => (
+              <button key={id} aria-current={view === id ? "page" : undefined} className={`side-link ${view === id ? "is-on" : ""}`} onClick={() => { go(id); close(); }}>
+                <Icon name={id} />
+                <span>{t(label)}</span>
+                {id === "live" && <span className="live-dot" aria-hidden="true" />}
+                {badge[id] && <span className={`side-badge ${badge[id].bad ? "is-bad" : ""}`}>{badge[id].n}</span>}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="side-foot">
+        <SideStatus stats={stats} health={health} />
+        <div className="side-tools">
+          <div className="lang" role="radiogroup" aria-label={t("Language")}>
+            {["pl", "en"].map((l) => <button key={l} role="radio" aria-checked={lang === l} className={lang === l ? "is-on" : ""} onClick={() => switchLang(l)}>{l.toUpperCase()}</button>)}
+          </div>
+          <button className="side-key" onClick={() => setShowKey(!showKey)}><Icon name="key" size={16} />{t("Admin key")}</button>
+        </div>
+        {showKey && <input className="side-key-input" type="password" aria-label={t("Admin key")} value={key} onChange={(e) => { setK(e.target.value); setKey(e.target.value); }} />}
+      </div>
+      <Rosette size={340} className="side-art" />
+    </aside>
   );
 }
 
 export default function App() {
   const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "start"));
   const [lang, setL] = useState(getLang());
-  const [key, setK] = useState(getKey());
-  const [showKey, setShowKey] = useState(false);
-  useEffect(() => { location.hash = view; }, [view]);
+  const [menu, setMenu] = useState(false);
+  const [stats] = usePoll(() => api("/admin/stats"), 4000);
+  const [health] = usePoll(() => fetch("/health").then((r) => r.json()), 5000);
+  useEffect(() => { location.hash = view; window.scrollTo(0, 0); }, [view]);
+  useEffect(() => {
+    const h = () => { const v = location.hash.slice(1); if (TITLES[v]) setView(v); };
+    window.addEventListener("hashchange", h);
+    return () => window.removeEventListener("hashchange", h);
+  }, []);
   useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
   const Views = { start: Start, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
-  const View = Views[view] || Live;
+  const View = Views[view] || Start;
+  const info = PAGE_INFO[view];
   return (
-    <div className="app" key={lang}>
-      <header className="top">
-        <div className="brand"><Rosette /><span className="wordmark">Aegis</span></div>
-        <nav aria-label={t("Sections")}>
-          {NAV.map((g) => (
-            <div className="nav-group" key={g.group}>
-              {g.group && <span className="nav-label">{t(g.group)}</span>}
-              {g.items.map(([id, label]) => (
-                <button key={id} aria-current={view === id ? "page" : undefined} className={`${view === id ? "is-on" : ""} ${id === "start" ? "nav-start" : ""}`} onClick={() => setView(id)}>{t(label)}</button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="top-tools">
-          <div className="lang" role="radiogroup" aria-label={t("Language")}>
-            {["pl", "en"].map((l) => <button key={l} role="radio" aria-checked={lang === l} className={lang === l ? "is-on" : ""} onClick={() => switchLang(l)}>{l.toUpperCase()}</button>)}
-          </div>
-          <button className="link" onClick={() => setShowKey(!showKey)}>{t("Admin key")}</button>
-          {showKey && <input type="password" aria-label={t("Admin key")} value={key} onChange={(e) => { setK(e.target.value); setKey(e.target.value); }} />}
-        </div>
-      </header>
-      <Posture />
-      <DisabledBanner />
-      <main>
-        <h1>{t(TITLES[view])}</h1>
-        <PageHelp view={view} go={setView} />
-        <View key={view} go={setView} />
-      </main>
+    <div className="layout" key={lang}>
+      <Sidebar view={view} go={setView} open={menu} close={() => setMenu(false)} stats={stats} health={health} lang={lang} switchLang={switchLang} />
+      {menu && <div className="scrim" onClick={() => setMenu(false)} />}
+      <div className="content">
+        <header className="mobile-top">
+          <button className="menu-btn" onClick={() => setMenu(true)} aria-label={t("Open menu")}><Icon name="menu" /></button>
+          <Rosette size={26} /><span className="wordmark">Aegis</span>
+        </header>
+        <DisabledBanner />
+        <main>
+          {view !== "start" && (
+            <header className="page-head">
+              <p className="eyebrow"><Icon name={view} size={16} />{t(GROUP_OF[view])}</p>
+              <h1>{t(TITLES[view])}</h1>
+              {info && <p className="page-sub">{t(info.what)}</p>}
+            </header>
+          )}
+          {view !== "start" && <PageHelp view={view} go={setView} />}
+          <View key={view} go={setView} />
+        </main>
+      </div>
     </div>
   );
 }

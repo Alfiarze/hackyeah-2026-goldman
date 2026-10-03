@@ -481,7 +481,10 @@ footer { border-top: 1px solid var(--rule); }
 .motion .brand:hover .rosette .r-outer { animation-duration: 40s; }
 
 /* hero: the engraving inks in from its centre, then breathes; a live rosette turns over it */
-.hero-art { position: relative; will-change: transform; }
+/* The figure is transformed (parallax, breathing), which makes it its own compositing group: the image's
+   multiply/screen blend then mixes with the figure, not the page. Painting the paper behind it keeps the
+   blend correct in both themes, otherwise the inverted engraving shows its black background in dark mode. */
+.hero-art { position: relative; will-change: transform; isolation: isolate; background: var(--paper); }
 .motion .hero-art img {
   -webkit-mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 var(--ink-reach), transparent calc(var(--ink-reach) + 48%));
   mask-image: radial-gradient(ellipse 58% 56% at 50% 50%, #000 var(--ink-reach), transparent calc(var(--ink-reach) + 48%));

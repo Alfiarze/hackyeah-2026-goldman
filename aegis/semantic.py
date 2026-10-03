@@ -73,6 +73,7 @@ class SemanticGuard:
         self.main_available = False
         self.override: str | None = None  # demo only: "force_safe" simulates a detector miss
         self._cache: OrderedDict[str, SemanticResult] = OrderedDict()
+        self._inflight: dict[str, asyncio.Future] = {}
 
     async def probe(self) -> bool:
         """Is the main model server reachable? (GET /models works on OpenRouter, vLLM, SGLang, llama.cpp)"""
@@ -101,7 +102,22 @@ class SemanticGuard:
         key = hashlib.sha256(f"{backend}:{text}".encode()).hexdigest()
         if key in self._cache:
             return self._cache[key]
-        result = heuristic_score(text) if backend == "heuristic" else await self._main(text, cfg)
+        if key in self._inflight:  # the same text is already being classified: share that one model call
+            return await asyncio.shield(self._inflight[key])
+        if backend == "heuristic":
+            result = heuristic_score(text)
+        else:
+            future = asyncio.get_running_loop().create_future()
+            self._inflight[key] = future
+            try:
+                result = await self._main(text, cfg)
+                future.set_result(result)
+            except BaseException as exc:
+                future.set_exception(exc)
+                future.exception()  # mark retrieved when nobody else was waiting
+                raise
+            finally:
+                self._inflight.pop(key, None)
         if result.error is None:
             self._cache[key] = result
             if len(self._cache) > 2000:

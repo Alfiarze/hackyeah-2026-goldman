@@ -116,3 +116,15 @@ async def test_unconfigured_provider_fails_cleanly(client, new_task):
     t = await new_task()
     r = await chat(client, t, model="main/deepseek/deepseek-v4.1-flash")
     assert r.status_code == 502 and r.json()["mandate"]["reason_code"] == "MODEL_UNAVAILABLE"
+
+
+async def test_simulation_reports_refusals_instead_of_crashing(client):
+    """If every request is refused before the budget stage (here: the mock model is taken off the allowlist),
+    the race reports why instead of failing with a 500."""
+    r = await client.delete("/admin/models/mock/echo", headers=ADMIN)
+    assert r.status_code == 200, r.text
+    r = await client.post("/admin/simulate/agents?n=5&pool_tokens=1000&max_tokens=100", headers=ADMIN)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["executed"] == 0 and body["other"] == 5 and body["overspend_tokens"] == 0
+    assert body["failures"]

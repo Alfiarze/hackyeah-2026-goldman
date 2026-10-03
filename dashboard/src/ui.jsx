@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { getLang, human, t } from "./i18n.js";
 export const LEVELS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET"];
 export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked" };
@@ -57,3 +57,31 @@ export function sandboxLine(sb, host = false) {
     ? t("Ran in an isolated container: {status}, {ms} ms{net}. Host untouched.", { status, ms, net })
     : t("Sandbox: {status}, {ms} ms{net}", { status, ms, net });
 }
+
+// The Aegis mark: guilloche rings drawn as fine intaglio lines (same as the landing page).
+export function Rosette({ size = 30, className = "" }) {
+  const groups = useMemo(() => {
+    const ring = (base, amp, lobes, phase) => {
+      const pts = [];
+      for (let i = 0; i <= 900; i++) {
+        const a = (i / 900) * Math.PI * 2;
+        const rad = base + amp * Math.sin(lobes * a + phase);
+        pts.push(`${(32 + rad * Math.cos(a)).toFixed(2)},${(32 + rad * Math.sin(a)).toFixed(2)}`);
+      }
+      return `M${pts.join("L")}Z`;
+    };
+    return {
+      outer: [0, 1, 2, 3].map((k) => ring(26, 3.4, 12, (k * Math.PI) / 6)),
+      middle: [0, 1, 2].map((k) => ring(17, 4.2, 9, (k * Math.PI) / 4.5)),
+      inner: [0, 1].map((k) => ring(8, 2.6, 7, k * Math.PI)),
+    };
+  }, []);
+  return (
+    <svg className={`rosette ${className}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      {Object.entries(groups).map(([name, ds]) => (
+        <g key={name} className={`r-${name}`}>{ds.map((d, i) => <path key={i} d={d} />)}</g>
+      ))}
+    </svg>
+  );
+}
+

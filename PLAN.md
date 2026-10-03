@@ -10,7 +10,7 @@
 | Temat | Decyzja |
 |---|---|
 | Forma | Gateway/proxy (FastAPI) między agentem a modelem (Ollama) i narzędziami (MCP/HTTP) |
-| Język | Python 3.11+, FastAPI, Pydantic v2, pytest (+ hypothesis), httpx |
+| Język | Python 3.12+, FastAPI, Pydantic v2, pytest (+ hypothesis), httpx |
 | Model lokalny | Ollama, mały model (np. `qwen2.5:3b` / `llama3.2:3b`) do kontroli semantycznej i agenta demo |
 | Polityka | Jeden plik `policy/policy.yaml`, hot-reload, wersjonowanie (hash), last-known-good |
 | Stan/audyt | **PostgreSQL 17** (zadania, mandaty, budżety, rezerwacje, wersje polityki, audyt w `JSONB`) przez SQLAlchemy 2 async + asyncpg; eksport audytu do JSONL/CSV |
@@ -234,6 +234,9 @@ profiles:                    # adherence = 1 - block_at_risk (np. strict = 60%)
 ```
 `enabled: false` dla `mandate`/`ifc_taint` jest dozwolone (jury testuje wyłączanie), ale generuje wpis audytu `CONTROL_DISABLED` i czerwony status na dashboardzie.
 Hot-reload: file watcher + `POST /admin/policy/reload` + `PUT /admin/policy` (dashboard). Walidacja Pydantic → atomowa podmiana snapshotu → wpis audytu `POLICY_CHANGED {old, new, diff}`. Błąd ⇒ `POLICY_REJECTED`, zostaje poprzednia wersja. Istniejące zadania: kolejne wywołania używają **nowej** polityki (może tylko ograniczać mandat).
+- **Wykrywanie zmian:** `watchfiles` + asekuracyjny polling sha256 pliku co 1 s (ten sam loader). Zdarzenia z hosta do kontenera na naszym Docker Desktop (virtiofs) dochodzą — sprawdzone — ale zależą od ustawień file sharing, a zapis edytora przez rename daje `added`+`deleted` w jednej paczce. Dlatego zdarzenie = tylko sygnał „przeczytaj plik ponownie”, nigdy „polityka usunięta”; brak pliku ⇒ zostaje last-good.
+- **Zapis z admin API atomowo:** tmp w tym samym katalogu → `fsync` → `os.replace`. Watcher ignoruje `*.tmp`. Bez tego watcher łapie połowę YAML-a ⇒ fałszywe `POLICY_REJECTED`.
+- **Wersje:** `policy_versions.seq` (BIGSERIAL, monotoniczny) + `content_hash`. Aktywna = najwyższy `seq` z `accepted=true`. **Rollback zapisuje starą treść jako nową wersję** (nowy `seq`, ten sam hash, `source=rollback:<seq>`) — append-only, plik i tabela zawsze zgodne.
 
 ### Feed sygnatur ataków (`feeds/attacks.yaml`)
 ```yaml
@@ -296,7 +299,7 @@ hackyeah-2026-goldman/
 │   ├── models.py                  # Decision, Mandate, Redaction (Pydantic)
 │   ├── db.py                      # SQLAlchemy async engine (asyncpg), DATABASE_URL
 │   ├── admin/ {policy.py, controls.py, signatures.py, tasks.py, documents.py,
-│   │           tools.py, audit.py, playground.py, events.py}   # CRUD pod dashboard (sekcja 8b)
+│   │           tools.py, audit.py, playground.py, events.py}   # CRUD pod dashboard (sekcja 8a)
 │   ├── policy/ {loader.py, schema.py, watcher.py, feed.py}
 │   ├── controls/ {mandate.py, allowlist.py, attacks.py, pickle_scan.py, injection.py,
 │   │              pii.py, secrets.py, taint.py, semantic.py}
@@ -337,7 +340,7 @@ Kolejność w górę: **działający szkielet > testy > reszta**. Checkpoint twa
 | H5–9 | Mandate/lease (HMAC), taint/IFC, PII+sekrety (block/redact), allowlista modeli, injection heuristics | Scena "evil.com" działa deterministycznie |
 | H9–13 | Hot-reload + last-good, feed sygnatur (pickle scan, CVE, trust_remote_code), semantyka (Ollama), profile, **proxy MCP** | Jury może zmieniać reguły live |
 | H13–16 | Budget escrow + test 30 agentów, limity, delegacja agent↔agent, memory | Overspend = 0 udowodniony |
-| H16–19 | Dashboard dopięty (szczegóły zadania, eksport, p50/p95, panel live), admin API CRUD priorytet 1 (sekcja 8b; read-only endpointy od H5), proof-of-enforcement | Raportowanie 20% |
+| H16–19 | Dashboard dopięty (szczegóły zadania, eksport, p50/p95, panel live), admin API CRUD priorytet 1 (sekcja 8a; read-only endpointy od H5), proof-of-enforcement | Raportowanie 20% |
 | H19–22 | Uzupełnienie testów do ~45, bypass, ad-hoc "jak jury" na świeżym klonie, bench; landing (jeśli jest czas) | Suite zielony |
 | H22–23 | README, diagram, PDF (10 slajdów), nagranie demo, **submit najpóźniej 4.10 10:00** | Zgłoszenie |
 | H23–24 | Bufor (awarie platformy, poprawki opisu) | — |
@@ -394,7 +397,7 @@ Dodatkowo: test "wyłącz kontrolę w polityce ⇒ test regresji wykrywa narusze
 
 Telemetria wydajności: `/metrics` (JSON) z p50/p95/p99 dla etapów deterministycznych, semantycznych i pełnej operacji; opis sprzętu/modelu/liczby prób w README.
 
-### 8b. Admin API (CRUD) pod dashboard
+### 8a. Admin API (CRUD) pod dashboard
 
 Dwie kategorie danych, dwie zasady zapisu:
 
@@ -423,7 +426,7 @@ Dwie kategorie danych, dwie zasady zapisu:
 | Audyt (read-only) | `GET /admin/audit?task=&rule=&action=&from=`, `GET /admin/audit/export?format=jsonl\|csv` | Filtrowana tabela, eksport |
 | Metryki (read-only) | `GET /admin/stats`, `GET /metrics` | Kafelki i wykresy |
 | Playground | `POST /admin/playground/evaluate` (prompt/akcja → decyzja, **bez** wykonania narzędzia) | Pole „wpisz własny prompt” dla jury |
-| Symulacja | `POST /admin/simulate/agents?n=30` | „Launch 30 agents” |
+| Symulacja | `POST /admin/simulate/agents?n=30` — pełna ścieżka gatewaya (mandat, pipeline, escrow), ale **mock modelu**, principale `sim_*` z własną pulą budżetu, zdarzenia oznaczone `synthetic=true` i domyślnie wyłączone z p50/p95 i kafelków (przełącznik „pokaż symulacje”) | „Launch 30 agents” |
 
 **Zasady:** audyt append-only (brak UPDATE/DELETE). Każdy zapis przez admin API = wpis audytu z `actor` i diffem. Admin API chronione osobnym kluczem (`ADMIN_API_KEY`), innym niż klucze agentów, bo agent nie może zmieniać własnej polityki. Live-odświeżanie dashboardu: SSE `GET /admin/events` (strumień nowych decyzji).
 **Testy:** każdy endpoint konfiguracji ma test: poprawna zmiana działa od następnego żądania, błędna zmiana ⇒ 422 i bez zmiany wersji, brak klucza admina ⇒ 401, klucz agenta ⇒ 403.
@@ -431,7 +434,7 @@ Dwie kategorie danych, dwie zasady zapisu:
 
 ---
 
-## 8a. Landing page (Astro)
+## 8b. Landing page (Astro)
 
 Statyczna strona projektu w **Astro** (`landing/`), niezależna od gatewaya. Cel: zgłoszenie przekonuje bez live prezentacji (HackTribe ocenia najpierw offline) i daje jurorom jedno miejsce startowe.
 
@@ -509,4 +512,5 @@ Statyczna strona projektu w **Astro** (`landing/`), niezależna od gatewaya. Cel
 2. `ollama pull qwen2.5:3b` na hoście; sprawdzić latencję na sprzęcie zespołu.
 3. Zamrozić `models.py` (Decision, Mandate), `policy/schema.py` i `db/init/001_schema.sql` — wszyscy kodują pod te kontrakty.
 4. Mock mail z licznikiem `/mock/mail/stats` (fundament proof-of-enforcement).
+4a. H5–9: `.env.example` dostaje `ADMIN_API_KEY`, `LEASE_SECRET` (HMAC), `TOOL_BACKEND_SECRET`, klucze agentów demo.
 5. Pierwszy test end-to-end: ALLOW zapis notatki, BLOCK wysyłki — zanim powstanie cokolwiek innego.

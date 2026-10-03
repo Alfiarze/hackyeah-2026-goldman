@@ -44,7 +44,7 @@ ADMIN = {"X-Admin-Key": "test-admin"}
 APP = {"X-App-Key": "test-app"}
 BASE_DSN = os.environ.get("TEST_DATABASE_URL_BASE", "postgresql://goldman:goldman@localhost:5432")
 TEST_DSN = f"{BASE_DSN}/goldman_test"
-TABLES = "tasks, budgets, reservations, audit_events, policy_versions, tool_registry, memory_entries"
+TABLES = "approvals, tasks, budgets, reservations, audit_events, policy_versions, tool_registry, memory_entries"
 
 
 def pytest_configure(config):

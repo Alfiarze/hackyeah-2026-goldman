@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
+from aegis import documents
 from aegis.settings import ROOT
 
 DATA_DIR = Path(os.environ.get("DEMO_DATA_DIR", ROOT / "demo" / "data")).resolve()
@@ -37,6 +38,8 @@ DEFINITIONS: dict[str, dict[str, Any]] = {
     "code.run": {"name": "code.run", "description": "Run Python code in a sandbox.",
                  "inputSchema": {"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]}},
 }
+
+BINARY_DOCUMENTS = {".pdf", ".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".gif"}
 
 CASE_LAW = [
     {"id": "III CSK 123/19", "summary": "Opłata za odstąpienie w umowie sprzedaży udziałów jest skuteczna, jeśli jest proporcjonalna (kara umowna)."},
@@ -91,6 +94,11 @@ async def call(name: str, body: Call) -> dict[str, Any]:
         path = (DATA_DIR / str(a.get("path", "")).lstrip("/")).resolve()
         if DATA_DIR not in path.parents or not path.is_file():
             raise HTTPException(404, "document not found")
+        if path.suffix.lower() in BINARY_DOCUMENTS:
+            # what an agent's document loader would read: text plus metadata, comments, hidden parts
+            doc = documents.analyze(path.read_bytes(), path.name)
+            return {"content": doc.analysis_text(), "path": a.get("path"), "format": doc.kind,
+                    "hidden_parts": [s["source"] for s in doc.sections], "active": doc.active}
         return {"content": path.read_text(encoding="utf-8"), "path": a.get("path")}
     if name == "legal_db.search":
         words = {w.lower() for w in str(a.get("query", "")).split() if len(w) > 3}

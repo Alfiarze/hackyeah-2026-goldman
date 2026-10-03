@@ -62,6 +62,13 @@ budgets:
   global: {tokens: 2000000, calls: 20000, concurrency: 100}
   guard: {tokens: 200000, calls: 5000}   # cost of the protection itself (semantic checks)
   usd_per_1k_tokens: 0.002     # ESTIMATE for reporting; local models cost nothing per token
+  max_delegation_depth: 3      # how many times a task may be handed on to another agent (confused-deputy chains)
+
+# Calls a person must approve before they run (tool names or sinks such as mail.send:external).
+# The agent gets 403 APPROVAL_REQUIRED; an admin approves in the console; the identical call then runs once.
+approvals:
+  tools: [http.post]
+  ttl_seconds: 900
 
 # Mandate templates. An authenticated app creates tasks from these, never from model output.
 task_profiles:

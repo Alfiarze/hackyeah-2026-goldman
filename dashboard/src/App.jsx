@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
-import { Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
+import { ApprovalButtons, Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
 import Icon from "./icons.jsx";
 import { TraceStep } from "./Trace.jsx";
@@ -10,7 +10,7 @@ import { DisabledBanner, DocInput, ExampleChips, checkDocument, PAGE_INFO, PageH
 const NAV = [
   { group: "Guide", items: [["start", "Start here"]] },
   { group: "Test it", items: [["playground", "Test an input"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
-  { group: "Monitor", items: [["live", "Live"], ["audit", "Audit log"], ["tasks", "Tasks"], ["budget", "Budget"]] },
+  { group: "Monitor", items: [["live", "Live"], ["approvals", "Approvals"], ["audit", "Audit log"], ["tasks", "Tasks"], ["budget", "Budget"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
 ];
 const GROUP_OF = Object.fromEntries(NAV.flatMap((g) => g.items.map(([id]) => [id, g.group])));
@@ -181,7 +181,7 @@ function Live() {
   );
 }
 
-const STAGES = ["mandate", "signatures", "deterministic", "data_flow", "semantic", "budget", "execute", "model_call"];
+const STAGES = ["mandate", "signatures", "deterministic", "data_flow", "approval", "semantic", "budget", "execute", "model_call"];
 
 function Meter({ value, reserved, limit }) {
   const v = Math.min(100, (value / Math.max(1, limit)) * 100);
@@ -365,7 +365,15 @@ function Replay({ r }) {
                 </>} />))}
         </div>
       )}
-      {finished && headline && <p className="verdict replay-verdict">{headline}</p>}
+      {finished && (() => {
+        const stopped = steps.filter((x) => ["BLOCK", "REDACT"].includes(x.action) || x.rejected || (x.accepted === false)).length;
+        return (
+          <p className="verdict replay-verdict">
+            {headline}{headline && <br />}
+            {stopped > 0 ? <><b>{stopped}</b> {t("threat(s) stopped, every one recorded in the audit log.")}</> : <>{t("Nothing was blocked: legitimate work went through every check.")}</>}
+          </p>
+        );
+      })()}
     </section>
   );
 }
@@ -876,6 +884,49 @@ function Budget() {
   );
 }
 
+// ------------------------------------------------------------------ approvals
+
+function Approvals() {
+  const [rows, reload] = usePoll(() => api("/admin/approvals"), 3000);
+  const pending = (rows || []).filter((r) => r.status === "pending");
+  const past = (rows || []).filter((r) => r.status !== "pending");
+  const STATUS = { approved: "Approved, not used yet", used: "Approved and run", denied: "Denied" };
+  return (
+    <div className="approvals">
+      <section className="card explain">
+        <h2>{t("A person decides the risky calls")}</h2>
+        <p>{t("Some calls are too consequential to leave to an agent: posting data to an outside URL, for example. The policy lists them under approvals. The agent's request is held, it appears here, and only the exact call you approve runs, once. Every decision is in the audit log.")}</p>
+      </section>
+      <Section title={t("Waiting for a decision")} aside={<span className="muted">{pending.length}</span>}>
+        {pending.length ? (
+          <ul className="appr-list">
+            {pending.map((a) => (
+              <li key={a.id} className="appr">
+                <div className="appr-main">
+                  <b><Id>{a.tool}</Id> {a.sink && a.sink !== a.tool && <span className="muted small">→ {a.sink}</span>}</b>
+                  <span className="muted small">{t("Agent {agent} on a {profile} task for {who}", { agent: a.agent_id, profile: human(a.profile), who: a.principal })} · {clock(a.created_at)}</span>
+                  <dl className="args">{Object.entries(a.args_preview || {}).map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{typeof v === "string" ? v : JSON.stringify(v)}</dd></React.Fragment>)}</dl>
+                </div>
+                <ApprovalButtons id={a.id} onDone={reload} />
+              </li>
+            ))}
+          </ul>
+        ) : <Empty>{t("Nothing is waiting. Try “Publish a summary on an outside website” in Be the agent, on the public research mission.")}</Empty>}
+      </Section>
+      {past.length > 0 && (
+        <Section title={t("Decided")}>
+          <table className="rows">
+            <thead><tr><th>{t("Tool")}</th><th>{t("Task")}</th><th>{t("Status")}</th><th>{t("Time")}</th></tr></thead>
+            <tbody>{past.map((a) => (
+              <tr key={a.id}><td><Id>{a.tool}</Id></td><td><Id>{a.task_id}</Id></td><td className={`status status-${a.status === "denied" ? "revoked" : "active"}`}>{t(STATUS[a.status] || a.status)}</td><td>{clock(a.decided_at)}</td></tr>
+            ))}</tbody>
+          </table>
+        </Section>
+      )}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ audit
 
 const KINDS = ["DECISION", "POLICY_CHANGED", "POLICY_REJECTED", "FEED_CHANGED", "TASK_CREATED", "TASK_DELEGATED", "TASK_REVOKED", "TOOL_APPROVED", "SIMULATION_RUN"];
@@ -941,7 +992,9 @@ function Sidebar({ view, go, open, close, stats, health, lang, switchLang }) {
   const [key, setK] = useState(getKey());
   const [showKey, setShowKey] = useState(false);
   const off = stats?.policy.disabled_controls.length || 0;
-  const badge = { controls: off ? { n: t("{n} off", { n: off }), bad: true } : null };
+  const [pending] = usePoll(() => api("/admin/approvals?status=pending").then((r) => r.length), 4000);
+  const badge = { controls: off ? { n: t("{n} off", { n: off }), bad: true } : null,
+    approvals: pending ? { n: pending, bad: true } : null };
   return (
     <aside className={`side ${open ? "is-open" : ""}`} aria-label={t("Sections")}>
       <div className="side-brand">
@@ -993,7 +1046,7 @@ export default function App() {
   }, []);
   useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
-  const Views = { start: Start, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
+  const Views = { start: Start, approvals: Approvals, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Start;
   const info = PAGE_INFO[view];
   return (

@@ -92,6 +92,7 @@ class Budgets(_Strict):
     global_: Limit = Field(Limit(tokens=5_000_000), alias="global")
     guard: Limit = Limit(tokens=200_000, calls=5000)
     usd_per_1k_tokens: float = Field(0.0, ge=0)
+    max_delegation_depth: int = Field(3, ge=0, le=20)  # agent -> agent hops below the first task
 
 
 class TaskProfile(_Strict):
@@ -121,6 +122,12 @@ class Provider(_Strict):
     sink: str  # data-flow sink this provider counts as, e.g. llm:local, llm:onprem, llm:external
 
 
+class Approvals(_Strict):
+    """Calls a person must approve first. Entries are tool names (http.post) or sinks (mail.send:external)."""
+    tools: list[str] = []
+    ttl_seconds: int = Field(900, ge=60, le=86400)
+
+
 class Policy(_Strict):
     version: int = 1
     profile: str = "balanced"
@@ -130,6 +137,7 @@ class Policy(_Strict):
     providers: dict[str, Provider] = {}
     controls: Controls = Controls()
     budgets: Budgets = Budgets()
+    approvals: Approvals = Approvals()
     task_profiles: dict[str, TaskProfile]
     profiles: dict[str, dict[str, Any]] = {}
 

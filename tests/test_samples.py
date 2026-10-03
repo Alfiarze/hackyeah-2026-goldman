@@ -116,3 +116,48 @@ async def test_docx_xml_is_never_expanded(client):
         z.writestr("word/document.xml", bomb)
     r = await client.post("/admin/playground/extract?name=bomb.docx", headers=ADMIN, content=buf.getvalue())
     assert r.status_code == 200 and len(r.json()["text"]) < 100
+
+
+# ---------------------------------------------------------------- more formats: Excel, PowerPoint, legacy, images
+
+async def test_xlsx_hidden_sheet_dde_formula_and_properties(client):
+    body = await check_file(client, "harmonogram-metadane.xlsx")
+    doc, d = body["document"], body["decision"]
+    assert doc["kind"] == "xlsx" and d["action"] == "BLOCK" and doc["body_rules"] == []
+    assert {"SEC-001", "PII-001"} <= rules_in(doc, "hidden sheet")         # very hidden sheet with a password
+    assert "dde_formula" in {a["kind"] for a in doc["active"]}             # =cmd|'/C powershell …'
+    assert "INJ-001" in rules_in(doc, "document properties: description")  # base64
+    assert "ATK-EXEC-002" in rules_in(doc, "document properties: keywords")
+
+
+async def test_pptx_speaker_notes_and_hidden_slide(client):
+    body = await check_file(client, "prezentacja-metadane.pptx")
+    doc = body["document"]
+    assert doc["kind"] == "pptx" and body["decision"]["action"] == "BLOCK" and doc["body_rules"] == []
+    assert "INJ-001" in rules_in(doc, "speaker notes")
+    assert "SEC-001" in rules_in(doc, "hidden slide")
+    assert "ATK-EXEC-003" in rules_in(doc, "document properties: subject")
+
+
+async def test_legacy_xls_text_is_recovered(client):
+    body = await check_file(client, "harmonogram-stary.xls")
+    doc = body["document"]
+    assert doc["kind"] == "xls" and body["decision"]["action"] == "BLOCK"
+    assert {"INJ-001", "SEC-001", "ATK-EXEC-002"} <= set(doc["body_rules"])
+    assert "wstępna" in doc["text"]                                        # Polish letters survive
+
+
+async def test_jpeg_exif_and_gps(client):
+    body = await check_file(client, "skan-umowy.jpg")
+    doc, d = body["document"], body["decision"]
+    assert doc["kind"] == "image" and d["action"] == "BLOCK"
+    assert "INJ-001" in rules_in(doc, "EXIF ImageDescription")
+    assert "SEC-001" in rules_in(doc, "EXIF XPComment")
+    assert "PII-001" in rules_in(doc, "EXIF Artist")
+    assert doc["privacy"] and "PII-002" in {f["rule_id"] for f in d["findings"]}  # GPS position
+
+
+async def test_png_text_chunks(client):
+    body = await check_file(client, "podpis.png")
+    doc = body["document"]
+    assert "INJ-001" in rules_in(doc, "image text field")

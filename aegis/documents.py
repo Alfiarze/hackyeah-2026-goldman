@@ -34,6 +34,8 @@ class Document:
     pages: int | None = None
     sections: list[dict[str, str]] = field(default_factory=list)  # {"source", "text"}
     active: list[dict[str, str]] = field(default_factory=list)  # {"kind", "detail"}
+    privacy: list[str] = field(default_factory=list)  # e.g. GPS position in a photo
+    notes: list[str] = field(default_factory=list)  # limits of what could be read
 
     def add(self, source: str, text: Any) -> None:
         text = str(text or "").strip()
@@ -47,7 +49,8 @@ class Document:
 
     def public(self) -> dict[str, Any]:
         return {"name": self.name, "kind": self.kind, "pages": self.pages, "chars": len(self.body),
-                "text": self.body, "sections": self.sections, "active": self.active}
+                "text": self.body, "sections": self.sections, "active": self.active, "privacy": self.privacy,
+                "notes": self.notes}
 
 
 def analyze(data: bytes, name: str = "document") -> Document:
@@ -57,10 +60,15 @@ def analyze(data: bytes, name: str = "document") -> Document:
         return _pdf(data, name)
     if data[:4] == b"PK\x03\x04":
         return _office(data, name)
+    if data[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        return _legacy_office(data, name)
+    if _is_image(data):
+        return _image(data, name)
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise GatewayError(415, "UNSUPPORTED_DOCUMENT", "send a PDF, a DOCX or UTF-8 text") from exc
+        raise GatewayError(415, "UNSUPPORTED_DOCUMENT",
+                           "send a PDF, an Office file (docx/xlsx/pptx/doc/xls/ppt), an image or UTF-8 text") from exc
     return Document(name=name, kind="text", body=text)  # HTML/XML/SVG are checked raw: comments and tags included
 
 
@@ -175,8 +183,19 @@ def _office(data: bytes, name: str) -> Document:
             raise GatewayError(413, "DOCUMENT_TOO_LARGE", f"{member} is too large once unpacked")
         return z.read(member).decode("utf-8", "replace")
 
-    if "word/document.xml" not in names:
-        raise GatewayError(415, "UNSUPPORTED_DOCUMENT", "only Word (.docx) documents are supported")
+    if "word/document.xml" in names:
+        doc = _docx(read, names, name)
+    elif "xl/workbook.xml" in names:
+        doc = _xlsx(read, names, name)
+    elif "ppt/presentation.xml" in names:
+        doc = _pptx(read, names, name)
+    else:
+        raise GatewayError(415, "UNSUPPORTED_DOCUMENT", "this ZIP is not a Word, Excel or PowerPoint file")
+    _ooxml_common(read, names, doc)
+    return doc
+
+
+def _docx(read, names: set[str], name: str) -> Document:
     xml = read("word/document.xml")
     runs = re.findall(r"<w:r[ >].*?</w:r>", xml, re.S)
     hidden_runs = [r for r in runs if re.search(r"<w:vanish(?: [^>]*)?/>", r)]
@@ -190,23 +209,31 @@ def _office(data: bytes, name: str) -> Document:
     hidden = [html.unescape("".join(re.findall(r"<w:t(?: [^>]*)?>(.*?)</w:t>", r, re.S))) for r in hidden_runs]
     doc.add("hidden text (w:vanish)", " ".join(h for h in hidden if h))
 
-    for member, label in (("docProps/core.xml", "document properties"), ("docProps/app.xml", "application properties")):
-        if member in names:
-            for tag, value in re.findall(r"<(\w+:\w+)[^>]*>([^<]{1,5000})</\1>", read(member)):
-                if tag.split(":")[1] not in ("created", "modified", "revision", "TotalTime", "Pages", "Words",
-                                              "Characters", "Lines", "Paragraphs", "DocSecurity", "AppVersion",
-                                              "CharactersWithSpaces", "ScaleCrop", "LinksUpToDate", "SharedDoc",
-                                              "HyperlinksChanged", "Template"):
-                    doc.add(f"{label}: {tag.split(':')[1]}", html.unescape(value))
-    if "docProps/custom.xml" in names:
-        for pname, value in re.findall(r'<property[^>]*name="([^"]{1,200})"[^>]*>(.*?)</property>', read("docProps/custom.xml"), re.S):
-            doc.add(f"custom property {pname}", _xml_text(value))
-    if "word/comments.xml" in names:
-        for author, body_xml in re.findall(r'<w:comment\b[^>]*w:author="([^"]*)"[^>]*>(.*?)</w:comment>', read("word/comments.xml"), re.S):
-            doc.add(f"comment by {html.unescape(author)}", _xml_text(body_xml))
     for member in ("word/footnotes.xml", "word/endnotes.xml"):
         if member in names:
             doc.add(member.split("/")[1].replace(".xml", ""), _xml_text(read(member)))
+    if "word/comments.xml" in names:
+        for author, body_xml in re.findall(r'<w:comment\b[^>]*w:author="([^"]*)"[^>]*>(.*?)</w:comment>', read("word/comments.xml"), re.S):
+            doc.add(f"comment by {html.unescape(author)}", _xml_text(body_xml))
+    return doc
+
+
+def _ooxml_common(read, names: set[str], doc: Document) -> None:
+    """Parts every Office Open XML file can carry: properties, external relationships, macros, embeddings."""
+    for member, label in (("docProps/core.xml", "document properties"), ("docProps/app.xml", "application properties")):
+        if member in names:
+            for tag, value in re.findall(r"<(\w+:\w+|\w+)[^>]*>([^<]{1,5000})</\1>", read(member)):
+                if tag.startswith("vt:"):  # typed values inside property vectors (slide titles, counts)
+                    continue
+                if tag.split(":")[-1] not in ("created", "modified", "revision", "TotalTime", "Pages", "Words",
+                                              "Characters", "Lines", "Paragraphs", "DocSecurity", "AppVersion",
+                                              "CharactersWithSpaces", "ScaleCrop", "LinksUpToDate", "SharedDoc",
+                                              "HyperlinksChanged", "Template", "Application", "PresentationFormat",
+                                              "Slides", "Notes", "HiddenSlides", "MMClips"):
+                    doc.add(f"{label}: {tag.split(':')[-1]}", html.unescape(value))
+    if "docProps/custom.xml" in names:
+        for pname, value in re.findall(r'<property[^>]*name="([^"]{1,200})"[^>]*>(.*?)</property>', read("docProps/custom.xml"), re.S):
+            doc.add(f"custom property {pname}", _xml_text(value))
     for rels in sorted(n for n in names if n.endswith(".rels")):
         for rel in re.findall(r"<Relationship\b[^>]{0,3000}>", read(rels)):
             attr = dict(re.findall(r'(\w+)="([^"]*)"', rel))
@@ -220,6 +247,206 @@ def _office(data: bytes, name: str) -> Document:
     if any(n.endswith("vbaProject.bin") for n in names):
         doc.active.append({"kind": "macro", "detail": "contains VBA macros (vbaProject.bin)"})
     for n in sorted(names):
-        if n.startswith("word/embeddings/"):
+        if re.match(r"(word|xl|ppt)/embeddings/", n):
             doc.active.append({"kind": "embedded_file", "detail": f"embedded object: {n.split('/')[-1]}"})
+
+
+def _xlsx(read, names: set[str], name: str) -> Document:
+    shared = []
+    if "xl/sharedStrings.xml" in names:
+        shared = ["".join(html.unescape(t) for t in re.findall(r"<t(?: [^>]*)?>(.*?)</t>", si, re.S))
+                  for si in re.findall(r"<si>(.*?)</si>", read("xl/sharedStrings.xml"), re.S)]
+    wb = read("xl/workbook.xml")
+    rels = read("xl/_rels/workbook.xml.rels") if "xl/_rels/workbook.xml.rels" in names else ""
+    targets = {rid: tgt for rid, tgt in re.findall(r'<Relationship\b[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"', rels)}
+    targets.update({rid: tgt for tgt, rid in re.findall(r'<Relationship\b[^>]*Target="([^"]+)"[^>]*Id="([^"]+)"', rels)})
+    visible, formulas = [], []
+    doc = Document(name=name, kind="xlsx", body="")
+    for tag in re.findall(r"<sheet\b[^>]*/>", wb):
+        attr = dict(re.findall(r'([\w:]+)="([^"]*)"', tag))
+        member = "xl/" + targets.get(attr.get("r:id", ""), "").lstrip("/").removeprefix("xl/")
+        if member not in names:
+            continue
+        xml = read(member)
+        cells = []
+        for c in re.findall(r"<c\b[^>]*>.*?</c>", xml, re.S):
+            if 't="s"' in c:
+                v = re.search(r"<v>(\d+)</v>", c)
+                if v and int(v.group(1)) < len(shared):
+                    cells.append(shared[int(v.group(1))])
+            elif 't="inlineStr"' in c:
+                cells.append(html.unescape("".join(re.findall(r"<t(?: [^>]*)?>(.*?)</t>", c, re.S))))
+            else:
+                v = re.search(r"<v>(.*?)</v>", c, re.S)
+                if v:
+                    cells.append(html.unescape(v.group(1)))
+            f = re.search(r"<f(?: [^>]*)?>(.*?)</f>", c, re.S)
+            if f:
+                formulas.append(html.unescape(f.group(1)))
+        text = "\n".join(x for x in cells if x.strip())
+        sheet = html.unescape(attr.get("name", member))
+        if attr.get("state") in ("hidden", "veryHidden"):
+            doc.add(f"hidden sheet {sheet}", text)  # not visible in Excel, still read by any parser
+        else:
+            visible.append(text)
+    doc.body = "\n\n".join(v for v in visible if v)
+    for dn, val in re.findall(r'<definedName\b[^>]*name="([^"]*)"[^>]*>(.*?)</definedName>', wb, re.S):
+        doc.add(f"defined name {html.unescape(dn)}", html.unescape(val))
+    if formulas:
+        doc.add("formulas", "\n".join(formulas))
+        for f in formulas:  # formulas that call out or start programs: DDE, WEBSERVICE, external calls
+            if re.search(r"(?i)\b(cmd|powershell|mshta|msexcel)\s*\||\bDDE(AUTO)?\b|\bWEBSERVICE\s*\(|\bCALL\s*\(|\bREGISTER(\.ID)?\s*\(|\bEXEC\s*\(", f):
+                doc.active.append({"kind": "dde_formula", "detail": f"formula that calls out or runs a program: ={f[:160]}"})
+    for c in sorted(n for n in names if re.match(r"xl/comments\d*\.xml$", n)):
+        for text in re.findall(r"<comment\b[^>]*>(.*?)</comment>", read(c), re.S):
+            doc.add("cell comment", _xml_text(text))
+    for c in sorted(n for n in names if n.startswith("xl/threadedComments/")):
+        doc.add("threaded comment", _xml_text(read(c)))
+    if any(n.startswith("xl/externalLinks/") for n in names):
+        doc.add("external workbook links", ", ".join(n for n in sorted(names) if n.startswith("xl/externalLinks/")))
+    return doc
+
+
+def _pptx(read, names: set[str], name: str) -> Document:
+    order = lambda n: int(re.search(r"(\d+)\.xml$", n).group(1))  # noqa: E731
+    slides = sorted((n for n in names if re.match(r"ppt/slides/slide\d+\.xml$", n)), key=order)
+    body = []
+    hidden_slides = [sl for sl in slides if re.search(r'<p:sld\b[^>]*show="0"', read(sl))]
+    for sl in slides:
+        if sl not in hidden_slides:  # a hidden slide is not on screen during the show: reported on its own
+            body.append("\n".join(html.unescape(x) for x in re.findall(r"<a:t>(.*?)</a:t>", read(sl), re.S)))
+    doc = Document(name=name, kind="pptx", body="\n\n".join(b for b in body if b.strip()), pages=len(slides))
+    for sl in hidden_slides:
+        doc.add(f"hidden slide {order(sl)}", "\n".join(html.unescape(x) for x in re.findall(r"<a:t>(.*?)</a:t>", read(sl), re.S)))
+    for nt in sorted((n for n in names if re.match(r"ppt/notesSlides/notesSlide\d+\.xml$", n)), key=order):
+        doc.add(f"speaker notes {order(nt)}", "\n".join(html.unescape(x) for x in re.findall(r"<a:t>(.*?)</a:t>", read(nt), re.S)))
+    for c in sorted(n for n in names if n.startswith("ppt/comments/")):
+        doc.add("slide comment", _xml_text(read(c)))
+    return doc
+
+
+# ---------------------------------------------------------------- legacy Office (OLE2: .doc, .xls, .ppt)
+
+_OLE_META = ("title", "subject", "author", "keywords", "comments", "last_saved_by", "category", "company",
+             "manager", "template")
+
+
+def _strings(raw: bytes, minimum: int = 5) -> list[str]:
+    """Readable runs in a binary stream: UTF-16LE (Word, Excel text) and single-byte cp1250."""
+    out = [m.decode("utf-16le", "ignore")  # Basic Latin and Latin-1 (high byte 0), Latin Extended-A (high byte 1)
+           for m in re.findall(rb"(?:[\x20-\x7e\xa0-\xff]\x00|[\x01-\xff]\x01){%d,}" % minimum, raw)]
+    out += [m.decode("cp1250", "ignore") for m in re.findall(rb"[\x20-\x7e\x8a-\xff]{%d,}" % (minimum + 3), raw)]
+    seen, uniq = set(), []
+    for s in out:
+        s = s.strip()
+        letters = sum(ch.isalpha() for ch in s)
+        if letters < 3 or letters < 0.4 * len(s):  # binary noise that happens to be printable
+            continue
+        if s and s not in seen:
+            seen.add(s)
+            uniq.append(s)
+    return uniq
+
+
+def _legacy_office(data: bytes, name: str) -> Document:
+    import olefile
+
+    try:
+        ole = olefile.OleFileIO(io.BytesIO(data))
+    except OSError as exc:
+        raise GatewayError(422, "DOCUMENT_UNREADABLE", "not a valid .doc/.xls/.ppt file") from exc
+    streams = ["/".join(s) for s in ole.listdir(streams=True, storages=True)]
+    main = next((s for s in ("WordDocument", "Workbook", "Book", "PowerPoint Document") if ole.exists(s)), None)
+    kind = {"WordDocument": "doc", "Workbook": "xls", "Book": "xls", "PowerPoint Document": "ppt"}.get(main, "ole")
+    body = ""
+    if main:
+        raw = ole.openstream(main).read(MAX_MEMBER)
+        if kind == "doc" and ole.exists("1Table"):
+            raw += ole.openstream("1Table").read(MAX_MEMBER)
+        body = "\n".join(_strings(raw))
+    doc = Document(name=name, kind=kind, body=body[:200_000])
+    doc.notes.append("legacy binary format: text is recovered from the file's streams, layout is not kept")
+    meta = ole.get_metadata()
+    for attr in _OLE_META:
+        value = getattr(meta, attr, None)
+        if isinstance(value, bytes):
+            value = value.decode("cp1250", "replace")
+        doc.add(f"document properties: {attr}", value)
+    if any(s.split("/")[0] in ("Macros", "_VBA_PROJECT_CUR", "VBA") or s.endswith("/VBA") for s in streams):
+        doc.active.append({"kind": "macro", "detail": "contains VBA macros"})
+    for s in streams:
+        if s.split("/")[-1] in ("\x01Ole10Native", "Package") or s.startswith("ObjectPool"):
+            doc.active.append({"kind": "embedded_file", "detail": f"embedded object stream: {s.replace(chr(1), '')}"})
+            break
+    ole.close()
+    return doc
+
+
+# ---------------------------------------------------------------- images: EXIF, XMP, PNG text chunks, GPS
+
+def _is_image(data: bytes) -> bool:
+    return (data[:3] == b"\xff\xd8\xff" or data[:8] == b"\x89PNG\r\n\x1a\n" or data[:6] in (b"GIF87a", b"GIF89a")
+            or data[:4] in (b"II*\x00", b"MM\x00*") or (data[:4] == b"RIFF" and data[8:12] == b"WEBP"))
+
+
+_EXIF_TEXT = {0x010E: "ImageDescription", 0x013B: "Artist", 0x8298: "Copyright", 0x010F: "Make", 0x0110: "Model",
+              0x0131: "Software", 0x9286: "UserComment", 0x9C9B: "XPTitle", 0x9C9C: "XPComment",
+              0x9C9D: "XPAuthor", 0x9C9E: "XPKeywords", 0x9C9F: "XPSubject", 0xA430: "CameraOwnerName",
+              0xA420: "ImageUniqueID"}
+
+
+def _exif_value(tag: int, value: Any) -> str:
+    if isinstance(value, bytes):
+        if tag in (0x9C9B, 0x9C9C, 0x9C9D, 0x9C9E, 0x9C9F):  # Windows XP* tags are UTF-16LE
+            return value.decode("utf-16le", "ignore").rstrip("\x00")
+        if tag == 0x9286 and value[:8] in (b"ASCII\x00\x00\x00", b"UNICODE\x00", b"\x00" * 8):
+            return value[8:].decode("utf-16" if value[:7] == b"UNICODE" else "latin-1", "ignore").rstrip("\x00")
+        return value.decode("utf-8", "ignore").rstrip("\x00")
+    if isinstance(value, tuple) and all(isinstance(v, int) for v in value):  # XP tags as int tuples
+        return bytes(value).decode("utf-16le", "ignore").rstrip("\x00")
+    return str(value)
+
+
+def _image(data: bytes, name: str) -> Document:
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        im = Image.open(io.BytesIO(data))
+    except (UnidentifiedImageError, OSError) as exc:
+        raise GatewayError(422, "DOCUMENT_UNREADABLE", "cannot read this image") from exc
+    doc = Document(name=name, kind="image", body="")
+    doc.notes.append("images: only metadata is read; text drawn in the picture needs OCR")
+    exif = im.getexif()
+    tags = dict(exif)
+    try:
+        tags.update(exif.get_ifd(0x8769))  # Exif sub-IFD: UserComment, CameraOwnerName…
+    except (KeyError, AttributeError):
+        pass
+    for tag, label in _EXIF_TEXT.items():
+        if tag in tags and tags[tag] not in (None, b"", ""):
+            doc.add(f"EXIF {label}", _exif_value(tag, tags[tag]))
+    try:
+        gps = exif.get_ifd(0x8825)
+    except (KeyError, AttributeError):
+        gps = {}
+    if gps.get(2) and gps.get(4):
+        def deg(v, ref):
+            d = float(v[0]) + float(v[1]) / 60 + float(v[2]) / 3600
+            return -d if ref in ("S", "W") else d
+        lat, lon = deg(gps[2], gps.get(1, "N")), deg(gps[4], gps.get(3, "E"))
+        doc.privacy.append(f"GPS position {lat:.5f}, {lon:.5f}")
+        doc.add("EXIF GPS position", f"{lat:.5f}, {lon:.5f}")
+    for key, value in (im.info or {}).items():  # PNG tEXt/iTXt/zTXt chunks, JPEG/GIF comments, XMP
+        if key in ("exif", "icc_profile", "dpi", "gamma", "transparency", "duration", "loop", "background",
+                   "progressive", "progression", "jfif", "jfif_version", "jfif_unit", "jfif_density", "adobe",
+                   "adobe_transform", "aspect", "interlace", "srgb", "chromaticity", "compression"):
+            continue
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", "ignore")
+        if isinstance(value, str) and value.strip():
+            doc.add("XMP metadata (XML)" if key in ("xmp", "XML:com.adobe.xmp") else f"image text field {key}", value)
+    if not any(x["source"].startswith("XMP") for x in doc.sections):
+        m = re.search(rb"<x:xmpmeta.{0,200000}?</x:xmpmeta>", data, re.S)
+        if m:
+            doc.add("XMP metadata (XML)", m.group(0).decode("utf-8", "replace"))
     return doc

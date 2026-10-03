@@ -104,3 +104,50 @@ async def test_mandate_disabled_by_policy_allows_tool(client, new_task, call):
     t = await new_task()
     r = await call(t, "code.run", code="print(1)")
     assert r.status_code == 200
+
+
+# ---------------------------------------------------------------- human approval
+
+async def test_high_risk_call_waits_for_a_person(client, new_task, call):
+    """http.post is on the approvals list: refused until an admin approves that exact call, then runs once."""
+    from conftest import ADMIN
+    t = await new_task(profile="research")
+    args = {"url": "https://example.org/summary", "body": "Publiczne podsumowanie orzecznictwa."}
+    r = await call(t, "http.post", **args)
+    assert r.status_code == 403 and r.json()["mandate"]["rule_id"] == "APPROVAL-001"
+    approval_id = r.json()["mandate"]["findings"][-1]["detail"]["approval_id"]
+    again = await call(t, "http.post", **args)  # asking again does not open a second request
+    assert again.json()["mandate"]["findings"][-1]["detail"]["approval_id"] == approval_id
+    pending = (await client.get("/admin/approvals?status=pending", headers=ADMIN)).json()
+    assert [p["id"] for p in pending] == [approval_id]
+    assert (await client.post(f"/admin/approvals/{approval_id}/approve", headers=ADMIN)).status_code == 200
+    other = await call(t, "http.post", url="https://example.org/other", body="Inna treść.")
+    assert other.status_code == 403   # the approval covers that exact call only
+    ok = await call(t, "http.post", **args)
+    assert ok.status_code == 200 and ok.json()["mandate"]["tool_invoked"] is True
+    once = await call(t, "http.post", **args)
+    assert once.status_code == 403    # used up
+
+
+async def test_denied_approval_stays_refused(client, new_task, call):
+    from conftest import ADMIN
+    t = await new_task(profile="research")
+    r = await call(t, "http.post", url="https://example.org/x", body="b")
+    approval_id = r.json()["mandate"]["findings"][-1]["detail"]["approval_id"]
+    await client.post(f"/admin/approvals/{approval_id}/deny", headers=ADMIN)
+    assert (await client.post(f"/admin/approvals/{approval_id}/approve", headers=ADMIN)).status_code == 409
+    assert (await call(t, "http.post", url="https://example.org/x", body="b")).status_code == 403
+
+
+# ---------------------------------------------------------------- confused deputy: delegation depth
+
+async def test_delegation_chain_has_a_depth_limit(client, new_task):
+    t = await new_task()
+    headers, task_id = t["headers"], t["task_id"]
+    for level in range(3):  # max_delegation_depth: 3
+        r = await client.post(f"/v1/tasks/{task_id}/delegate", headers=headers, json={"agent_id": "demo-agent", "purpose": f"hop {level}"})
+        assert r.status_code == 201, r.text
+        task_id = r.json()["task_id"]
+        headers = dict(headers, **{"X-Mandate-Lease": r.json()["lease"]})
+    r = await client.post(f"/v1/tasks/{task_id}/delegate", headers=headers, json={"agent_id": "demo-agent", "purpose": "hop 4"})
+    assert r.status_code == 403 and "DELEGATION_TOO_DEEP" in r.text

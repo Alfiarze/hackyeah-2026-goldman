@@ -528,6 +528,8 @@ export function Start({ go }) {
 // ------------------------------------------------------------------ per-page help
 
 export const PAGE_INFO = {
+  approvals: { what: "Every pending call that needs a person's decision, with the exact arguments.",
+    try: ["Approve a call: only that exact call runs, once.", "Deny it: the agent stays refused."], next: ["audit", "Audit log"] },
   live: { what: "Every decision the gateway makes, as it happens, plus what actually reached the tools, the spend and the time each check adds.",
     try: ["Empty? Open “Run a scenario” or “Test an input”, then come back: the new rows appear here at once.", "A red row means a blocked request; “never reached the tool” is the proof that it did not run."], next: ["scenarios", "Run a scenario"] },
   tasks: { what: "Every agent task has a mandate: which files, tools and recipients it may use, its budget and its expiry.",

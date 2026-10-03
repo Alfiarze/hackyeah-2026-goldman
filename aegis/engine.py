@@ -11,6 +11,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import secrets
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -233,6 +234,15 @@ class Gateway:
                 if role in ("user", "tool"):
                     untrusted.append(messages[i]["content"])
                 d.timings.update({k: d.timings.get(k, 0) + v for k, v in sub.timings.items()})
+        joined = " ".join(str(x) for x in untrusted)
+        if (not d.blocked and len(untrusted) > 1 and policy.controls.injection_heuristics.enabled
+                and not any(f.rule_id == "INJ-001" for f in d.findings)):
+            # multi-turn: an instruction split across messages ("Ignore all" / "previous instructions")
+            if spans := detectors.find_injection(joined):
+                # the pieces cannot be cut out of separate messages, so the request is refused as a whole
+                d.add(Finding(action="BLOCK", rule_id="INJ-002", reason_code="PROMPT_INJECTION_ACROSS_MESSAGES",
+                              stage="deterministic", detail={"patterns": sorted({x[2] for x in spans}),
+                                                             "messages": len(untrusted)}))
         if not d.blocked and untrusted:
             await self.semantic_check(d, policy, "\n\n".join(untrusted), task)
         if d.blocked:
@@ -354,6 +364,9 @@ class Gateway:
             if spec.writes:
                 with timer("data_flow"):
                     self.taint_check(d, policy, task, sink)
+        if not d.blocked and spec and (tool in policy.approvals.tools or sink in policy.approvals.tools):
+            with timer("approval"):
+                await self.require_approval(d, policy, task, tool, sink, args)
         if d.blocked:
             await self._finish(d, t0, channel=channel, target=target, task=task, extra={"sink": sink})
             return 403, _blocked(d)
@@ -396,10 +409,16 @@ class Gateway:
             new_level = await self.tasks.raise_taint(task.id, Classification(label))
             extra["taint"] = {"source": target, "label": Classification(label).name, "task_now": new_level.name}
         content = result.get("content")
-        if isinstance(content, str) and content:
+        active = result.pop("active", None) if isinstance(result, dict) else None
+        if (isinstance(content, str) and content) or active:
             post = Decision()
-            self.content_checks(post, policy, content, target="tool_results", pii=False)
-            await self.semantic_check(post, policy, content, task)
+            if active and policy.controls.documents.enabled:  # a script, macro or remote template in the file read
+                post.add(Finding(action="BLOCK" if policy.controls.documents.mode == "block" else "REDACT",
+                                 rule_id="DOC-001", reason_code="ACTIVE_CONTENT_IN_DOCUMENT", stage="signatures",
+                                 detail={"kinds": sorted({a["kind"] for a in active}),
+                                         "items": [a["detail"] for a in active][:10], "target": "tool_results"}))
+            self.content_checks(post, policy, content or "", target="tool_results", pii=False)
+            await self.semantic_check(post, policy, content or "", task)
             for f in post.findings:
                 f.detail["phase"] = "result"
                 d.add(f)
@@ -414,6 +433,33 @@ class Gateway:
         if d.blocked:
             return 403, _blocked(d) | {"tool_invoked": True}
         return 200, {"result": result, "mandate": d.public()}
+
+    async def require_approval(self, d: Decision, policy: Policy, task: Task, tool: str, sink: str,
+                               args: dict[str, Any]) -> None:
+        """High-risk call: runs only if a person approved this exact call (same task, tool and arguments).
+        An approval is used once; otherwise a pending request is opened and the call is refused for now."""
+        args_hash = hashlib.sha256(json.dumps(args, sort_keys=True, default=str).encode()).hexdigest()
+        used = await self.pool.fetchval(
+            "UPDATE approvals SET status='used' WHERE id = (SELECT id FROM approvals WHERE task_id=$1 AND tool=$2 "
+            "AND args_hash=$3 AND status='approved' AND decided_at > now() - make_interval(secs => $4) "
+            "ORDER BY decided_at DESC LIMIT 1) RETURNING id", task.id, tool, args_hash, policy.approvals.ttl_seconds)
+        if used:
+            d.findings.append(Finding(action="ALLOW", rule_id="APPROVAL-OK", reason_code="APPROVED_BY_PERSON",
+                                      stage="approval", detail={"approval_id": used}))
+            return
+        approval_id = await self.pool.fetchval(
+            "SELECT id FROM approvals WHERE task_id=$1 AND tool=$2 AND args_hash=$3 AND status='pending'",
+            task.id, tool, args_hash)
+        if approval_id is None:
+            approval_id = "apr_" + secrets.token_hex(6)
+            preview = {k: (v[:300] if isinstance(v, str) else v) for k, v in args.items()}
+            await self.pool.execute(
+                "INSERT INTO approvals (id, task_id, tool, sink, args_hash, args_preview) VALUES ($1,$2,$3,$4,$5,$6)",
+                approval_id, task.id, tool, sink, args_hash, preview)
+            await self.audit.system("APPROVAL_REQUESTED", actor=task.principal, task_id=task.id,
+                                    evidence={"approval_id": approval_id, "tool": tool, "sink": sink})
+        d.add(Finding(action="BLOCK", rule_id="APPROVAL-001", reason_code="APPROVAL_REQUIRED", stage="approval",
+                      detail={"approval_id": approval_id, "tool": tool, "sink": sink}))
 
     def _redact_all(self, text: str, policy: Policy, tool: str, pii: bool) -> str:
         spans = detectors.find_secrets(text) if policy.controls.secrets.enabled else []

@@ -159,7 +159,8 @@ def create_app(settings: Settings | None = None,
         try:
             child = await g.tasks.delegate(parent, agent_id=body.agent_id, tools=body.tools,
                                            resources=body.resources, budget_tokens=body.budget_tokens,
-                                           purpose=body.purpose)
+                                           purpose=body.purpose,
+                                           max_depth=g.policy.active.budgets.max_delegation_depth)
         except GatewayError as exc:
             await g.audit.system("DELEGATION_DENIED", actor=parent.principal, task_id=parent.id,
                                  evidence={"reason_code": exc.reason_code, "message": exc.message,

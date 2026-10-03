@@ -166,8 +166,12 @@ class TaskManager:
         return Classification(new)
 
     async def delegate(self, parent: Task, *, agent_id: str, tools: list[str] | None,
-                       resources: list[str] | None, budget_tokens: int | None, purpose: str) -> Task:
+                       resources: list[str] | None, budget_tokens: int | None, purpose: str,
+                       max_depth: int | None = None) -> Task:
         """Child mandate must be a subset of the parent's; child starts with the parent's taint."""
+        if max_depth is not None and len(await self.ancestry(parent)) > max_depth:
+            raise GatewayError(403, "DELEGATION_TOO_DEEP",
+                               f"a task may be delegated at most {max_depth} level(s) deep")
         pm = parent.mandate
         tools = tools if tools is not None else pm["tools"]
         resources = resources if resources is not None else pm["resources"]

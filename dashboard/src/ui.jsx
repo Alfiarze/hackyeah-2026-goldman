@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { api } from "./api.js";
 import { getLang, human, t } from "./i18n.js";
 export const LEVELS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET"];
-export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked", CONTAINED: "Contained" };
+export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked", CONTAINED: "Contained", PENDING: "Awaiting approval" };
 export const locale = () => (getLang() === "pl" ? "pl-PL" : "en-GB");
 export const num = (n, d = 0) => (n === null || n === undefined ? "—" : Number(n).toLocaleString(locale(), { maximumFractionDigits: d }));
 export const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString(locale()) : "");
@@ -31,6 +32,7 @@ export function Level({ v }) {
 
 export function describe(f) {
   const d = f.detail || {};
+  if (d.approval_id) return t("waits for a person's decision ({id})", { id: d.approval_id });
   if (d.kinds) return t("found {list}", { list: d.kinds.map((k) => t(k.replace("_", " "))).join(", ") }) + (d.items?.length ? `: ${d.items[0]}` : "");
   if (d.entities) return t("found {list}", { list: d.entities.map(human).join(", ") });
   if (d.types) return t("found {list}", { list: d.types.map(human).join(", ") });
@@ -83,6 +85,22 @@ export function Rosette({ size = 30, className = "" }) {
         <g key={name} className={`r-${name}`}>{ds.map((d, i) => <path key={i} d={d} />)}</g>
       ))}
     </svg>
+  );
+}
+
+
+// Approve or deny a held high-risk call (policy: approvals).
+export function ApprovalButtons({ id, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const decide = async (verdict) => {
+    setBusy(true);
+    try { await api(`/admin/approvals/${id}/${verdict}`, { method: "POST" }); onDone?.(verdict); } finally { setBusy(false); }
+  };
+  return (
+    <span className="actions">
+      <button className="btn small btn-primary" disabled={busy} onClick={() => decide("approve")}>{t("Approve this call")}</button>
+      <button className="btn small btn-danger" disabled={busy} onClick={() => decide("deny")}>{t("Deny")}</button>
+    </span>
   );
 }
 

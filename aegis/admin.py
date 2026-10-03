@@ -387,6 +387,30 @@ async def quarantine_tool(request: Request, name: str):
     return {"name": name, "status": "quarantined"}
 
 
+@router.get("/approvals")
+async def approvals(request: Request, status: str | None = None):
+    rows = await _gw(request).pool.fetch(
+        "SELECT a.*, t.principal, t.agent_id, t.profile FROM approvals a JOIN tasks t ON t.id = a.task_id "
+        "WHERE ($1::text IS NULL OR a.status = $1) ORDER BY a.created_at DESC LIMIT 100", status)
+    return [dict(r) for r in rows]
+
+
+@router.post("/approvals/{approval_id}/{verdict}")
+async def decide_approval(request: Request, approval_id: str, verdict: str):
+    if verdict not in ("approve", "deny"):
+        raise GatewayError(404, "NOT_FOUND")
+    gw = _gw(request)
+    status = "approved" if verdict == "approve" else "denied"
+    row = await gw.pool.fetchrow(
+        "UPDATE approvals SET status=$2, decided_at=now(), decided_by='admin' WHERE id=$1 AND status='pending' "
+        "RETURNING id, task_id, tool", approval_id, status)
+    if row is None:
+        raise GatewayError(409, "APPROVAL_NOT_PENDING", "no pending approval with this id")
+    await gw.audit.system("APPROVAL_GRANTED" if status == "approved" else "APPROVAL_DENIED", actor="admin",
+                          task_id=row["task_id"], evidence={"approval_id": approval_id, "tool": row["tool"]})
+    return {"id": approval_id, "status": status}
+
+
 @router.get("/reservations")
 async def reservations(request: Request, status: str | None = None, limit: int = 100):
     rows = await _gw(request).pool.fetch(
@@ -565,6 +589,11 @@ async def check_document(request: Request, name: str = Query("document", max_len
                              reason_code="ACTIVE_CONTENT_IN_DOCUMENT", stage="signatures",
                              detail={"kinds": sorted({a["kind"] for a in doc.active}),
                                      "items": [a["detail"] for a in doc.active][:10]}))
+    pii = gw.policy.active.controls.pii
+    if doc.privacy and pii.enabled:  # e.g. where a photo was taken: personal data, but not text
+        extra.append(Finding(action="BLOCK" if pii.mode == "block" else "REDACT", rule_id="PII-002",
+                             reason_code="LOCATION_IN_METADATA", stage="deterministic",
+                             detail={"entities": ["GPS"], "items": doc.privacy}))
     result = await gw.evaluate(doc.analysis_text(), target="tool_results", extra=extra)
     return result | {"document": out}
 

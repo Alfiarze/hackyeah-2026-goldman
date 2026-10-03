@@ -9,6 +9,7 @@ export const STAGES = [
   { id: "signatures", label: "Known attacks", hint: "Does it match a signature from the attack feed?" },
   { id: "deterministic", label: "Patterns", hint: "Personal data, passwords and keys, injection phrases." },
   { id: "data_flow", label: "Data flow", hint: "May data this confidential go to this destination?" },
+  { id: "approval", label: "Person", hint: "High-risk calls wait for a person's approval." },
   { id: "semantic", label: "AI review", hint: "A model scores the text for manipulation." },
   { id: "budget", label: "Budget", hint: "Tokens and calls are reserved before anything runs." },
   { id: "execute", label: "Runs", hint: "Only now is the tool or model actually called." },
@@ -44,7 +45,7 @@ export function Pipeline({ decision, ran, animate = false, sandbox = null }) {
   const states = stageStates(decision, ran);
   const last = states.reduce((acc, s, i) => (s === "skip" ? acc : i), 0);
   return (
-    <ol className={`pipe ${animate ? "is-animated" : ""}`} aria-label={t("Checks in order")}>
+    <ol className={`pipe ${animate ? "is-animated" : ""}`} style={{ "--cols": STAGES.length }} aria-label={t("Checks in order")}>
       {STAGES.map((s, i) => {
         const ms = decision?.timings?.[s.id] ?? (s.id === "execute" ? decision?.timings?.model_call : undefined);
         return (
@@ -100,7 +101,8 @@ function sandboxStory(sb) {
 export function TraceStep({ n, title, why, request, decision, response, ran, action, rule, sandbox, extra, animate }) {
   const fired = (decision?.findings || []).filter((f) => f.action !== "ALLOW");
   const contained = sandbox && (sandbox.network_attempted || sandbox.status !== "ok");
-  const act = contained && (action || decision?.action) === "ALLOW" ? "CONTAINED" : (action || decision?.action);
+  const pending = decision?.rule_id === "APPROVAL-001";
+  const act = pending ? "PENDING" : contained && (action || decision?.action) === "ALLOW" ? "CONTAINED" : (action || decision?.action);
   return (
     <article className={`trace ${act ? `trace-${act.toLowerCase()}` : ""} ${animate ? "is-animated" : ""}`}>
       <header className="trace-head">
@@ -109,7 +111,7 @@ export function TraceStep({ n, title, why, request, decision, response, ran, act
           <h3>{t(title)}</h3>
           {why && <p>{t(why)}</p>}
         </div>
-        {act && <Stamp a={act} rule={act === "CONTAINED" ? t("sandbox") : rule || decision?.rule_id} />}
+        {act && <Stamp a={act} rule={act === "CONTAINED" ? t("sandbox") : act === "PENDING" ? t("person") : rule || decision?.rule_id} />}
       </header>
 
       {request && (

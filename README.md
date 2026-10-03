@@ -149,7 +149,11 @@ model/tool `502`, and auth failures `401`.
 | Sandboxed code execution (`code.run`) | deterministic | sandbox (strict: block) | LLM05 Improper Output Handling, CWE-94 |
 | MCP tool hash pinning and quarantine | deterministic | block | LLM01 / Invariant Labs tool poisoning |
 | Case-scoped memory | deterministic | block | Agentic: memory poisoning |
-| `documents`: uploaded PDF/DOCX files. Metadata, XMP (XML), annotations, form fields, comments, hidden runs and custom properties are checked like the text and reported by location; scripts, auto-actions, launch actions, embedded files, macros and remote templates are active content | deterministic | block | LLM01 indirect injection, LLM05 |
+| `approvals`: calls a person must approve first (default: `http.post`); only the exact approved call runs, once | deterministic + human | hold (403 `APPROVAL_REQUIRED`) | LLM06 Excessive Agency, Agentic: human-in-the-loop |
+| `max_delegation_depth`: agent → agent hand-offs per task chain (default 3); every hop keeps a subset mandate and the parent's taint | deterministic | block | Agentic: confused deputy, runaway recursion |
+| Multi-turn injection: an instruction split across messages is checked on the joined conversation (`INJ-002`) | deterministic | block | LLM01 |
+| Output and tool-call validation: XSS in generated HTML, SQL injection, SSRF to internal/metadata addresses, credential files (`ATK-XSS/SQLI/SSRF/FILE`) | deterministic | block | LLM05 Improper Output Handling, CWE-79/89/918 |
+| `documents`: files read by agents or uploaded (PDF, DOCX/XLSX/PPTX, legacy DOC/XLS/PPT, JPEG/PNG/TIFF/WebP). Metadata, XMP (XML), annotations, form fields, comments, hidden runs, hidden sheets and slides, speaker notes, formulas, EXIF and PNG text chunks are checked like the text and reported by location; a GPS position in a photo is personal data (`PII-002`); scripts, auto-actions, launch actions, embedded files, macros, DDE formulas and remote templates are active content (`DOC-001`) | deterministic | block | LLM01 indirect injection, LLM05 |
 
 **Historical attacks** (`feeds/attacks.yaml`, editable live or served from `ATTACK_FEED_URL`):
 - unsafe deserialization: a pickle opcode scan (`pickletools.genops`, the file is never unpickled) that flags

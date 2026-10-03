@@ -295,6 +295,8 @@ hackyeah-2026-goldman/
 │   ├── pipeline.py                # pipeline pre/post, short-circuit, łączenie decyzji
 │   ├── models.py                  # Decision, Mandate, Redaction (Pydantic)
 │   ├── db.py                      # SQLAlchemy async engine (asyncpg), DATABASE_URL
+│   ├── admin/ {policy.py, controls.py, signatures.py, tasks.py, documents.py,
+│   │           tools.py, audit.py, playground.py, events.py}   # CRUD pod dashboard (sekcja 8b)
 │   ├── policy/ {loader.py, schema.py, watcher.py, feed.py}
 │   ├── controls/ {mandate.py, allowlist.py, attacks.py, pickle_scan.py, injection.py,
 │   │              pii.py, secrets.py, taint.py, semantic.py}
@@ -335,7 +337,7 @@ Kolejność w górę: **działający szkielet > testy > reszta**. Checkpoint twa
 | H5–9 | Mandate/lease (HMAC), taint/IFC, PII+sekrety (block/redact), allowlista modeli, injection heuristics | Scena "evil.com" działa deterministycznie |
 | H9–13 | Hot-reload + last-good, feed sygnatur (pickle scan, CVE, trust_remote_code), semantyka (Ollama), profile, **proxy MCP** | Jury może zmieniać reguły live |
 | H13–16 | Budget escrow + test 30 agentów, limity, delegacja agent↔agent, memory | Overspend = 0 udowodniony |
-| H16–19 | Dashboard dopięty (szczegóły zadania, eksport, p50/p95, panel live), proof-of-enforcement | Raportowanie 20% |
+| H16–19 | Dashboard dopięty (szczegóły zadania, eksport, p50/p95, panel live), admin API CRUD priorytet 1 (sekcja 8b; read-only endpointy od H5), proof-of-enforcement | Raportowanie 20% |
 | H19–22 | Uzupełnienie testów do ~45, bypass, ad-hoc "jak jury" na świeżym klonie, bench; landing (jeśli jest czas) | Suite zielony |
 | H22–23 | README, diagram, PDF (10 slajdów), nagranie demo, **submit najpóźniej 4.10 10:00** | Zgłoszenie |
 | H23–24 | Bufor (awarie platformy, poprawki opisu) | — |
@@ -391,6 +393,41 @@ Dodatkowo: test "wyłącz kontrolę w polityce ⇒ test regresji wykrywa narusze
 **Panel live:** edycja `policy.yaml` w przeglądarce, pole "wpisz własny prompt", przełącznik profilu strict/balanced/permissive, przycisk "Launch 30 agents".
 
 Telemetria wydajności: `/metrics` (JSON) z p50/p95/p99 dla etapów deterministycznych, semantycznych i pełnej operacji; opis sprzętu/modelu/liczby prób w README.
+
+### 8b. Admin API (CRUD) pod dashboard
+
+Dwie kategorie danych, dwie zasady zapisu:
+
+**A. Konfiguracja (polityka) — jedno źródło prawdy.** CRUD nie zapisuje osobnych rekordów. Każda zmiana = walidacja (Pydantic) → nowa wersja polityki (`policy/policy.yaml` + wiersz w `policy_versions`) → hot-reload → wpis audytu z diffem. Edycja z UI i ręczna edycja pliku dają identyczny efekt. Błędna zmiana ⇒ `422` + `POLICY_REJECTED`, aktywna wersja bez zmian.
+
+| Zasób | Endpointy | W UI |
+|---|---|---|
+| Kontrole | `GET /admin/controls`, `PATCH /admin/controls/{name}` (enabled, mode block/redact, progi) | Lista kontroli z przełącznikami i suwakami |
+| Profil surowości | `PUT /admin/policy/profile` | strict / balanced / permissive |
+| Allowlista modeli | `GET/POST/DELETE /admin/models` | Lista + dodaj/usuń |
+| Sinki i clearance | `GET/PUT/DELETE /admin/sinks/{name}` | Tabela: narzędzie → max klasyfikacja |
+| Profile zadań (szablony mandatów) | `GET/POST/PUT/DELETE /admin/task-profiles/{id}` | Edytor: zasoby, narzędzia, budżet, TTL |
+| Budżety (limity) | `PUT /admin/budgets/{scope}` | Limity tokenów/wywołań/współbieżności |
+| Sygnatury ataków (feed) | `GET/POST/PUT/DELETE /admin/signatures/{id}`, `POST /admin/signatures/test` (sprawdź regex na próbce) | Lista + formularz + „przetestuj” |
+| Cała polityka | `GET/PUT /admin/policy`, `GET /admin/policy/versions`, `POST /admin/policy/rollback/{version}` | Edytor YAML, historia wersji, diff, rollback |
+
+**B. Stan runtime — Postgres.**
+
+| Zasób | Endpointy | W UI |
+|---|---|---|
+| Zadania / mandaty | `POST /v1/tasks`, `GET /admin/tasks`, `GET /admin/tasks/{id}`, `POST /admin/tasks/{id}/revoke` | Lista aktywnych, szczegóły, przycisk „odbierz przepustkę” |
+| Katalog dokumentów (etykiety poufności) | `GET/POST/PUT/DELETE /admin/documents/{id}` | Zmiana etykiety PUBLIC…SECRET (zmiana etykiety audytowana) |
+| Rejestr narzędzi MCP | `GET /admin/tools`, `POST /admin/tools/{name}/approve`, `POST /admin/tools/{name}/quarantine` | Status, diff definicji, zatwierdź/kwarantanna |
+| Rezerwacje budżetu | `GET /admin/reservations?status=` , `POST /admin/reservations/{id}/settle` | Aktywne / niepewne, ręczne rozliczenie |
+| Pamięć | `GET /admin/memory?case=`, `DELETE /admin/memory/{id}` | Przegląd wpisów per sprawa |
+| Audyt (read-only) | `GET /admin/audit?task=&rule=&action=&from=`, `GET /admin/audit/export?format=jsonl\|csv` | Filtrowana tabela, eksport |
+| Metryki (read-only) | `GET /admin/stats`, `GET /metrics` | Kafelki i wykresy |
+| Playground | `POST /admin/playground/evaluate` (prompt/akcja → decyzja, **bez** wykonania narzędzia) | Pole „wpisz własny prompt” dla jury |
+| Symulacja | `POST /admin/simulate/agents?n=30` | „Launch 30 agents” |
+
+**Zasady:** audyt append-only (brak UPDATE/DELETE). Każdy zapis przez admin API = wpis audytu z `actor` i diffem. Admin API chronione osobnym kluczem (`ADMIN_API_KEY`), innym niż klucze agentów, bo agent nie może zmieniać własnej polityki. Live-odświeżanie dashboardu: SSE `GET /admin/events` (strumień nowych decyzji).
+**Testy:** każdy endpoint konfiguracji ma test: poprawna zmiana działa od następnego żądania, błędna zmiana ⇒ 422 i bez zmiany wersji, brak klucza admina ⇒ 401, klucz agenta ⇒ 403.
+**Zakres na 24 h:** priorytet 1 — kontrole (PATCH), profil, polityka (GET/PUT/wersje/rollback), sygnatury, zadania (lista/szczegóły/revoke), audyt+eksport, playground, stats. Priorytet 2 — dokumenty, narzędzia MCP, sinki, profile zadań, rezerwacje, pamięć (na początek tylko odczyt, edycja przez YAML).
 
 ---
 

@@ -38,8 +38,7 @@ first use; the default is `dev-admin-key` (see `.env.example`).
 
 Switching to the GB10 means changing these values and nothing else. `LLM_LOCATION` tells the data-flow rule where the
 server lives: `onprem` may receive confidential data, `cloud` only public data. While testing through OpenRouter,
-prompts really leave the machine (the dashboard shows a test-mode warning), so use only the synthetic demo
-documents. Without a configured server the AI review falls back to a local heuristic scorer and the console uses the
+prompts really leave the machine, so use only the synthetic demo documents. Without a configured server the AI review falls back to a local heuristic scorer and the console uses the
 `mock/echo` test model.
 
 | Command | What it does |

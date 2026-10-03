@@ -85,6 +85,21 @@ class Limit(_Strict):
     concurrency: int = Field(1000, ge=1)
 
 
+class RateLimits(_Strict):
+    """Requests per minute, counted for every request an agent makes (allowed or not)."""
+    per_agent_per_minute: int = Field(60, ge=1)
+    per_principal_per_minute: int = Field(120, ge=1)
+    global_per_minute: int = Field(1000, ge=1)
+
+
+class CircuitBreaker(_Strict):
+    """A task that keeps getting blocked is cut off: after `blocks` blocked requests within `window_seconds`
+    every further request of that task is refused until it has been quiet for the window."""
+    enabled: bool = True
+    blocks: int = Field(10, ge=1)
+    window_seconds: int = Field(60, ge=5, le=3600)
+
+
 class Budgets(_Strict):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
     default_max_tokens: int = Field(1024, ge=1)
@@ -93,6 +108,8 @@ class Budgets(_Strict):
     guard: Limit = Limit(tokens=200_000, calls=5000)
     usd_per_1k_tokens: float = Field(0.0, ge=0)
     max_delegation_depth: int = Field(3, ge=0, le=20)  # agent -> agent hops below the first task
+    rate_limits: RateLimits = RateLimits()
+    circuit_breaker: CircuitBreaker = CircuitBreaker()
 
 
 class TaskProfile(_Strict):
@@ -116,6 +133,9 @@ class TaskProfile(_Strict):
 class Models(_Strict):
     allow: list[str]
     default: str
+    # sha256 of model artifacts (weights, LoRA adapters) by "<model name>/<file>": a different file is refused
+    pinned: dict[str, str] = {}
+    require_pinned: bool = False  # refuse any uploaded artifact that has no pin
 
 
 class Provider(_Strict):

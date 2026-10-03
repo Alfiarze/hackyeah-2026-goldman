@@ -63,6 +63,8 @@ Every response carries a `Decision` with these fields: `action` (`ALLOW` / `REDA
 | `Rejected` | Bad agent key, or a lease that is forged, belongs to another agent, or is expired, revoked or completed. The call is refused before evaluation (401/403/404). |
 | `Blocked` | Policy said no. `e.decision` holds the rule and the evidence (403). |
 | `BudgetExceeded` | A budget scope had no room (429). Subclass of `Blocked`. |
+| `RateLimited` | Too many requests this minute, or the task was cut off by the circuit breaker (429). Subclass of `BudgetExceeded`. |
+| `ApprovalRequired` | The call waits for a person's approval; `approval_id` names it. Retry the identical call once approved. Subclass of `Blocked`. |
 | `Unavailable` | The model or tool was unreachable and the gateway failed closed (502). Subclass of `Blocked`. |
 
 The agent never holds tool credentials. Tools run behind the gateway, which holds them.

@@ -21,7 +21,7 @@ from typing import Any
 
 import httpx
 
-from aegis_sdk.errors import AegisError, Blocked, BudgetExceeded, Rejected, Unavailable
+from aegis_sdk.errors import AegisError, ApprovalRequired, Blocked, BudgetExceeded, RateLimited, Rejected, Unavailable
 from aegis_sdk.types import ChatResult, Decision, TaskInfo, ToolResult
 
 LEASE_HEADER = "X-Mandate-Lease"
@@ -54,7 +54,11 @@ def _check(resp: httpx.Response) -> dict[str, Any]:
     if "mandate" in body:  # evaluated and blocked: carries a full decision
         decision = Decision.from_json(body["mandate"])
         if resp.status_code == 429:
+            if decision.rule_id in ("RATE-001", "CIRCUIT-001"):
+                raise RateLimited(decision, status=429)
             raise BudgetExceeded(decision, status=429)
+        if decision.rule_id == "APPROVAL-001":
+            raise ApprovalRequired(decision, status=resp.status_code)
         if resp.status_code == 502:
             raise Unavailable(decision, status=502)
         raise Blocked(decision, status=resp.status_code)

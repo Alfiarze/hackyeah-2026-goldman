@@ -32,6 +32,9 @@ export function Level({ v }) {
 
 export function describe(f) {
   const d = f.detail || {};
+  if (d.limit_per_minute) return t("{scope}: {n} requests this minute, the limit is {limit}", { scope: d.scope, n: d.count, limit: d.limit_per_minute });
+  if (d.threshold && d.window_seconds) return t("{n} blocked requests in the last {s} s (threshold {th}): the task is cut off", { n: d.blocked_recently, s: d.window_seconds, th: d.threshold });
+  if (d.expected && d.got) return t("{file}: expected sha256 {e}…, got {g}…", { file: d.file, e: d.expected.slice(0, 12), g: d.got.slice(0, 12) });
   if (d.approval_id) return t("waits for a person's decision ({id})", { id: d.approval_id });
   if (d.kinds) return t("found {list}", { list: d.kinds.map((k) => t(k.replace("_", " "))).join(", ") }) + (d.items?.length ? `: ${d.items[0]}` : "");
   if (d.entities) return t("found {list}", { list: d.entities.map(human).join(", ") });

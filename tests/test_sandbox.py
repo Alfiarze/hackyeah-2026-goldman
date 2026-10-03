@@ -55,3 +55,16 @@ async def test_disabling_control_blocks_code(client):
     t = await code_task(client)
     r = await run_code(client, t, "print(1)")
     assert r.status_code == 403 and r.json()["mandate"]["reason_code"] == "CODE_EXECUTION_BLOCKED"
+
+
+# ---------------------------------------------------------------- model artifacts pinned by sha256
+
+async def test_pinned_lora_adapter_passes_and_a_swapped_one_is_refused(gw):
+    import base64
+    from aegis.scenarios import LORA_ORIGINAL
+    ok_status, ok = await gw.register_model({"name": "legal-lora", "source_url": "https://huggingface.co/kancelaria/legal-lora",
+                                             "files": {"adapter_model.safetensors": base64.b64encode(LORA_ORIGINAL).decode()}})
+    assert ok_status == 200 and "MODEL-HASH-OK" in {f["rule_id"] for f in ok["mandate"]["findings"]}
+    bad_status, bad = await gw.register_model({"name": "legal-lora", "source_url": "https://huggingface.co/kancelaria/legal-lora",
+                                               "files": {"adapter_model.safetensors": base64.b64encode(LORA_ORIGINAL + b"x").decode()}})
+    assert bad_status == 403 and bad["mandate"]["rule_id"] == "MODEL-HASH-001"

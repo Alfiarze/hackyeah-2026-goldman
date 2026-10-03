@@ -21,6 +21,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# OCR for scanned PDFs and text in pictures (aegis/documents.py), Polish and English
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-pol tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
 # Dependencies first for layer caching
 COPY pyproject.toml ./
 RUN mkdir aegis && touch aegis/__init__.py \

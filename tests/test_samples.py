@@ -161,3 +161,24 @@ async def test_png_text_chunks(client):
     body = await check_file(client, "podpis.png")
     doc = body["document"]
     assert "INJ-001" in rules_in(doc, "image text field")
+
+
+# ---------------------------------------------------------------- OCR: scans and pictures
+
+needs_ocr = pytest.mark.skipif(__import__("shutil").which("tesseract") is None, reason="tesseract not installed")
+
+
+@needs_ocr
+async def test_scanned_pdf_is_read_with_ocr(client):
+    """A PDF made only of page images has no text layer; the note for the AI on the scan is read by OCR."""
+    body = await check_file(client, "skan-umowy.pdf")
+    doc, d = body["document"], body["decision"]
+    assert any("OCR" in n for n in doc["notes"])
+    assert "Notatka dla asystenta AI" in doc["text"]
+    assert d["action"] == "BLOCK" and {"INJ-001", "PII-001"} <= set(doc["body_rules"])
+
+
+@needs_ocr
+async def test_text_in_a_picture_is_read_with_ocr(client):
+    body = await check_file(client, "skan-umowy.jpg")
+    assert "Skan podpisanej umowy" in body["document"]["text"]

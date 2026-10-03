@@ -89,9 +89,11 @@ services:
       # where "Open the dashboard" points; override in Coolify if the gateway has a custom domain
       DASHBOARD_URL: ${DASHBOARD_URL:-${SERVICE_URL_GATEWAY}/dashboard/}
 
-  # Local model server with DeepSeek, internal network only (no public URL). The gateway is not wired to it.
+  # Local model server with DeepSeek. Behind a profile: Coolify does not pull, build or start it.
+  # The gateway is not wired to it.
   ollama:
     image: ollama/ollama:latest
+    profiles: ["ollama"]
     restart: unless-stopped
     expose:
       - "11434"

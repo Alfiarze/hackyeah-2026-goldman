@@ -12,6 +12,8 @@ from typing import Any
 from aegis.engine import Gateway
 
 AGENT = "demo-agent"
+# the adapter whose sha256 is pinned in policy.yaml (models.pinned)
+LORA_ORIGINAL = b'LORA-ADAPTER legal-pl v1: rank=16 alpha=32 target=q_proj,v_proj (sample weights)'
 
 
 def _clip(v: Any, n: int = 280) -> Any:
@@ -215,6 +217,10 @@ async def supply_chain(gw: Gateway):
                            "gguf_metadata": {"tokenizer.chat_template":
                                              "{{ messages.__class__ }}"}},
         "typosquat source": {"name": "qwen-typo", "source_url": "https://hugginface.co/Qwen/Qwen2.5-3B"},
+        "LoRA adapter, the pinned original": {"name": "legal-lora", "source_url": "https://huggingface.co/kancelaria/legal-lora",
+                                              "files": {"adapter_model.safetensors": base64.b64encode(LORA_ORIGINAL).decode()}},
+        "LoRA adapter swapped for another file": {"name": "legal-lora", "source_url": "https://huggingface.co/kancelaria/legal-lora",
+                                                  "files": {"adapter_model.safetensors": base64.b64encode(LORA_ORIGINAL + b" +backdoor").decode()}},
     }
     for label, payload in cases.items():
         status, body = await gw.register_model(payload)
@@ -254,6 +260,61 @@ async def code_sandbox(gw: Gateway):
     return r.done(note="each ran in its own --network none, read-only, memory-capped container, then it was removed")
 
 
+async def runaway(gw: Gateway):
+    """A hijacked agent loops. Every request is legitimate and each task still has budget, so only the
+    per-minute limit stops it (it counts across tasks). A second agent keeps trying forbidden things until the
+    circuit breaker cuts its task off, and then even a legitimate request of that task is refused."""
+    import secrets as _secrets
+
+    r = _Run(gw, "runaway agent")
+    policy = gw.policy.active
+    limit = policy.budgets.rate_limits.per_agent_per_minute
+    agent = f"runaway-{_secrets.token_hex(3)}"
+    sent, allowed, limited, tasks, last = 0, 0, 0, 0, None
+    task = lease = None
+    while sent < limit + 10:
+        if sent % 25 == 0:  # a new task every 25 requests: the per-task budget never runs out
+            task = await gw.tasks.create(policy, principal=f"runaway_{agent}", agent_id=agent, profile="contract_review",
+                                         params={"client": "A"}, purpose="demo: runaway agent")
+            lease = gw.tasks.lease_for(task)
+            tasks += 1
+        status, body = await gw.tool_call(agent, lease, "legal_db.search", {"query": "kara umowna"})
+        sent += 1
+        if status == 200:
+            allowed += 1
+        else:
+            limited += 1
+            last = body.get("mandate")
+    r.steps.append({"step": "hijacked agent fires requests in a loop", "action": "BLOCK", "rule_id": "RATE-001",
+                    "why": f"{sent} identical searches in a few seconds, spread over {tasks} tasks so that no task runs out of budget.",
+                    "request": {"channel": "tool", "target": "legal_db.search", "args": {"query": "kara umowna", "repeat": f"x{sent}"}},
+                    "decision": last, "tool_invoked": False,
+                    "burst": {"sent": sent, "allowed": allowed, "limited": limited, "limit": limit, "tasks": tasks}})
+
+    cb = policy.budgets.circuit_breaker
+    agent2 = f"prober-{_secrets.token_hex(3)}"
+    t2 = await gw.tasks.create(policy, principal=f"runaway_{agent2}", agent_id=agent2, profile="contract_review",
+                               params={"client": "A"}, purpose="demo: circuit breaker")
+    lease2 = gw.tasks.lease_for(t2)
+    blocked = 0
+    for _ in range(cb.blocks):
+        status, _body = await gw.tool_call(agent2, lease2, "doc.read", {"path": "/clients/B/contracts/nda.txt"})
+        blocked += status != 200
+    r.steps.append({"step": "a second agent keeps probing for forbidden files", "action": "BLOCK", "rule_id": "MANDATE-RES",
+                    "why": f"{cb.blocks} attempts to read client B's file in a row; each one is refused by the pass.",
+                    "request": {"channel": "tool", "target": "doc.read", "args": {"path": "/clients/B/contracts/nda.txt", "repeat": f"x{cb.blocks}"}},
+                    "tool_invoked": False, "burst": {"sent": cb.blocks, "allowed": cb.blocks - blocked, "limited": blocked}})
+    status, body = await gw.tool_call(agent2, lease2, "legal_db.search", {"query": "kara umowna"})
+    m = body.get("mandate", {})
+    r.steps.append({"step": "now even a legitimate request of that task", "tool": "legal_db.search", "http_status": status,
+                    "action": m.get("action"), "rule_id": m.get("rule_id"), "reason_code": m.get("reason_code"),
+                    "tool_invoked": m.get("tool_invoked"),
+                    "why": "The circuit breaker has cut this task off: nothing it asks for runs until it has been quiet for a minute.",
+                    "request": {"channel": "tool", "target": "legal_db.search", "args": {"query": "kara umowna"}},
+                    "decision": m or None})
+    return r.done(burst_allowed=allowed, burst_limited=limited)
+
+
 SCENARIOS = {
     "clean": clean_task,
     "injection": injection,
@@ -264,4 +325,5 @@ SCENARIOS = {
     "supply_chain": supply_chain,
     "code_sandbox": code_sandbox,
     "budget_race": budget_race,
+    "runaway": runaway,
 }

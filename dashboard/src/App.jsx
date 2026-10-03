@@ -235,6 +235,8 @@ const SCENARIO_COPY = {
     checks: "Unsafe deserialization, vulnerable packages, typosquatting.", expect: "BLOCK" },
   code_sandbox: { title: "Code runs in a sandbox", text: "An agent is tricked into running code that tries to reach the network and to run forever. Each run happens in an isolated, throw-away container.",
     checks: "Malicious code execution, runaway compute.", expect: "REDACT" },
+  runaway: { title: "Runaway agent", text: "A hijacked agent loops, opening new tasks so no task runs out of budget. Another keeps probing for forbidden files.",
+    checks: "Requests per minute across tasks, circuit breaker.", expect: "BLOCK" },
   budget_race: { title: "Thirty agents, one budget", text: "Thirty agents race for a 10,000-token pool at 1,000 tokens each.",
     checks: "Budget governance under concurrency.", expect: "BLOCK" },
 };
@@ -362,6 +364,14 @@ function Replay({ r }) {
                 extra={<>
                   {s.rejected && <p className="trace-ran is-not">{t("Rejected: {why}.", { why: human(s.rejected) })}</p>}
                   {s.tools && <p className="small">{t("Tools the agent can see")}: {s.tools.map((x) => <Id key={x}>{x}</Id>)}</p>}
+                  {s.burst && (
+                    <div className="burst">
+                      <span><b>{s.burst.sent}</b> {t("sent")}</span>
+                      <span className="t-allow"><b>{s.burst.allowed}</b> {t("went through")}</span>
+                      <span className="t-block"><b>{s.burst.limited}</b> {t("stopped")}</span>
+                      {s.burst.limit && <span className="muted">{t("limit: {n} per agent per minute, over {tasks} tasks", { n: s.burst.limit, tasks: s.burst.tasks })}</span>}
+                    </div>
+                  )}
                 </>} />))}
         </div>
       )}
@@ -982,7 +992,6 @@ function SideStatus({ stats, health }) {
           <dt>{t("Signatures")}</dt><dd>{stats.feed.signatures}</dd>
         </dl>
       )}
-      {stats?.llm.configured && stats.llm.server?.includes("openrouter.ai") && <p className="side-alert">{t("Test mode: prompts go to OpenRouter (cloud)")}</p>}
       {stats?.semantic.override && <p className="side-alert">{t("AI review forced to “safe” (demo)")}</p>}
     </div>
   );

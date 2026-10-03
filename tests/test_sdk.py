@@ -93,3 +93,9 @@ def test_budget_status_maps_to_budget_exceeded():
     with pytest.raises(BudgetExceeded) as exc:
         _check(resp)
     assert exc.value.rule_id == "BUD-001"
+
+
+async def test_sdk_maps_approval_and_rate_limit(client):
+    """New gateway rules surface as their own exceptions; both are subclasses of the existing ones."""
+    from aegis_sdk import ApprovalRequired, Blocked, BudgetExceeded, RateLimited
+    assert issubclass(ApprovalRequired, Blocked) and issubclass(RateLimited, BudgetExceeded)

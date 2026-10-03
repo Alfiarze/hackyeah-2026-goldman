@@ -139,3 +139,35 @@ async def test_race_admits_exactly_what_fits(client):
     assert body["fit"] == 10000 // body["reserve_per_request"]
     assert body["executed"] >= body["fit"] and body["executed"] + body["prevented"] == 30
     assert body["overspend_tokens"] == 0 and body["committed_tokens"] <= 10000
+
+
+# ---------------------------------------------------------------- requests per minute and circuit breaker
+
+async def set_policy(client, old, new):
+    text = (await client.get("/admin/policy", headers=ADMIN)).json()["yaml"]
+    assert old in text
+    r = await client.put("/admin/policy", headers=ADMIN | {"Content-Type": "text/plain"}, content=text.replace(old, new))
+    assert r.status_code == 200, r.text
+
+
+async def test_runaway_loop_hits_the_per_agent_rate_limit(client, new_task, call):
+    """Each request is fine and the task budget has room, but the agent loops: the limit per minute stops it,
+    and it counts across tasks, so opening new tasks does not help."""
+    await set_policy(client, "per_agent_per_minute: 60", "per_agent_per_minute: 5")
+    t1, t2 = await new_task(), await new_task()
+    codes = [(await call(t, "legal_db.search", query="kara umowna")).status_code for t in (t1, t1, t1, t2, t2, t2)]
+    assert codes == [200] * 5 + [429]
+    r = await call(t2, "legal_db.search", query="kara umowna")
+    assert r.json()["mandate"]["rule_id"] == "RATE-001"
+    assert r.json()["mandate"]["tool_invoked"] is False
+
+
+async def test_circuit_breaker_cuts_off_a_task_that_keeps_getting_blocked(client, new_task, call):
+    await set_policy(client, "blocks: 10", "blocks: 3")
+    t = await new_task()
+    for _ in range(3):  # three forbidden reads
+        assert (await call(t, "doc.read", path="/clients/B/contracts/nda.txt")).status_code == 403
+    r = await call(t, "legal_db.search", query="kara umowna")  # even a legitimate request is now refused
+    assert r.status_code == 429 and r.json()["mandate"]["rule_id"] == "CIRCUIT-001"
+    other = await new_task()  # other tasks are not affected
+    assert (await call(other, "legal_db.search", query="kara umowna")).status_code == 200

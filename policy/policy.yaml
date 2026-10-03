@@ -12,6 +12,11 @@ models:
     - mock/echo            # deterministic local model used by tests and the simulator
     - "main/*"             # the main model server from .env (LLM_BASE_URL / LLM_MODEL): OpenRouter now, GB10 later
   default: mock/echo     # used only when no main server is configured
+  # Model artifacts (weights, LoRA adapters) by "<model name>/<file>": the sha256 they must have.
+  # A swapped file under a known name is refused (MODEL-HASH-001). require_pinned: refuse unknown files too.
+  pinned:
+    legal-lora/adapter_model.safetensors: "sha256:f8d5b1b170198bb8bf9a4fdacfff275cbcdcad4a98d87c3d5ca25dad39731827"
+  require_pinned: false
 
 # Where a prompt to each model provider goes, for the data-flow rule. Unknown provider => llm:external.
 providers:
@@ -63,6 +68,14 @@ budgets:
   guard: {tokens: 200000, calls: 5000}   # cost of the protection itself (semantic checks)
   usd_per_1k_tokens: 0.002     # ESTIMATE for reporting; local models cost nothing per token
   max_delegation_depth: 3      # how many times a task may be handed on to another agent (confused-deputy chains)
+  rate_limits:                 # requests per minute, also when the per-task budget would still allow them
+    per_agent_per_minute: 60
+    per_principal_per_minute: 120
+    global_per_minute: 1000
+  circuit_breaker:             # a task blocked this often is cut off until it has been quiet for the window
+    enabled: true
+    blocks: 10
+    window_seconds: 60
 
 # Calls a person must approve before they run (tool names or sinks such as mail.send:external).
 # The agent gets 403 APPROVAL_REQUIRED; an admin approves in the console; the identical call then runs once.

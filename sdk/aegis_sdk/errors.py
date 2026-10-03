@@ -46,3 +46,19 @@ class BudgetExceeded(Blocked):
 
 class Unavailable(Blocked):
     """The upstream model or tool was unreachable (HTTP 502). The gateway failed closed."""
+
+
+class RateLimited(BudgetExceeded):
+    """Too many requests this minute (RATE-001), or the task was cut off by the circuit breaker after too many
+    blocked requests (CIRCUIT-001). Back off and retry later (HTTP 429)."""
+
+
+class ApprovalRequired(Blocked):
+    """The call needs a person's approval first (APPROVAL-001). Retry the identical call after it is approved."""
+
+    @property
+    def approval_id(self) -> str | None:
+        for f in self.decision.findings:
+            if f.rule_id == "APPROVAL-001":
+                return (f.detail or {}).get("approval_id")
+        return None

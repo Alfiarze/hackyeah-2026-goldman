@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import html
 import io
+import os
 import re
+import shutil
+import subprocess
 import zipfile
 from dataclasses import dataclass, field
 from typing import Any
@@ -53,6 +56,28 @@ class Document:
                 "notes": self.notes}
 
 
+def ocr(image: bytes) -> str | None:
+    """Text drawn in a picture or a scanned page, via the tesseract binary (Polish + English by default).
+    None when OCR is not installed; the caller then says so instead of pretending the image is empty."""
+    exe = shutil.which("tesseract")
+    if not exe:
+        return None
+    from PIL import Image, ImageOps
+
+    try:
+        im = Image.open(io.BytesIO(image))
+        im = ImageOps.exif_transpose(im).convert("L")
+        if im.width < 1200:  # small scans read far better upscaled
+            im = im.resize((im.width * 2, im.height * 2))
+        buf = io.BytesIO()
+        im.save(buf, format="PNG")
+        out = subprocess.run([exe, "stdin", "stdout", "-l", os.environ.get("OCR_LANGS", "pol+eng")],
+                             input=buf.getvalue(), capture_output=True, timeout=60, check=False)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return ""
+    return out.stdout.decode("utf-8", "replace").strip()
+
+
 def analyze(data: bytes, name: str = "document") -> Document:
     if len(data) > MAX_BYTES:
         raise GatewayError(413, "DOCUMENT_TOO_LARGE", "documents up to 10 MB")
@@ -84,7 +109,16 @@ def _pdf(data: bytes, name: str) -> Document:
         if reader.is_encrypted:
             raise GatewayError(422, "PDF_ENCRYPTED", "the PDF is password-protected")
         pages = [page.extract_text() or "" for page in reader.pages]
+        scanned = 0
+        for i, page in enumerate(reader.pages[:30]):
+            if len(pages[i].strip()) < 20:  # no text layer: a scan. Read the page images instead.
+                texts = [t for img in list(page.images)[:5] if (t := ocr(img.data))]
+                if texts:
+                    pages[i] = "\n".join(texts)
+                    scanned += 1
         doc = Document(name=name, kind="pdf", body="\n".join(pages).strip(), pages=len(pages))
+        if scanned:
+            doc.notes.append(f"OCR: {scanned} scanned page(s) were read from their images")
         _pdf_metadata(reader, doc)
         _pdf_annotations(reader, doc)
         _pdf_active(reader, data, doc)
@@ -414,8 +448,10 @@ def _image(data: bytes, name: str) -> Document:
         im = Image.open(io.BytesIO(data))
     except (UnidentifiedImageError, OSError) as exc:
         raise GatewayError(422, "DOCUMENT_UNREADABLE", "cannot read this image") from exc
-    doc = Document(name=name, kind="image", body="")
-    doc.notes.append("images: only metadata is read; text drawn in the picture needs OCR")
+    text = ocr(data)
+    doc = Document(name=name, kind="image", body=text or "")
+    doc.notes.append("OCR: text in the picture was read" if text is not None
+                     else "OCR is not installed: only the metadata of this image was read")
     exif = im.getexif()
     tags = dict(exif)
     try:

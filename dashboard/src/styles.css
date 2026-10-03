@@ -1070,3 +1070,6 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 .pipe { grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr)); }
 .pipe::before { left: calc(50% / var(--cols, 8)); right: calc(50% / var(--cols, 8)); }
 @media (max-width: 760px) { .pipe { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.burst { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; padding: 10px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--rule); font-size: 14px; }
+.burst b { font-size: 22px; font-weight: 800; margin-right: 4px; }

@@ -206,6 +206,11 @@ class Gateway:
         d = Decision(policy_version=self.policy.version, task_id=task.id)
         timer = _Timer(d)
         model = body.get("model") or self.default_model(policy)
+        with timer("budget"):
+            limited = await self.guard_rate(d, policy, task)
+        if limited:
+            await self._finish(d, t0, channel="model", target=model, task=task)
+            return limited, _blocked(d)
         messages = [dict(m) for m in body.get("messages", [])]
         if body.get("stream"):
             body = dict(body, stream=False)  # responses are buffered and checked before release
@@ -310,6 +315,11 @@ class Gateway:
         policy = self.policy.active
         d = Decision(policy_version=self.policy.version, task_id=task.id)
         timer = _Timer(d)
+        with timer("budget"):
+            limited = await self.guard_rate(d, policy, task)
+        if limited:
+            await self._finish(d, t0, channel=channel, target=tool, task=task)
+            return limited, _blocked(d)
         spec = TOOLS.get(tool)
         target = tool
         with timer("mandate"):
@@ -433,6 +443,37 @@ class Gateway:
         if d.blocked:
             return 403, _blocked(d) | {"tool_invoked": True}
         return 200, {"result": result, "mandate": d.public()}
+
+    async def guard_rate(self, d: Decision, policy: Policy, task: Task) -> int | None:
+        """Requests per minute (agent, principal, gateway) and the circuit breaker. Runs before anything else,
+        so a runaway loop is stopped even when every single request would pass. Returns an HTTP status."""
+        if task.synthetic:  # load tests of the budget escrow measure the escrow, not this
+            return None
+        cb = policy.budgets.circuit_breaker
+        if cb.enabled:
+            recent = await self.pool.fetchval(
+                "SELECT count(*) FROM audit_events WHERE task_id=$1 AND action='BLOCK' "
+                "AND ts > now() - make_interval(secs => $2)", task.id, cb.window_seconds)
+            if recent >= cb.blocks:
+                d.add(Finding(action="BLOCK", rule_id="CIRCUIT-001", reason_code="CIRCUIT_OPEN", stage="budget",
+                              detail={"blocked_recently": recent, "threshold": cb.blocks,
+                                      "window_seconds": cb.window_seconds}))
+                return 429
+        rl = policy.budgets.rate_limits
+        limits = {f"agent:{task.agent_id}": rl.per_agent_per_minute,
+                  f"principal:{task.principal}": rl.per_principal_per_minute, "global": rl.global_per_minute}
+        rows = await self.pool.fetch(
+            "INSERT INTO rate_counters (scope, bucket, n) SELECT s, date_trunc('minute', now()), 1 "
+            "FROM unnest($1::text[]) s ON CONFLICT (scope, bucket) DO UPDATE SET n = rate_counters.n + 1 "
+            "RETURNING scope, n", list(limits))
+        for r in rows:
+            if r["n"] > limits[r["scope"]]:
+                d.add(Finding(action="BLOCK", rule_id="RATE-001", reason_code="RATE_LIMITED", stage="budget",
+                              detail={"scope": r["scope"], "limit_per_minute": limits[r["scope"]], "count": r["n"]}))
+                return 429
+        if secrets.randbelow(200) == 0:  # keep the table small
+            await self.pool.execute("DELETE FROM rate_counters WHERE bucket < now() - interval '10 minutes'")
+        return None
 
     async def require_approval(self, d: Decision, policy: Policy, task: Task, tool: str, sink: str,
                                args: dict[str, Any]) -> None:
@@ -623,8 +664,34 @@ class Gateway:
                             findings.append(f)
                 for f in findings:
                     d.add(f)
+        digests = {}
+        if policy.controls.model_allowlist.enabled:
+            with _Timer(d)("signatures"):
+                self.check_artifact_pins(d, policy, str(payload.get("name") or ""), payload.get("files") or {}, digests)
         await self._finish(d, t0, channel="model_register", target=str(payload.get("name")), task=None)
-        return (403 if d.blocked else 200), {"accepted": not d.blocked, "mandate": d.public()}
+        return (403 if d.blocked else 200), {"accepted": not d.blocked, "mandate": d.public(), "sha256": digests}
+
+    @staticmethod
+    def check_artifact_pins(d: Decision, policy: Policy, name: str, files: dict[str, str],
+                            digests: dict[str, str]) -> None:
+        """Weights and adapters are compared with the sha256 pinned in the policy: a swapped LoRA adapter or a
+        re-uploaded checkpoint with the same name is refused."""
+        pins = {k: v.removeprefix("sha256:").lower() for k, v in policy.models.pinned.items()}
+        for fname, b64 in files.items():
+            digest = hashlib.sha256(base64.b64decode(b64)).hexdigest()
+            key = f"{name}/{fname}"
+            digests[key] = digest
+            expected = pins.get(key)
+            if expected is None:
+                if policy.models.require_pinned:
+                    d.add(Finding(action="BLOCK", rule_id="MODEL-HASH-002", reason_code="ARTIFACT_NOT_PINNED",
+                                  stage="signatures", detail={"file": key, "sha256": digest}))
+            elif expected != digest:
+                d.add(Finding(action="BLOCK", rule_id="MODEL-HASH-001", reason_code="ARTIFACT_HASH_MISMATCH",
+                              stage="signatures", detail={"file": key, "expected": expected, "got": digest}))
+            else:
+                d.findings.append(Finding(action="ALLOW", rule_id="MODEL-HASH-OK", reason_code="ARTIFACT_PINNED",
+                                          stage="signatures", detail={"file": key, "sha256": digest}))
 
     # ================================================================ playground
 

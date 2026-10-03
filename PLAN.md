@@ -13,7 +13,8 @@
 | Język | Python 3.11+, FastAPI, Pydantic v2, pytest (+ hypothesis), httpx |
 | Model lokalny | Ollama, mały model (np. `qwen2.5:3b` / `llama3.2:3b`) do kontroli semantycznej i agenta demo |
 | Polityka | Jeden plik `policy/policy.yaml`, hot-reload, wersjonowanie (hash), last-known-good |
-| Stan/audyt | SQLite (stan zadań, budżety) + JSONL (audyt, eksportowalny) |
+| Stan/audyt | **PostgreSQL 17** (zadania, mandaty, budżety, rezerwacje, wersje polityki, audyt w `JSONB`) przez SQLAlchemy 2 async + asyncpg; eksport audytu do JSONL/CSV |
+| Uruchomienie | **Docker Compose**: `db` (Postgres) + `gateway` (Dockerfile); Ollama domyślnie na hoście (macOS Metal), opcjonalnie kontener (`--profile ollama`). `make run` = jedna komenda |
 | Dashboard | Statyczny HTML + HTMX/Alpine lub lekki React, serwowany przez gateway |
 | Zakaz | Brak płatnych API, brak zewnętrznych datasetów/hardware. Wszystko lokalnie |
 | Język materiałów | Angielski (kod, README, PDF); wewnętrznie PL |
@@ -76,7 +77,7 @@
         ┌───────────────┬──────────────────┐
         ▼               ▼                  ▼
      Ollama        Tool backends       Audit (JSONL)
-                (mock mail, notes,     + SQLite state
+                (mock mail, notes,     + PostgreSQL state
                  docs, http-sink)             │
                                               ▼
                                     Dashboard + export
@@ -144,15 +145,39 @@ Mandat tworzony przez uwierzytelnioną aplikację (`POST /v1/tasks`) z **profilu
 
 ### 3.4 Budget escrow
 ```
-atomic (SQLite BEGIN IMMEDIATE / asyncio.Lock per scope):
-    if settled + reserved + new_reservation <= limit: reserved += new; OK
-    else: BLOCK BUDGET_EXCEEDED   (przed wywołaniem modelu)
+reserve (JEDNA transakcja Postgres, wszystkie zakresy: task, rodzic, principal, global):
+    dla każdego zakresu, w stałej kolejności po scope_id (brak deadlocków):
+        UPDATE budgets
+           SET reserved = reserved + :n, active_calls = active_calls + 1
+         WHERE scope_id = :scope
+           AND spent + reserved + :n <= token_limit
+           AND active_calls < concurrency_limit
+        RETURNING scope_id;
+    0 wierszy w którymkolwiek ⇒ ROLLBACK ⇒ BLOCK BUDGET_EXCEEDED (przed wywołaniem modelu)
+    INSERT INTO reservations (id, task_id, amount, status='active')
+    COMMIT
 execute
-settle: reserved -= new; settled += actual   (zwolnienie nadwyżki)
-timeout/niepewność: rezerwacja zostaje do rozliczenia (nie zerujemy)
+settle (transakcja): reserved -= n; spent += actual; active_calls -= 1;
+                     reservations.status = 'settled'   (nadwyżka zwolniona)
+timeout/niepewność: reservations.status = 'uncertain', rezerwacja zostaje do rozliczenia (nie zerujemy)
 ```
+Warunek w `WHERE` + blokada wiersza przez `UPDATE` = atomowe check-and-reserve bez osobnego locka w aplikacji.
 Zakresy: per task, per principal, globalny. Podzadania liczą się do limitu nadrzędnego. Wymiary: tokeny (rezerwacja = `prompt_tokens` + `max_tokens`; brak `max_tokens` w żądaniu ⇒ gateway wstawia limit z polityki, żeby rezerwacja miała górną granicę), liczba wywołań, czas, współbieżność (slot zwalniany w `finally`). Koszt $ = konfigurowalna stawka, oznaczony jako estymacja.
-Skalowalność (10% oceny): MVP = jeden proces uvicorn + SQLite (lock poprawny tylko w 1 workerze — tak uruchamiamy). Ścieżka produkcyjna opisana w README: stan budżetu w Redis (skrypt Lua = atomowe check-and-reserve), gateway bezstanowy, N instancji.
+Skalowalność (10% oceny): atomowość budżetu jest w Postgresie, więc jest poprawna przy wielu workerach i wielu instancjach gatewaya (gateway bezstanowy, stan w bazie). MVP uruchamiamy z 1 workerem uvicorn (prostszy snapshot polityki w pamięci). Przy N instancjach: zmiana polityki zapisywana w `policy_versions` + `NOTIFY policy_changed`, każda instancja robi `LISTEN` i przeładowuje snapshot. Test współbieżności uruchamiamy też z `--workers 4`, żeby to udowodnić. Dalej: Redis (Lua) dla bardzo wysokiego RPS — opisane jako przyszły rozwój.
+
+### 3.5 Schemat bazy (PostgreSQL, `db/init/001_schema.sql`)
+| Tabela | Kluczowe kolumny |
+|---|---|
+| `tasks` | `id`, `principal`, `parent_id`, `profile`, `mandate JSONB`, `classification SMALLINT`, `lease_hash`, `expires_at`, `status` |
+| `budgets` | `scope_id` (task:/principal:/global/guard), `token_limit`, `spent`, `reserved`, `calls_limit`, `calls_used`, `concurrency_limit`, `active_calls` |
+| `reservations` | `id`, `task_id`, `scope_ids TEXT[]`, `amount`, `actual`, `status` (active/settled/uncertain), `created_at` |
+| `audit_events` | `id BIGSERIAL`, `ts`, `task_id`, `kind` (DECISION/POLICY_CHANGED/POLICY_REJECTED/CONTROL_DISABLED/…), `action`, `rule_id`, `stage`, `policy_version`, `latency_ms`, `tool_invoked`, `evidence JSONB` — indeksy na `(ts)`, `(task_id)`, `(rule_id)` |
+| `policy_versions` | `version` (hash), `content JSONB`, `source` (file/api), `accepted BOOL`, `error`, `created_at` |
+| `tool_registry` | `name`, `definition_hash`, `approved_at`, `status` (approved/quarantined) — MCP tool poisoning |
+| `memory_entries` | `id`, `case_id`, `classification`, `source_task`, `content` |
+
+Schemat ładowany przez `docker-entrypoint-initdb.d` (tylko przy pustym wolumenie; zmiana schematu ⇒ `make clean && make run`). Bez Alembica — za drogie na 24 h. Testy: osobna baza `goldman_test` czyszczona (`TRUNCATE`) per test.
+Audyt do dashboardu: agregacje SQL (blokady per reguła, p50/p95 przez `percentile_cont`). Eksport: `COPY`/stream do JSONL i CSV.
 
 ---
 
@@ -257,7 +282,11 @@ hackyeah-2026-goldman/
 ├── PLAN.md
 ├── README.md                      # 1 komenda uruchomienia, 1 reguła do zmiany
 ├── pyproject.toml
-├── Makefile                       # make run | make test | make demo | make bench
+├── Dockerfile                     # gateway (python:3.12-slim, non-root, healthcheck)
+├── docker-compose.yml             # db (Postgres 17) + gateway + opcjonalnie ollama (profile)
+├── .env.example                   # porty, credentiale Postgres, OLLAMA_BASE_URL
+├── Makefile                       # make run | down | logs | test | test-docker | db-shell | clean | demo | bench
+├── db/init/001_schema.sql         # schemat Postgres (docker-entrypoint-initdb.d)
 ├── policy/policy.yaml
 ├── feeds/attacks.yaml
 ├── mandate/
@@ -265,6 +294,7 @@ hackyeah-2026-goldman/
 │   ├── mcp_proxy.py               # MCP streamable HTTP proxy (tools/list filtr + hash, tools/call → pipeline)
 │   ├── pipeline.py                # pipeline pre/post, short-circuit, łączenie decyzji
 │   ├── models.py                  # Decision, Mandate, Redaction (Pydantic)
+│   ├── db.py                      # SQLAlchemy async engine (asyncpg), DATABASE_URL
 │   ├── policy/ {loader.py, schema.py, watcher.py, feed.py}
 │   ├── controls/ {mandate.py, allowlist.py, attacks.py, pickle_scan.py, injection.py,
 │   │              pii.py, secrets.py, taint.py, semantic.py}
@@ -410,12 +440,16 @@ Statyczna strona projektu w **Astro** (`landing/`), niezależna od gatewaya. Cel
 | Rozbieżność wag testów (15% vs 20%) | Planujemy pod 20%; pytanie do mentora |
 | Rozbieżność terminu (11:00 vs 23:00) | Planujemy pod 4.10 11:00 |
 | False positives z taint | Świadoma granica, opisana w README ("konserwatywnie") |
+| Jury nie ma Dockera / Docker nie startuje | README: wymagania (Docker Desktop) na górze; fallback „bez Dockera”: lokalny Postgres + `uvicorn` z `DATABASE_URL`; test uruchomienia na drugim, czystym komputerze przed submitem |
+| Ollama w kontenerze na macOS = CPU, bardzo wolno | Domyślnie Ollama na hoście (`host.docker.internal`), kontener tylko przez `--profile ollama` (Linux) |
+| Zmiana schematu nie wchodzi (init tylko przy pustym wolumenie) | `make clean && make run`; schemat zamrożony po H5 |
 
 ---
 
 ## 11. Definition of Done (przed submit)
 
-- [ ] Obca osoba: `make run` → dashboard działa; zmienia 1 regułę → widzi efekt
+- [ ] Obca osoba na czystym klonie: `cp .env.example .env && make run` → `/health` = ok, dashboard działa; zmienia 1 regułę w `policy/policy.yaml` (zamontowany wolumen) → widzi efekt bez rebuildu
+- [ ] Test współbieżności budżetu przechodzi także z `--workers 4`
 - [ ] `make test` zielony; pokrycie pozytywne+negatywne każdej kontroli
 - [ ] Scena evil.com + wymuszone przeoczenie detektora działa na świeżym klonie
 - [ ] Hot-reload: zła polityka nie wyłącza ochrony
@@ -434,8 +468,8 @@ Statyczna strona projektu w **Astro** (`landing/`), niezależna od gatewaya. Cel
 
 ## 12. Pierwsze kroki (H0–H1)
 
-1. `uv init` / `pyproject.toml`, zależności: `fastapi uvicorn pydantic pyyaml httpx watchfiles pytest pytest-asyncio hypothesis`.
-2. `ollama pull qwen2.5:3b`; sprawdzić latencję na sprzęcie zespołu.
-3. Zamrozić `models.py` (Decision, Mandate) i `policy/schema.py` — wszyscy kodują pod te kontrakty.
+1. ✅ `pyproject.toml`, `Dockerfile`, `docker-compose.yml` (db + gateway + opcjonalnie ollama), `Makefile`, szkielet `mandate/app.py` z `/health` (sprawdza Postgresa). `make run` działa.
+2. `ollama pull qwen2.5:3b` na hoście; sprawdzić latencję na sprzęcie zespołu.
+3. Zamrozić `models.py` (Decision, Mandate), `policy/schema.py` i `db/init/001_schema.sql` — wszyscy kodują pod te kontrakty.
 4. Mock mail z licznikiem `/mock/mail/stats` (fundament proof-of-enforcement).
 5. Pierwszy test end-to-end: ALLOW zapis notatki, BLOCK wysyłki — zanim powstanie cokolwiek innego.

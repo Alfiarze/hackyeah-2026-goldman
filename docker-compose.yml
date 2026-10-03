@@ -7,8 +7,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-goldman}
       POSTGRES_USER: ${POSTGRES_USER:-goldman}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goldman}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-goldman} -d ${POSTGRES_DB:-goldman}"]
       interval: 10s
@@ -16,5 +19,40 @@ services:
       retries: 5
       start_period: 10s
 
+  gateway:
+    build: .
+    container_name: goldman-gateway
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-goldman}:${POSTGRES_PASSWORD:-goldman}@db:5432/${POSTGRES_DB:-goldman}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      POLICY_PATH: /app/policy/policy.yaml
+      ATTACK_FEED_PATH: /app/feeds/attacks.yaml
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    volumes:
+      # Mounted from host so jury edits are picked up by hot-reload without rebuild
+      - ./policy:/app/policy
+      - ./feeds:/app/feeds
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Optional: Ollama in a container (Linux / no host Ollama). On macOS prefer host Ollama (Metal GPU).
+  # Enable with: docker compose --profile ollama up
+  # and set OLLAMA_BASE_URL=http://ollama:11434 in .env
+  ollama:
+    image: ollama/ollama:latest
+    container_name: goldman-ollama
+    profiles: ["ollama"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   db_data:
+  ollama_data:

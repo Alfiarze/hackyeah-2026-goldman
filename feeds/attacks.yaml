@@ -56,6 +56,15 @@ signatures:
       targets: [user_input, tool_args, tool_results, model_output]
       pattern: 'bash\s+-i\s+>&\s*/dev/tcp/|nc\s+-e\s+/bin/(?:ba)?sh|curl\s+[^|\n]+\|\s*(?:ba)?sh|wget\s+[^|\n]+\|\s*(?:ba)?sh'
 
+  - id: ATK-EXEC-003
+    title: Destructive system commands (wipe disk, fork bomb, recursive delete of root/home)
+    severity: critical
+    refs: [OWASP-LLM05, OWASP-LLM06, CWE-78]
+    match:
+      type: regex
+      targets: [user_input, tool_args, tool_results, model_output]
+      pattern: 'rm\s+-[a-zA-Z]*[rR][a-zA-Z]*\s+(?:--no-preserve-root\s+)?(?:/|~|\*|\$HOME)(?=[\s''"\);]|$)|\bmkfs\.\w+\s+/dev/|\bdd\s+if=\S+\s+of=/dev/(?:sd|nvme|hd|xvd)|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:|\bchmod\s+-R\s+0?777\s+/(?:\s|$)|\bformat\s+[cC]:'
+
   - id: ATK-SUPPLY-001
     title: Model pulled from a non-allowlisted or typosquatted source
     severity: high

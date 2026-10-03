@@ -41,6 +41,40 @@ async def test_disable_control_takes_effect_and_is_audited(client):
     assert "pii" in events[0]["evidence"]["disabled_controls"]
 
 
+async def test_deleted_control_section_falls_back_to_secure_default(gw, settings):
+    """A judge deletes the whole `secrets:` line from the file: the control is not silently switched off,
+    the built-in default (enabled, block) applies."""
+    text = settings.policy_path.read_text()
+    assert "  secrets: {enabled: true, mode: block}\n" in text
+    settings.policy_path.write_text(text.replace("  secrets: {enabled: true, mode: block}\n", ""))
+    changed, error = await gw.policy.reload_from_file()
+    assert changed and error is None
+    assert gw.policy.active.controls.secrets.enabled and gw.policy.active.controls.secrets.mode == "block"
+    d = (await gw.evaluate("moje hasło to Zima2024!"))["decision"]
+    assert d["action"] == "BLOCK" and d["rule_id"] == "SEC-001"
+
+
+async def test_pii_entity_list_change_is_live(client):
+    text = "NIP 5260001246, PESEL 44051401359"
+    d = await evaluate(client, text)
+    assert d["action"] == "REDACT" and {"NIP", "PESEL"} <= set(d["findings"][0]["detail"]["entities"])
+    r = await client.patch("/admin/controls/pii", headers=ADMIN, json={"entities": ["PESEL"]})
+    assert r.status_code == 200, r.text
+    d = await evaluate(client, text)
+    assert d["findings"][0]["detail"]["entities"] == ["PESEL"]
+
+
+async def test_password_check_follows_secrets_mode(client):
+    text = "my password is Tr0ub4dor&3"
+    assert (await evaluate(client, text))["action"] == "BLOCK"
+    await client.patch("/admin/controls/secrets", headers=ADMIN, json={"mode": "redact"})
+    r = await client.post("/admin/playground/evaluate", headers=ADMIN, json={"text": text})
+    assert r.json()["decision"]["action"] == "REDACT"
+    assert r.json()["redacted"] == "my password is [REDACTED:PASSWORD]"
+    await client.patch("/admin/controls/secrets", headers=ADMIN, json={"enabled": False})
+    assert (await evaluate(client, text))["action"] == "ALLOW"
+
+
 async def test_invalid_policy_rejected_keeps_version(client, gw):
     before = gw.policy.version
     r = await client.put("/admin/policy", headers=ADMIN | {"Content-Type": "text/plain"},

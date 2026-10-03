@@ -42,7 +42,7 @@ controls:
   model_allowlist: {enabled: true}
   pii:
     enabled: true
-    entities: [PESEL, CREDIT_CARD, IBAN, EMAIL, PHONE]
+    entities: [PESEL, CREDIT_CARD, IBAN, EMAIL, PHONE, NIP, ID_CARD, PASSPORT, ADDRESS]
   secrets: {enabled: true, mode: block}
   attack_signatures: {enabled: true, mode: block}   # rules live in feeds/attacks.yaml
   injection_heuristics: {enabled: true}   # mode comes from the profile (strict = block)

@@ -40,13 +40,9 @@ class ModeControl(_Strict):
 
 class PiiControl(ModeControl):
     mode: Mode = "redact"
-    entities: list[Literal["PESEL", "CREDIT_CARD", "IBAN", "EMAIL", "PHONE"]] = [
-        "PESEL",
-        "CREDIT_CARD",
-        "IBAN",
-        "EMAIL",
-        "PHONE",
-    ]
+    entities: list[Literal["PESEL", "CREDIT_CARD", "IBAN", "EMAIL", "PHONE", "NIP", "ID_CARD", "PASSPORT",
+                           "ADDRESS"]] = ["PESEL", "CREDIT_CARD", "IBAN", "EMAIL", "PHONE", "NIP", "ID_CARD",
+                                          "PASSPORT", "ADDRESS"]
 
 
 class SemanticControl(_Strict):

@@ -66,15 +66,15 @@ const cases = [
         <!-- model / tools -->
         <g class="node n-model" data-model>
           <rect x="820" y="190" width="200" height="90" rx="14" />
-          <text x="935" y="228" class="n-title"><tspan class="l-en">Model · tools</tspan><tspan class="l-pl">Model · narzędzia</tspan></text>
+          <text x="935" y="228" class="n-title">Model · tools</text>
           <text x="935" y="254" class="n-sub">on-prem GB10 · MCP</text>
         </g>
 
         <!-- sandbox -->
         <g class="node n-sbx" data-sbx>
           <rect x="820" y="360" width="200" height="96" rx="14" class="sbx-body" />
-          <text x="935" y="398" class="n-title"><tspan class="l-en">Sandbox</tspan><tspan class="l-pl">Piaskownica</tspan></text>
-          <text x="935" y="424" class="n-sub"><tspan class="l-en">no network · 10 s</tspan><tspan class="l-pl">bez sieci · 10 s</tspan></text>
+          <text x="935" y="398" class="n-title">Sandbox</text>
+          <text x="935" y="424" class="n-sub">no network · 10 s</text>
           <line x1="1045" y1="356" x2="1045" y2="460" class="wall" />
           <text x="1120" y="412" class="n-sub net">internet</text>
         </g>
@@ -82,7 +82,7 @@ const cases = [
         <!-- audit -->
         <g class="node n-audit">
           <rect x="820" y="64" width="200" height="74" rx="14" />
-          <text x="920" y="94" class="n-title"><tspan class="l-en">Audit log</tspan><tspan class="l-pl">Audyt</tspan></text>
+          <text x="920" y="94" class="n-title">Audit log</text>
           <text x="920" y="119" class="n-sub" data-audit>append-only</text>
         </g>
         <path class="lane lane-audit" d="M 560 120 L 820 100" />
@@ -140,8 +140,7 @@ const cases = [
                     backSbx: path("f-back-sbx"), backBlock: path("f-back-block") };
     const auditLane = svg.querySelector<SVGPathElement>(".lane-audit")!;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lang = () => document.documentElement.dataset.lang === "pl" ? "pl" : "en";
-
+    
     const clamp = (x: number) => Math.max(0, Math.min(1, x));
     const ease = (x: number) => { x = clamp(x); return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
     const seg = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
@@ -194,7 +193,7 @@ const cases = [
       const decided = t >= 2.4;
       if (decided) {
         stampEl.textContent = c.stamp + (c.rule ? ` · ${c.rule}` : "");
-        whyEl.textContent = c[lang()];
+        whyEl.textContent = c.en;
         if (c.masked) reqEl.textContent = c.masked;
       } else if (c.masked) reqEl.textContent = c.req;
       packet.style.opacity = "1";
@@ -238,7 +237,7 @@ const cases = [
     select(0);
     if (reduce) {
       // no motion: show the decision of the selected case straight away
-      const show = (i: number) => { select(i, true); const c = CASES[i]; stampEl.textContent = c.stamp + (c.rule ? ` · ${c.rule}` : ""); whyEl.textContent = c[lang()]; if (c.masked) reqEl.textContent = c.masked; put({ x: 500, y: 230 }); };
+      const show = (i: number) => { select(i, true); const c = CASES[i]; stampEl.textContent = c.stamp + (c.rule ? ` · ${c.rule}` : ""); whyEl.textContent = c.en; if (c.masked) reqEl.textContent = c.masked; put({ x: 500, y: 230 }); };
       tabs.forEach((b, i) => b.addEventListener("click", () => show(i)));
       show(0);
     } else {

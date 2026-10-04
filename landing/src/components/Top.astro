@@ -15,35 +15,14 @@ const home = import.meta.env.BASE_URL.replace(/\/?$/, "/");
     </a>
     <nav aria-label="Sections">
       <a href={`${home}#flow`}><L en="Flow" pl="Przepływ" /></a>
-      <a href={`${home}#how`}><L en="How it works" pl="Jak to działa" /></a>
-      <a href={`${home}#catches`}><L en="What it catches" pl="Co wykrywa" /></a>
+      <a href={`${home}#sandbox`}><L en="Sandbox" pl="Sandbox" /></a>
       <a href={`${home}#benchmark`}><L en="Benchmark" pl="Benchmark" /></a>
-      <a href={`${home}#tech`}><L en="Under the hood" pl="Technologia" /></a>
       <a href={`${home}#scenarios`}><L en="Try it" pl="Wypróbuj" /></a>
       <a href={`${home}docs/`}><L en="Docs" pl="Docs" /></a>
     </nav>
     <div class="top-tools">
-      <div class="lang" role="group" aria-label="Language">
-        <button type="button" data-set-lang="pl" aria-pressed="false">PL</button>
-        <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
-      </div>
       <a class="console-btn" href={`${dashboardUrl}`} data-dashboard=""><L en="Open the dashboard" pl="Otwórz dashboard" /></a>
     </div>
   </div>
 </header>
 
-<script>
-  const root = document.documentElement;
-  const buttons = document.querySelectorAll<HTMLButtonElement>("[data-set-lang]");
-  const apply = (lang: string) => {
-    root.dataset.lang = lang;
-    root.lang = lang;
-    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
-  };
-  buttons.forEach((b) => b.addEventListener("click", () => {
-    const lang = b.dataset.setLang ?? "en";
-    apply(lang);
-    try { localStorage.setItem("aegis-lang-v2", lang); } catch { /* private mode */ }
-  }));
-  apply(root.dataset.lang ?? "en");
-</script>

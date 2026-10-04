@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, download, getKey, setKey } from "./api.js";
-import { getLang, human, setLang, t } from "./i18n.js";
+import { human, t } from "./i18n.js";
 import { ApprovalButtons, Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
 import Icon from "./icons.jsx";
@@ -997,7 +997,7 @@ function SideStatus({ stats, health }) {
   );
 }
 
-function Sidebar({ view, go, open, close, stats, health, lang, switchLang }) {
+function Sidebar({ view, go, open, close, stats, health }) {
   const [key, setK] = useState(getKey());
   const [showKey, setShowKey] = useState(false);
   const off = stats?.policy.disabled_controls.length || 0;
@@ -1029,9 +1029,6 @@ function Sidebar({ view, go, open, close, stats, health, lang, switchLang }) {
       <div className="side-foot">
         <SideStatus stats={stats} health={health} />
         <div className="side-tools">
-          <div className="lang" role="radiogroup" aria-label={t("Language")}>
-            {["pl", "en"].map((l) => <button key={l} role="radio" aria-checked={lang === l} className={lang === l ? "is-on" : ""} onClick={() => switchLang(l)}>{l.toUpperCase()}</button>)}
-          </div>
           <button className="side-key" onClick={() => setShowKey(!showKey)}><Icon name="key" size={16} />{t("Admin key")}</button>
         </div>
         {showKey && <input className="side-key-input" type="password" aria-label={t("Admin key")} value={key} onChange={(e) => { setK(e.target.value); setKey(e.target.value); }} />}
@@ -1043,7 +1040,6 @@ function Sidebar({ view, go, open, close, stats, health, lang, switchLang }) {
 
 export default function App() {
   const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "start"));
-  const [lang, setL] = useState(getLang());
   const [menu, setMenu] = useState(false);
   const [stats] = usePoll(() => api("/admin/stats"), 4000);
   const [health] = usePoll(() => fetch("/health").then((r) => r.json()), 5000);
@@ -1053,14 +1049,13 @@ export default function App() {
     window.addEventListener("hashchange", h);
     return () => window.removeEventListener("hashchange", h);
   }, []);
-  useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
-  const switchLang = (l) => { setLang(l); setL(l); };
+  useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view]);
   const Views = { start: Start, approvals: Approvals, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Start;
   const info = PAGE_INFO[view];
   return (
-    <div className="layout" key={lang}>
-      <Sidebar view={view} go={setView} open={menu} close={() => setMenu(false)} stats={stats} health={health} lang={lang} switchLang={switchLang} />
+    <div className="layout">
+      <Sidebar view={view} go={setView} open={menu} close={() => setMenu(false)} stats={stats} health={health} />
       {menu && <div className="scrim" onClick={() => setMenu(false)} />}
       <div className="content">
         <header className="mobile-top">

@@ -49,6 +49,7 @@ prompts really leave the machine, so use only the synthetic demo documents. With
 | `make venv && make test` | same suite on the host |
 | `make bench` | performance telemetry report → `docs/bench-report.md` (p50/p95/p99 per stage, throughput) |
 | `make demo` | run every scripted scenario against the running stack |
+| `make redteam` | start the stack and replay the adversarial corpus (OWASP LLM / agentic techniques, 17 probes incl. negative controls) |
 | `make dashboard-dev` | Vite dev server for the dashboard |
 | `make landing` | build and start the landing page as its own nginx container on :8080 |
 | `make db-shell` | open `psql` in the database container |
@@ -279,7 +280,14 @@ with aegis.create_task(principal="lawyer_anna", agent_id="demo-agent",
 ## Tests
 
 `make test-docker` runs the full suite against a real Postgres (`goldman_test`), the real gateway and the real tool
-backends: **306 collected cases — 304 passed, 2 skipped** (the two need a live model server, `-m live`).
+backends: **323 collected — all green in the Docker image** (on a bare host without tesseract the two OCR tests
+skip; the image ships tesseract, so the canonical `make test-docker` run passes end to end).
+
+* `tests/cases/redteam.yaml` + `make redteam`: a **17-probe adversarial corpus** (direct/translated/
+  obfuscated/indirect prompt injection, markdown-image exfiltration, credential dump, IFC violation,
+  RCE and reverse-shell payloads, unsafe deserialization, XSS in output, trust_remote_code) with
+  negative controls proving the channel-scoped signatures do not overreach — replayed through the
+  live stack by `make redteam` and pinned in-process by `tests/test_redteam_cases.py`.
 
 * `tests/cases/content.yaml`: **100 expected decisions** for content controls, written independently of the
   code and run through the Playground API — PII checksum validators (PESEL, NIP, ID card, passport, Luhn,

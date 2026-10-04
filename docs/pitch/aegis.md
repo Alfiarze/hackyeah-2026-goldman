@@ -134,7 +134,7 @@ style: |
 <p class="claim">Inne guardraile pytają, czy akcja <i>wygląda</i> groźnie.<br><b>Aegis pyta, czy agent był do niej upoważniony</b> — z tymi danymi, w tym zadaniu.</p>
 
 <div class="chips" style="margin-top:34px">
-<span class="chip a">246 testów</span><span class="chip c">0,3 ms / decyzja</span><span class="chip r">10 ataków end-to-end</span><span class="chip">1 plik polityki</span>
+<span class="chip a">323 testów</span><span class="chip c">p95 1,3 ms / decyzja</span><span class="chip r">10 ataków end-to-end</span><span class="chip">1 plik polityki</span>
 </div>
 </div>
 <div class="right"><img src="img/engraving-hero-dark.webp"></div>
@@ -387,15 +387,15 @@ Jury może zepsuć YAML celowo: dostanie 422, a bramka dalej działa na poprzedn
 <div class="grid" style="grid-template-columns: 1.1fr 1fr; gap:26px; align-items:start">
 <div>
 <div class="grid g3" style="gap:12px">
-<div class="card stat a"><b>246</b><span>testów automatycznych, zielone</span></div>
-<div class="card stat"><b>82</b><span>przypadki treści w YAML, bez kodu</span></div>
+<div class="card stat a"><b>323</b><span>testów automatycznych, zielone</span></div>
+<div class="card stat"><b>117</b><span>przypadki treści i red-team w YAML, bez kodu</span></div>
 <div class="card stat c"><b>10</b><span>scenariuszy end-to-end</span></div>
 <div class="card stat a"><b>0</b><span>tokenów ponad budżet przy 30 agentach naraz</span></div>
 <div class="card stat a"><b>0</b><span>maili wysłanych w ataku (licznik usługi)</span></div>
 <div class="card stat"><b>3×</b><span>każda akcja agenta testowana w 3 rundach</span></div>
 </div>
 <pre style="margin-top:16px"><code>$ make test-docker
-........................................ 246 passed</code></pre>
+........................................ 323 passed</code></pre>
 </div>
 <div>
 <img class="shot" src="img/race.png" style="width:100%">

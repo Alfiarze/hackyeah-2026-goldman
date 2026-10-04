@@ -2,7 +2,7 @@
 // t("Hello {name}", {name}) interpolates. Missing keys fall back to English.
 import PL from "./pl.js";
 
-const KEY = "aegis.lang";
+const KEY = "aegis.lang.v2"; // v2: earlier auto-detected Polish choices are ignored, English is the default
 let lang = (() => {
   // English by default; Polish only when the person picked it (remembered per browser).
   try { return localStorage.getItem(KEY) || "en"; } catch { return "en"; }

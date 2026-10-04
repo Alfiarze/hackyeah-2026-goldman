@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: Caslon; src: url(../fonts/libre-caslon-display-latin-400-normal.woff2); }
+@font-face { font-family: Mono; src: url(../fonts/ibm-plex-mono-latin-500-normal.woff2); }
+html,body{margin:0;width:1600px;height:1200px;overflow:hidden;background:#0d1219}
+#c{position:relative;width:1600px;height:1200px;overflow:hidden;
+ background:radial-gradient(900px 700px at 50% 42%, rgba(143,176,232,.16), transparent 70%),
+ repeating-linear-gradient(115deg, transparent 0 10px, rgba(255,255,255,.02) 10px 11px), #0d1219}
+.art{position:absolute;opacity:.16}
+svg{position:absolute;inset:0}
+.name{position:absolute;left:0;right:0;top:800px;text-align:center;font:400 150px Caslon,serif;color:#e6ebe4;letter-spacing:.3em;padding-left:.3em}
+.sub{position:absolute;left:0;right:0;top:985px;text-align:center;font:500 30px Mono,monospace;color:#8fb0e8;letter-spacing:.32em;text-transform:uppercase}
+</style></head><body><div id="c">
+<img class="art" src="../img/engraving-landscape-dark.webp" style="left:-100px;bottom:-60px;width:1800px">
+<svg width="1600" height="1200" id="s"></svg>
+<div class="name">AEGIS</div><div class="sub">AI Control Layer</div>
+</div><script>
+const NS="http://www.w3.org/2000/svg",s=document.getElementById("s");
+const g=document.createElementNS(NS,"g");g.setAttribute("transform","translate(800 425)");s.appendChild(g);
+function path(d,w,o,c="#8fb0e8"){const p=document.createElementNS(NS,"path");p.setAttribute("d",d);p.setAttribute("fill","none");p.setAttribute("stroke",c);p.setAttribute("stroke-width",w);p.setAttribute("stroke-opacity",o);g.appendChild(p);}
+function ros(R,n,k,a,b,w,o){for(let i=0;i<n;i++){const ph=i/n*Math.PI*2;let d="";for(let t=0;t<=1440;t++){const th=t/1440*Math.PI*2;const r=R*.72+a*R*Math.sin(k*th+ph)+b*R*Math.cos(5*th-ph*2);d+=(t?"L":"M")+(r*Math.cos(th)).toFixed(1)+" "+(r*Math.sin(th)).toFixed(1);}path(d+"Z",w,o);}}
+ros(300,26,12,.2,.08,1.4,.55);
+ros(128,18,8,.22,.06,1.2,.7);
+for(let i=0;i<10;i++){const c=document.createElementNS(NS,"circle");c.setAttribute("r",312+i*7);c.setAttribute("fill","none");c.setAttribute("stroke",i==5?"#e5b05a":"#8fb0e8");c.setAttribute("stroke-opacity",i==5?.6:.28);c.setAttribute("stroke-width",1.3);g.appendChild(c);}
+const core=document.createElementNS(NS,"circle");core.setAttribute("r",30);core.setAttribute("fill","rgba(143,176,232,.18)");core.setAttribute("stroke","#8fb0e8");core.setAttribute("stroke-width",2.5);g.appendChild(core);
+</script></body></html>

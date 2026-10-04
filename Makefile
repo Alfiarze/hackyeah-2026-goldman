@@ -65,3 +65,8 @@ db-shell:
 # Removes containers AND volumes (database data)
 clean:
 	docker compose down -v
+
+# 60 s promo film (docs/pitch/aegis-film.mp4). Needs python3, ffmpeg, node and Playwright with Chromium
+# (set CHROME_PATH to use an installed Chromium).
+film:
+	cd docs/pitch/video && python3 score.py && node render.cjs ../aegis-film.mp4 30

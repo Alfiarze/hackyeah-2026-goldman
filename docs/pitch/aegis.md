@@ -252,7 +252,7 @@ Each slide answers one question a jury would ask.
 <p class="dim mono" style="font-size:13px; margin-top:12px">every decision → rule_id · stage · time in ms · append-only audit</p>
 </div>
 <div class="col">
-<div class="node"><b>Model</b><span>on-prem GB10</span></div>
+<div class="node"><b>Model</b><span>on-prem 2× GB10</span></div>
 <div class="node"><b>Tools / MCP</b><span>direct call → 401</span></div>
 <div class="node"><b>Sandbox</b><span>no network</span></div>
 <div class="node"><b>Dashboard</b><span>live · audit</span></div>
@@ -422,15 +422,15 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 
 <p class="q"><b>08</b> Can it run inside the bank?</p>
 
-# Runs on one GB10. <em>Local, fixed, countable cost.</em>
+# Runs on two GB10s. <em>Local, fixed, countable cost.</em>
 
 <div class="gb">
 <div style="position:relative">
 <div class="fence"></div><span class="fence-l">NOTHING LEAVES THIS LINE</span>
 <div class="rack">
-<h3>NVIDIA GB10 · on-prem</h3>
-<div class="row"><span>Model server</span><b>vLLM · OpenAI-compatible</b></div>
-<div class="row"><span>Memory</span><b>128 GB unified</b></div>
+<h3>2× NVIDIA GB10 · on-prem</h3>
+<div class="row"><span>Model server</span><b>vLLM · tensor parallel 2</b></div>
+<div class="row"><span>Memory</span><b>2 × 128 GB unified · 200 Gb/s link</b></div>
 <div class="row"><span>Aegis gateway + Postgres</span><b>Docker Compose, one command</b></div>
 <div class="row"><span>Sandbox</span><b>local containers, no network</b></div>
 <div class="row"><span>AI review</span><b>local model, not a cloud API</b></div>
@@ -447,7 +447,7 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 </div>
 
 <!--
-(40 s) Everything runs locally: the model on the GB10, the gateway, the database and the sandbox. Costs are fixed (hardware) and countable (every token reserved and logged). Prompts with confidential data never leave the building.
+(40 s) Everything runs locally: the model on our two GB10s, the gateway, the database and the sandbox. Costs are fixed (hardware) and countable (every token reserved and logged). Prompts with confidential data never leave the building.
 -->
 
 ---
@@ -466,7 +466,7 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 
 <div class="grid g4" style="margin-top:16px">
 <div class="card"><span class="k">start</span><p><code>make run</code></p></div>
-<div class="card"><span class="k">cloud / on-prem</span><p>Compose · Coolify · GB10</p></div>
+<div class="card"><span class="k">cloud / on-prem</span><p>Compose · Coolify · 2× GB10</p></div>
 <div class="card"><span class="k">scale</span><p>stateless, scales out</p></div>
 <div class="card"><span class="k">docs + agent skill</span><p>aegis.alfaguys.com/docs</p></div>
 </div>
@@ -477,5 +477,5 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 </div>
 
 <!--
-(35 s) Deployment isn't a promise: make run starts everything, Coolify does the same in the cloud, the model sits on the GB10 inside our network. Integration without rewriting the agent: base_url, SDK or MCP proxy.
+(35 s) Deployment isn't a promise: make run starts everything, Coolify does the same in the cloud, the model sits on our two GB10s inside our network. Integration without rewriting the agent: base_url, SDK or MCP proxy.
 -->

@@ -16,7 +16,7 @@ whether the content is malicious.
   deterministic rule can never be overridden by it.
 - The agent **never holds credentials**: tools accept only the gateway's secret (a direct call gets 401), and
   agent code runs in a sealed, network-less sandbox.
-- Everything runs **on-prem on one GB10** (model via vLLM), with fixed, countable cost.
+- Everything runs **on-prem on two NVIDIA GB10s** (DGX Spark, 2 × 128 GB, 200 Gb/s link; model via vLLM, tensor parallel 2), with fixed, countable cost.
 
 Live: landing <https://aegis.alfaguys.com> · dashboard <https://dashboardaegis.alfaguys.com> ·
 API <https://gatewayaegis.alfaguys.com> ([docs](https://aegis.alfaguys.com/docs/)) · pitch deck

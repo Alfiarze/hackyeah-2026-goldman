@@ -20,7 +20,7 @@ flowchart LR
     B --> X[09 Execute]
     X --> O[10 Output check · DLP]
   end
-  X --> LLM[Model server<br/>vLLM on GB10, OpenAI-compatible]
+  X --> LLM[Model server<br/>vLLM on 2× GB10, OpenAI-compatible]
   X -- "backend secret" --> Tools[Tool backends / MCP servers]
   X -- "sandbox secret" --> Sbx[Sandbox runner<br/>throw-away containers, no network]
   GW --> PG[(PostgreSQL<br/>tasks · budgets · approvals · audit · policy versions)]
@@ -41,10 +41,10 @@ Components ([`5-implementation`](../5-implementation/) has the code map):
 | PostgreSQL | tasks and leases, budgets with atomic escrow, approvals, rate counters, append-only audit, policy versions |
 | Tool backends / MCP (`aegis/backends.py`) | accept only the gateway's secret; keep call counters as evidence that a blocked call never arrived |
 | Sandbox runner (`aegis/sandbox.py`) | the only service with Docker access; starts a locked-down container per `code.run` |
-| Model server | any OpenAI-compatible endpoint; production target: vLLM on the team's GB10 (on-prem) |
+| Model server | any OpenAI-compatible endpoint; production: vLLM on the team's two GB10s (on-prem, tensor parallel 2) |
 | Dashboard (`dashboard/`) | live decisions, audit, approvals, budgets, configuration, scenario replay |
 
-![Runs on one GB10](gb10-on-prem.png)
+![Runs on two GB10s](gb10-on-prem.png)
 
 **Design choices**
 
@@ -79,7 +79,7 @@ Throughput (mixed workload): 32 req/s at concurrency 1 · 102 req/s at 4 · **19
 | Backend | Added latency | Notes |
 |---|---:|---|
 | Heuristic scorer (default without a model server) | 0.02 ms p50 | deterministic fallback, always available |
-| Local model on GB10 (`semantic.backend: auto`) | the model's own latency | one short classification per untrusted input; identical concurrent inputs share one call; timeout → fail-closed |
+| Local model on the GB10s (`semantic.backend: auto`) | the model's own latency | one short classification per untrusted input; identical concurrent inputs share one call; timeout → fail-closed |
 
 The AI review runs **after** all deterministic checks, so anything a rule blocks never costs a model call, and it
 only runs on untrusted content (user input, tool results, files). Its token use is reserved from a separate guard

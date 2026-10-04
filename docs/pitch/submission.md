@@ -41,7 +41,7 @@ and LoRA weights are pinned by sha256; MCP tool definitions are pinned and quara
 **Benefits:** agents can be given real work without a master key; security edits one YAML policy (hot reload in
 under 1 s, broken files rejected, versions with one-click rollback); every decision is explained (rule, stage,
 time) and written to an append-only audit; integration is a `base_url` swap (OpenAI-compatible), a Python SDK
-or an MCP proxy; runs fully on-prem with the model on the team's GB10, so confidential prompts never leave.
+or an MCP proxy; runs fully on-prem with the model on the team's two GB10s (tensor parallel), so confidential prompts never leave.
 
 ## Idea stage
 New Idea

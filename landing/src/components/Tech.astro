@@ -5,10 +5,10 @@ import L from "./L.astro";
 const sheets = [
   {
     id: "model",
-    en: ["The model: on-prem, on our own GB10", "The agent console and the AI review run on our own hardware, so prompts, documents and risk scores never leave the firm’s network."],
-    pl: ["Model: on-prem, na naszym GB10", "Konsola agenta i ocena AI działają na naszym sprzęcie, więc prompty, dokumenty i oceny ryzyka nie opuszczają sieci firmy."],
+    en: ["The model: on-prem, on our own two GB10s", "The agent console and the AI review run on our own hardware, so prompts, documents and risk scores never leave the firm’s network."],
+    pl: ["The model: on-prem, on our own two GB10s", "Konsola agenta i ocena AI działają na naszym sprzęcie, więc prompty, dokumenty i oceny ryzyka nie opuszczają sieci firmy."],
     rows: [
-      [["Hardware", "Sprzęt"], ["NVIDIA GB10 with <span class='count' data-count='128'>128</span> GB of unified memory, in the building", "NVIDIA GB10 ze <span class='count' data-count='128'>128</span> GB pamięci zunifikowanej, na miejscu"]],
+      [["Hardware", "Sprzęt"], ["Two NVIDIA GB10 (DGX Spark), <span class='count' data-count='2'>2</span> × 128 GB of unified memory, linked at 200 Gb/s, in the building", "Two NVIDIA GB10 (DGX Spark), 2 × 128 GB of unified memory, linked at 200 Gb/s"]],
       [["Interface", "Interfejs"], ["OpenAI-compatible API: the gateway points at any compatible server through environment variables", "API zgodne z OpenAI: bramkę przepina się na dowolny zgodny serwer zmiennymi środowiskowymi"]],
       [["Trust level", "Poziom zaufania"], ["On-premises: confidential data may reach it. A cloud model would be cleared for public data only.", "Na miejscu: dane poufne mogą do niego trafić. Model w chmurze dostałby dostęp tylko do danych publicznych."]],
       [["Pinning", "Przypięcie"], ["Model weights and LoRA adapters are pinned by hash; a mismatch is refused (<span class='id'>MODEL-HASH-001/002</span>)", "Wagi modelu i adaptery LoRA są przypięte hashem; niezgodność jest odrzucana (<span class='id'>MODEL-HASH-001/002</span>)"]],

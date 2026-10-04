@@ -28,7 +28,7 @@ The code stays where the build expects it (moving it would break the Docker imag
 | [`tests/`](../tests/) | 334 tests, YAML content and red-team cases |
 
 Stack: Python 3.12, FastAPI, asyncpg / PostgreSQL 17, pypdf, olefile, Pillow, tesseract; React 18 + Vite; Astro;
-Docker Compose. No paid APIs: the model is any OpenAI-compatible server (vLLM on GB10 in production).
+Docker Compose. No paid APIs: the model is any OpenAI-compatible server (vLLM on two GB10s in production).
 
 ## Deploying into an existing agentic ecosystem
 
@@ -58,7 +58,7 @@ moved behind the gateway by giving them the gateway's backend secret, so a direc
 |---|---|
 | Laptop / single server | `make run` (Docker Compose: Postgres, gateway, tool backends, sandbox runner) → `http://localhost:8000/dashboard/` |
 | Cloud / PaaS | Coolify with [`docker-compose.coolify.yml`](../docker-compose.coolify.yml): generated secrets, no published host ports, domains per service ([README](../README.md#deploying-on-coolify)) |
-| On-prem with the model | the same stack next to vLLM on an NVIDIA GB10; set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_LOCATION=onprem` |
+| On-prem with the model | the same stack next to vLLM on two NVIDIA GB10s (DGX Spark, tensor parallel 2, 200 Gb/s link); set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_LOCATION=onprem` |
 
 Configuration is environment variables (`.env.example`) plus `policy/policy.yaml`. Default demo admin key:
 `hackyeah` (set `ADMIN_API_KEY` to change it — do so before exposing the dashboard beyond a trusted network).

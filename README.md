@@ -13,6 +13,16 @@ central policy and the data the task has already seen. Only then does it run.
 The whole thing is a FastAPI gateway plus a mock tool/MCP backend and a PostgreSQL database, with a React
 dashboard and a static landing page. It runs with one command.
 
+## Submission map
+
+| Folder | Assessment category |
+|---|---|
+| [`1-solution/`](1-solution/) — overview, implemented controls, policy configuration | Robustness of the solution and quality of guardrails (30%) |
+| [`2-architecture/`](2-architecture/) — architecture diagram, deterministic / AI enforcement performance | Architecture and performance efficiency (20%) |
+| [`3-reporting/`](3-reporting/) — dashboard screenshots, implemented metrics | Security reporting (20%) |
+| [`4-testing/`](4-testing/) — test cases, red-team corpus, scenarios, run logs | Completeness of the self-testing suite (15%) |
+| [`5-implementation/`](5-implementation/) — code map, deployment, integration into agent ecosystems | Practical implementability and scalability (15%) |
+
 ## Quick start
 
 Requirements: Docker Desktop. Everything except the model runs locally in Docker.

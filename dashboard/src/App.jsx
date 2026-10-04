@@ -9,8 +9,8 @@ import { TraceStep } from "./Trace.jsx";
 import { DisabledBanner, DocInput, ExampleChips, checkDocument, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
-  { group: "Guide", items: [["start", "Start here"]] },
-  { group: "Test it", items: [["playground", "Test an input"], ["livechat", "Live test"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
+  { group: "Start here", items: [["livechat", "Live test"], ["start", "Guided tour"]] },
+  { group: "Test it", items: [["playground", "Test an input"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
   { group: "Monitor", items: [["live", "Live"], ["approvals", "Approvals"], ["audit", "Audit log"], ["tasks", "Tasks"], ["budget", "Budget"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
 ];
@@ -1040,7 +1040,7 @@ function Sidebar({ view, go, open, close, stats, health }) {
 }
 
 export default function App() {
-  const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "start"));
+  const [view, setView] = useState(() => (TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "livechat"));
   const [menu, setMenu] = useState(false);
   const [stats] = usePoll(() => api("/admin/stats"), 4000);
   const [health] = usePoll(() => fetch("/health").then((r) => r.json()), 5000);

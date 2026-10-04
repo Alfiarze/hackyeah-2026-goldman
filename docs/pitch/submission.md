@@ -93,7 +93,7 @@ top bar — we hand it to the jury) · API https://gatewayaegis.alfaguys.com (`/
 ```
 git clone https://github.com/Alfiarze/hackyeah-2026-goldman && cd hackyeah-2026-goldman
 make run                      # Postgres + gateway + tool backends + sandbox
-open http://localhost:8000/dashboard/     # admin key: dev-admin-key
+open http://localhost:8000/dashboard/     # admin key: hackyeah
 make test-docker              # full test suite (250 tests)
 make demo                     # run every attack scenario against the running stack
 ```

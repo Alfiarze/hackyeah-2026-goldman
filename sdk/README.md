@@ -61,7 +61,7 @@ async with AsyncAegis("http://localhost:8000", app_key="...", agent_key="...") a
 ```python
 from aegis_sdk import Admin
 
-admin = Admin("http://localhost:8000", admin_key="dev-admin-key")
+admin = Admin("http://localhost:8000", admin_key="hackyeah")
 for a in admin.approvals():                 # pending people's approvals (APPROVAL-001)
     admin.approve(a["id"])                  # or admin.deny(...)
 admin.check("Mój PESEL to 44051401359").redacted        # dry run: 'Mój PESEL to [REDACTED:PESEL]'

@@ -1,7 +1,7 @@
-const KEY = "aegis.adminKey";
+const KEY = "aegis.adminKey.v2"; // v2: keys typed before the hackyeah default are ignored
 
 export function getKey() {
-  try { return localStorage.getItem(KEY) || "dev-admin-key"; } catch { return "dev-admin-key"; }
+  try { return localStorage.getItem(KEY) || "hackyeah"; } catch { return "hackyeah"; }
 }
 export function setKey(k) {
   try { localStorage.setItem(KEY, k); } catch { /* private mode */ }

@@ -26,7 +26,7 @@ class Settings:
     tool_backend_secret: str = os.environ.get("TOOL_BACKEND_SECRET", "dev-backend-secret")
     sandbox_base_url: str = os.environ.get("SANDBOX_BASE_URL", "http://localhost:8002")
     sandbox_secret: str = os.environ.get("SANDBOX_SECRET", "dev-sandbox-secret")
-    admin_api_key: str = os.environ.get("ADMIN_API_KEY", "dev-admin-key")
+    admin_api_key: str = os.environ.get("ADMIN_API_KEY", "hackyeah")
     app_api_key: str = os.environ.get("APP_API_KEY", "dev-app-key")
     lease_secret: str = os.environ.get("LEASE_SECRET", "dev-lease-secret")
     # agent api key -> agent id

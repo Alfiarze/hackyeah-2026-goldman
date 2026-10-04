@@ -16,7 +16,7 @@ runs). Full docs: https://aegis.alfaguys.com/docs/ · OpenAPI: `<AEGIS_URL>/docs
 export AEGIS_URL=https://gatewayaegis.alfaguys.com   # or http://localhost:8000 after `make run`
 export AEGIS_APP_KEY=...        # creates tasks (from the Aegis team; local default: dev-app-key)
 export AEGIS_AGENT_KEY=agent-key-demo
-export AEGIS_ADMIN_KEY=...      # optional: dry-run checks (local default: dev-admin-key)
+export AEGIS_ADMIN_KEY=...      # optional: dry-run checks (local default: hackyeah)
 ```
 
 The helper `aegis_probe.py` (next to this file) uses only the Python standard library.

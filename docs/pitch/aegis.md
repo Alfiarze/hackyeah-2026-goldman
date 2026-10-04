@@ -33,7 +33,7 @@ style: |
     color: var(--ink); font: 400 22px/1.45 "Grotesk", "Helvetica Neue", Arial, sans-serif;
     display: flex; flex-direction: column; justify-content: flex-start; gap: 0;
   }
-  section::after { font: 500 13px "Mono", monospace; color: var(--ink-3); letter-spacing: .12em; content: attr(data-marpit-pagination) " / 13"; }
+  section::after { font: 500 13px "Mono", monospace; color: var(--ink-3); letter-spacing: .12em; content: attr(data-marpit-pagination) " / 10"; }
   footer { font: 500 12px "Mono", monospace; color: var(--ink-3); letter-spacing: .14em; text-transform: uppercase; left: 64px; bottom: 24px; }
   h1 { font: 400 46px/1.08 "Caslon", Georgia, serif; color: var(--ink); margin: 0 0 22px; letter-spacing: -.005em; max-width: 1050px; }
   h1 em { font-style: normal; color: var(--accent); }
@@ -354,70 +354,7 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 
 ---
 
-<p class="q"><b>06</b> What if the attack is inside a file?</p>
-
-# We read what a human <em>doesn't see</em> — and the agent does
-
-<div class="grid" style="grid-template-columns: 1fr 1.15fr; gap:26px; align-items:start">
-<div>
-<div class="chips" style="margin-bottom:16px"><span class="chip c">PDF</span><span class="chip c">DOCX</span><span class="chip c">XLSX</span><span class="chip c">PPTX</span><span class="chip c">DOC · XLS · PPT</span><span class="chip c">JPG · PNG</span><span class="chip c">scan → OCR</span></div>
-<div class="grid g2" style="gap:10px">
-<div class="card"><span class="k">hidden</span><p>metadata · XMP (XML) · comments · hidden text · white 1-pt text</p></div>
-<div class="card"><span class="k">overlooked</span><p>speaker notes · hidden sheets and slides · EXIF · GPS</p></div>
-<div class="card"><span class="k">active</span><p class="block">JavaScript · macros · DDE formulas · remote .dotm template</p></div>
-<div class="card"><span class="k">encoded</span><p>base64 · leetspeak · zero-width · s p a c e s</p></div>
-</div>
-
-</div>
-<img class="shot" src="img/document-verdict-en.png" style="width:100%; max-height:500px; object-fit:cover; object-position:top">
-</div>
-
-<!--
-(40 s) Agents analyse contracts in PDF and Word. The attacker hides the instruction in metadata, XMP, a comment, a hidden sheet, speaker notes, white 1-pt text or an image. The demo file looks clean; the gateway finds the hidden parts and the script, and says where.
--->
-
----
-
-<p class="q"><b>07</b> How does security manage it?</p>
-
-# One file. Changes apply <em>in a second</em>, no restart.
-
-<div class="grid" style="grid-template-columns: 1fr 1fr; gap:26px; align-items:start">
-
-```yaml
-profile: balanced          # strict | balanced | permissive
-controls:
-  pii: {enabled: true, mode: redact}
-  secrets: {enabled: true, mode: block}
-  documents: {enabled: true, mode: block}
-  semantic: {block_at_risk: 0.7}   # adherence 30%
-budgets:
-  per_principal: {tokens: 200000, calls: 2000}
-  rate_limits: {per_agent_per_minute: 60}
-  circuit_breaker: {blocks: 10, window_seconds: 60}
-approvals:
-  tools: [http.post]       # waits for a person
-models:
-  allow: ["main/*"]
-  pinned: {legal-lora/adapter_model.safetensors: "sha256:f8d5…"}
-```
-
-<div class="grid" style="gap:10px">
-<div class="card"><h3><span class="icon i-a">✓</span>Hot reload &lt; 1 s</h3><p>dashboard · API · file</p></div>
-<div class="card"><h3><span class="icon i-b">✗</span>Broken file? Rejected</h3><p>last good version keeps running</p></div>
-<div class="card"><h3><span class="icon i-c">↺</span>Every version stored</h3><p>one-click rollback</p></div>
-<div class="card"><h3><span class="icon i-r">◐</span>Human approval</h3><p>runs once, if approved</p></div>
-</div>
-</div>
-
-<!--
-(40 s, live: Configure → turn off "Personal data" → Test an input → PESEL passes → turn it back on)
-The jury can break the YAML on purpose: 422, and the gateway keeps running on the previous version.
--->
-
----
-
-<p class="q"><b>08</b> Where does agent code run?</p>
+<p class="q"><b>06</b> Where does agent code run?</p>
 
 # In a sealed room that is <em>destroyed after every run</em>
 
@@ -449,7 +386,7 @@ The jury can break the YAML on purpose: 422, and the gateway keeps running on th
 
 ---
 
-<p class="q"><b>09</b> How do we know it works?</p>
+<p class="q"><b>07</b> How do we know it works?</p>
 
 # Positive and negative tests <em>for every control</em>
 
@@ -483,7 +420,7 @@ The jury can break the YAML on purpose: 422, and the gateway keeps running on th
 
 ---
 
-<p class="q"><b>10</b> Can it run inside the bank?</p>
+<p class="q"><b>08</b> Can it run inside the bank?</p>
 
 # Runs on one GB10. <em>Local, fixed, countable cost.</em>
 
@@ -515,38 +452,9 @@ The jury can break the YAML on purpose: 422, and the gateway keeps running on th
 
 ---
 
-<p class="q"><b>11</b> How fast is a check?</p>
-
-# Milliseconds, <em>not an API round trip</em>
-
-<div class="grid" style="grid-template-columns: 1.4fr 1fr; gap:26px; align-items:start">
-<div class="card" style="padding:16px 20px">
-<table style="width:100%; border-collapse:collapse; font-size:15.5px">
-<tr><td style="padding:8px 0" class="acc"><b>Aegis</b> content checks</td><td class="mono acc" style="text-align:right"><b>0.36 ms</b></td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)" class="acc"><b>Aegis</b> blocked tool call, full decision</td><td class="mono acc" style="text-align:right; border-top:1px solid var(--rule)"><b>2.3 ms</b></td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)" class="acc"><b>Aegis</b> allowed tool call end to end</td><td class="mono acc" style="text-align:right; border-top:1px solid var(--rule)"><b>7.1 ms</b></td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)">Protect AI classifier v2 (GPU)</td><td class="mono muted" style="text-align:right; border-top:1px solid var(--rule)">18 ms</td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)">Lakera Guard (API, 1k chars)</td><td class="mono muted" style="text-align:right; border-top:1px solid var(--rule)">&lt; 20 ms</td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)">LLM Guard</td><td class="mono muted" style="text-align:right; border-top:1px solid var(--rule)">30–200 ms</td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)">Azure Prompt Shields</td><td class="mono muted" style="text-align:right; border-top:1px solid var(--rule)">100–300 ms</td></tr>
-<tr><td style="padding:8px 0; border-top:1px solid var(--rule)">NeMo Guardrails · Llama Guard 3 8B</td><td class="mono muted" style="text-align:right; border-top:1px solid var(--rule)">~500 ms</td></tr>
-</table>
-</div>
-<div class="grid" style="gap:12px">
-<div class="card stat c"><b>195</b><span>req/s on 4 vCPU</span></div>
-<div class="card"><span class="k">read fairly</span><p>Others: published figures. They classify text; Aegis also decides tool, file, recipient, budget.</p></div>
-</div>
-</div>
-
-<!--
-(30 s) Our numbers come from make bench on the real pipeline with Postgres. Sources for the others are on the landing page.
--->
-
----
-
 <!-- _class: close -->
 
-<p class="q"><b>12</b> Can we deploy it tomorrow?</p>
+<p class="q"><b>09</b> Can we deploy it tomorrow?</p>
 
 # One command. Three integrations. <em>Data stays with us.</em>
 

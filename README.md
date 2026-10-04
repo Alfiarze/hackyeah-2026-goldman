@@ -24,7 +24,7 @@ open http://localhost:8000/dashboard/
 ```
 
 `make run` copies `.env.example` to `.env` for you if `.env` is missing. The dashboard asks for the admin key on
-first use; the default is `dev-admin-key` (see `.env.example`).
+first use; the default is `hackyeah` (see `.env.example`).
 
 **Model server.** The agent console and the AI review use one OpenAI-compatible model server, configured in `.env`:
 
@@ -55,7 +55,7 @@ prompts really leave the machine, so use only the synthetic demo documents. With
 | `make db-shell` | open `psql` in the database container |
 | `make clean` | drop containers **and** the database volume |
 
-Default keys live in `.env.example`: admin `dev-admin-key`, app `dev-app-key`, agent `agent-key-demo` /
+Default keys live in `.env.example`: admin `hackyeah`, app `dev-app-key`, agent `agent-key-demo` /
 `agent-key-other`, plus the HMAC lease secret and the tool-backend secret.
 
 ## Architecture

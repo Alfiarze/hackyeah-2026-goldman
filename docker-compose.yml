@@ -40,7 +40,7 @@ services:
       TOOL_BACKEND_SECRET: ${TOOL_BACKEND_SECRET:-dev-backend-secret}
       SANDBOX_BASE_URL: http://sandbox:8002
       SANDBOX_SECRET: ${SANDBOX_SECRET:-dev-sandbox-secret}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-hackyeah}
       APP_API_KEY: ${APP_API_KEY:-dev-app-key}
       LEASE_SECRET: ${LEASE_SECRET:-dev-lease-secret}
       AGENT_KEYS: ${AGENT_KEYS:-agent-key-demo:demo-agent,agent-key-other:other-agent}

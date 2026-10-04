@@ -62,7 +62,7 @@ services:
       SANDBOX_BASE_URL: http://sandbox:8002
       SANDBOX_SECRET: ${SERVICE_PASSWORD_SANDBOX}
       # shown in Coolify > Environment Variables; give it to whoever needs the dashboard (jury)
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-${SERVICE_PASSWORD_ADMIN}}   # set ADMIN_API_KEY in Coolify to choose it
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-hackyeah}   # demo default; set ADMIN_API_KEY in Coolify to change it
       APP_API_KEY: ${APP_API_KEY:-${SERVICE_PASSWORD_APP}}
       LEASE_SECRET: ${SERVICE_PASSWORD_64_LEASE}
       AGENT_KEYS: agent-key-demo:demo-agent,agent-key-other:other-agent

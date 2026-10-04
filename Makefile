@@ -1,6 +1,6 @@
 .PHONY: run up down logs ps test test-docker bench redteam redteam-live demo dashboard-dev landing venv db-shell clean sample-pdfs
 
-ADMIN ?= dev-admin-key
+ADMIN ?= hackyeah
 GW ?= http://localhost:8000
 
 run: up

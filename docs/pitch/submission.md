@@ -86,8 +86,8 @@ https://aegis.alfaguys.com
 https://github.com/Alfiarze/hackyeah-2026-goldman
 
 ## Instructions on how to open project
-**Live:** landing https://aegis.alfaguys.com · dashboard https://dashboard.aegis.alfaguys.com (admin key in the
-top bar — we hand it to the jury) · API https://gateway.aegis.alfaguys.com (`/health`, `/docs`).
+**Live:** landing https://aegis.alfaguys.com · dashboard https://dashboardaegis.alfaguys.com (admin key in the
+top bar — we hand it to the jury) · API https://gatewayaegis.alfaguys.com (`/health`, `/docs`).
 
 **Locally** (needs Docker):
 ```

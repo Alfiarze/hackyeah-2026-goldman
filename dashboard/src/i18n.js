@@ -4,7 +4,8 @@ import PL from "./pl.js";
 
 const KEY = "aegis.lang";
 let lang = (() => {
-  try { return localStorage.getItem(KEY) || (navigator.language || "en").slice(0, 2); } catch { return "en"; }
+  // English by default; Polish only when the person picked it (remembered per browser).
+  try { return localStorage.getItem(KEY) || "en"; } catch { return "en"; }
 })() === "pl" ? "pl" : "en";
 
 export function getLang() { return lang; }

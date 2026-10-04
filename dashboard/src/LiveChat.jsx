@@ -18,7 +18,10 @@ const EXAMPLES = [
 const STAGE_ORDER = ["mandate", "signatures", "deterministic", "data_flow", "semantic", "budget",
   "model_call", "output_deterministic", "output_signatures"];
 
-const prettyModel = (m) => (m || "").replace(/^main\//, "").replaceAll("-", " ");
+const prettyModel = (m) => (m || "")
+  .replace(/^main\//, "").split("/").pop().replaceAll("-", " ")
+  .replace(/\bdeepseek\b/gi, "DeepSeek").replace(/\bv([\d.]+)\b/gi, "V$1")
+  .replace(/\bflash\b/gi, "Flash");
 
 function Typing() {
   return <div className="lc-msg ai is-typing" aria-label={t("The assistant is typing")}>

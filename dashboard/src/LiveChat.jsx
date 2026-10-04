@@ -60,12 +60,46 @@ function Bubble({ m, onSelectTurn }) {
       </div>
     );
   }
+  if (m.role === "file") return <FileCard m={m} onSelectTurn={onSelectTurn} />;
   const mine = m.role === "user";
   return (
     <div className={`lc-msg ${mine ? "user" : "ai"}`}>
       <div className="lc-bubble">
+        {mine && m.file && <p className="lc-attach-tag"><Icon name="clip" size={14} /> {m.file}</p>}
         {mine ? <p className="lc-text">{m.text}</p> : <div className="lc-text"><Markdown text={shown || ""} />{!done && <span className="lc-caret" />}</div>}
         {m.redactedNote && <p className="lc-redacted-note">{t("A value in this message was redacted before the model saw it.")} <button className="link" onClick={() => onSelectTurn(m.turnId)}>{t("See what")}</button></p>}
+      </div>
+    </div>
+  );
+}
+
+const ACCEPT = ".pdf,.docx,.xlsx,.pptx,.doc,.xls,.ppt,.txt,.md,.csv,.jpg,.jpeg,.png";
+const MAX_CHARS = 12000; // what the assistant gets from the file, after the gateway's checks
+
+// An uploaded file, after the gateway read it inside out: verdict, hidden parts, active content.
+function FileCard({ m, onSelectTurn }) {
+  const d = m.decision || {};
+  const doc = m.doc || {};
+  const blocked = d.action === "BLOCK";
+  return (
+    <div className="lc-msg user">
+      <div className={`lc-file ${blocked ? "is-blocked" : ""}`}>
+        <div className="lc-file-head">
+          <Icon name="clip" size={16} />
+          <b>{m.name}</b>
+          <span className="muted small">{[doc.kind, doc.pages ? t("{n} pages", { n: doc.pages }) : null, doc.chars ? t("{n} characters", { n: num(doc.chars) }) : null].filter(Boolean).join(" · ")}</span>
+        </div>
+        <div className="lc-file-verdict"><Mark a={d.action || "BLOCK"} />{d.rule_id && <Id>{d.rule_id}</Id>}<span className="muted small">{human(d.reason_code)}</span></div>
+        {(doc.sections?.length > 0 || doc.active?.length > 0) && (
+          <ul className="lc-file-parts">
+            {(doc.sections || []).slice(0, 6).map((s, i) => <li key={i}><span className="lc-hidden">{t("hidden")}</span> {s.source}{s.rules?.length ? <> · <Id>{s.rules.join(" ")}</Id></> : null}</li>)}
+            {(doc.active || []).slice(0, 4).map((a, i) => <li key={`a${i}`} className="red"><span className="lc-hidden">{t("active")}</span> {a.kind}: <span className="muted">{String(a.detail).slice(0, 90)}</span></li>)}
+          </ul>
+        )}
+        <p className="small">{blocked
+          ? t("Stopped at the gateway: the assistant never sees this file.")
+          : t("Checked and attached. Ask something about it — the text goes to the assistant with your next message, through the gateway again.")}</p>
+        <button className="link small" onClick={() => onSelectTurn(m.turnId)}>{t("See the full trace")} →</button>
       </div>
     </div>
   );
@@ -157,6 +191,29 @@ export default function LiveChat() {
   const [error, setError] = useState(null);
   const scroller = useRef(null);
   const composer = useRef(null);
+  const picker = useRef(null);
+  const [attached, setAttached] = useState(null); // {name, text} waiting for the next message
+  const [dragging, setDragging] = useState(false);
+
+  const upload = async (file) => {
+    if (!file || busy) return;
+    setBusy(true); setError(null);
+    const turnId = Date.now();
+    try {
+      const res = await api(`/admin/playground/document?name=${encodeURIComponent(file.name)}`, { method: "POST", raw: file });
+      const d = res.decision || {};
+      const doc = res.document || {};
+      setTurns((ts) => [{ id: turnId, at: new Date().toISOString(), decision: d, status: d.action === "BLOCK" ? 403 : 200, sanitized: [], usage: null, model: null }, ...ts]);
+      setSel(turnId);
+      setMessages((ms) => [...ms, { id: turnId, role: "file", name: file.name, decision: d, doc, turnId }]);
+      if (d.action !== "BLOCK") {
+        const body = res.redacted || doc.text || "";
+        setAttached({ name: file.name, text: body.slice(0, MAX_CHARS), cut: body.length > MAX_CHARS });
+      }
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+    composer.current?.focus();
+  };
 
   useEffect(() => {
     api("/admin/models/available").then((list) => {
@@ -178,17 +235,20 @@ export default function LiveChat() {
 
   const history = () => messages
     .filter((m) => m.role === "user" || (m.role === "assistant" && m.text))
-    .map((m) => ({ role: m.role, content: m.text }));
+    .map((m) => ({ role: m.role, content: m.content || m.text }));
 
   const send = async (text) => {
     text = (text ?? input).trim();
     if (!text || busy || !task) return;
     setInput(""); setBusy(true); setError(null);
     const turnId = Date.now();
-    setMessages((ms) => [...ms, { id: turnId, role: "user", text }]);
+    const file = attached;
+    const content = file ? `${text}\n\n--- Attached file: ${file.name}${file.cut ? " (first part)" : ""} ---\n${file.text}` : text;
+    setAttached(null);
+    setMessages((ms) => [...ms, { id: turnId, role: "user", text, content, file: file?.name }]);
     try {
       const res = await api(`/admin/console/tasks/${task.task_id}/chat`, {
-        method: "POST", body: { messages: history().concat([{ role: "user", content: text }]), model: model || undefined },
+        method: "POST", body: { messages: history().concat([{ role: "user", content }]), model: model || undefined },
       });
       const r = res.response || {};
       const d = r.mandate || null;
@@ -233,7 +293,10 @@ export default function LiveChat() {
 
   return (
     <div className="livechat">
-      <section className="lc-chat card">
+      <section className={`lc-chat card ${dragging ? "is-drop" : ""}`}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); upload(e.dataTransfer.files?.[0]); }}>
         <header className="lc-head">
           <div className="lc-head-left">
             <span className="lc-model"><i className="lc-live-dot" aria-hidden="true" />{prettyModel(model) || "…"}</span>
@@ -267,7 +330,16 @@ export default function LiveChat() {
               {EXAMPLES.slice(1, 4).map((x, i) => <li key={i}><button type="button" className="chip" onClick={() => send(x.text)}>{t(x.label)}</button></li>)}
             </ul>
           )}
+          {attached && (
+            <p className="lc-attached"><Icon name="clip" size={14} /> {attached.name} <span className="muted small">{t("checked · goes with your next message")}</span>
+              <button type="button" className="link small" onClick={() => setAttached(null)}>{t("Remove")}</button></p>
+          )}
           <div className="lc-input-row">
+            <input ref={picker} type="file" accept={ACCEPT} hidden onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ""; }} />
+            <button type="button" className="btn quiet lc-clip" onClick={() => picker.current?.click()} disabled={busy}
+              title={t("Attach a file: PDF, Word, Excel, PowerPoint, image or scan. The gateway reads it first, including hidden parts.")} aria-label={t("Attach a file")}>
+              <Icon name="clip" size={18} />
+            </button>
             <textarea ref={composer} rows={1} value={input} placeholder={t("Write to the assistant…")}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
@@ -276,7 +348,7 @@ export default function LiveChat() {
               <Icon name="arrow" size={18} />
             </button>
           </div>
-          <p className="note">{t("Enter sends · Shift+Enter adds a line · every turn goes through the real gateway")}</p>
+          <p className="note">{t("Enter sends · Shift+Enter adds a line · drop a PDF or Office file to attach it · every turn goes through the real gateway")}</p>
         </form>
       </section>
 

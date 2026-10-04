@@ -7,10 +7,11 @@ export function setKey(k) {
   try { localStorage.setItem(KEY, k); } catch { /* private mode */ }
 }
 
-export async function api(path, { method = "GET", body, text } = {}) {
+export async function api(path, { method = "GET", body, text, raw } = {}) {
   const headers = { "X-Admin-Key": getKey() };
   let payload;
-  if (text !== undefined) { headers["Content-Type"] = "text/plain"; payload = text; }
+  if (raw !== undefined) { headers["Content-Type"] = "application/octet-stream"; payload = raw; }
+  else if (text !== undefined) { headers["Content-Type"] = "text/plain"; payload = text; }
   else if (body !== undefined) { headers["Content-Type"] = "application/json"; payload = JSON.stringify(body); }
   const res = await fetch(path, { method, headers, body: payload });
   const ct = res.headers.get("content-type") || "";

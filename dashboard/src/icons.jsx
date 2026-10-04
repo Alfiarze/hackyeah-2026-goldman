@@ -23,6 +23,7 @@ const P = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5" /><circle cx="12" cy="7.8" r="0.5" /></>,
   download: <><path d="M12 4v11M7 10.5l5 5 5-5" /><path d="M5 20h14" /></>,
   key: <><circle cx="8" cy="14" r="4" /><path d="M11 11l8-8M16 6l2.5 2.5" /></>,
+  clip: <path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8" />,
 };
 
 export default function Icon({ name, size = 20, className = "" }) {

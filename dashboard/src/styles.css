@@ -1159,3 +1159,17 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 .md .md-pre { margin: 0; padding: 10px 12px; background: rgba(0,0,0,.35); border-radius: 8px; overflow-x: auto; }
 .md .md-pre code { background: none; padding: 0; }
 .md a { color: inherit; text-decoration: underline; }
+
+/* live chat: file attachments */
+.lc-clip { border-radius: 12px; padding: 10px 12px; }
+.lc-chat.is-drop { outline: 2px dashed var(--accent, #8fb0e8); outline-offset: -8px; }
+.lc-attached { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; font-size: 14px; }
+.lc-attach-tag { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 13px; opacity: .8; }
+.lc-file { max-width: 560px; border: 1px solid var(--rule); border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,.02); display: grid; gap: 8px; }
+.lc-file.is-blocked { border-color: rgba(239,122,109,.6); }
+.lc-file-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-file-verdict { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-file-parts { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 13px; }
+.lc-file-parts .red { color: #ef7a6d; }
+.lc-hidden { font-family: var(--mono, monospace); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin-right: 4px; }
+.lc-file p { margin: 0; }

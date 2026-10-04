@@ -201,15 +201,15 @@ async def run(args) -> None:
 
                 t0 = time.perf_counter()
                 await asyncio.gather(*(one(fn) for fn in mixed))
-                dt = time.perf_counter() - t0
-                rps_rows.append((c, len(mixed) / dt, dt))
+                wall = time.perf_counter() - t0
+                rps_rows.append((c, len(mixed) / wall, wall))
 
     # ---------------- report
     out(f"# Aegis performance report")
     out()
     out(f"* generated: `{dt.datetime.now().isoformat(timespec='seconds')}` by `make bench`")
-    out(f"* machine: {platform.platform()} · {platform.processor() or 'cpu'} · "
-        f"{__import__('os').cpu_count()} logical cores · Python {platform.python_version()}")
+    out(f"* machine: {platform.platform()} | {platform.processor() or 'cpu'} | "
+        f"{__import__('os').cpu_count()} logical cores | Python {platform.python_version()}")
     out(f"* run: {args.n} measured requests per workload (+{args.warmup} warm-up, excluded), "
         f"{len(mixed)} mixed requests per concurrency level")
     out()
@@ -240,8 +240,8 @@ async def run(args) -> None:
     out()
     guard = per_workload.get("guard only: playground", [])
     if guard:
-        out(f"**Deterministic guard (playground dry run):** p50 {fmt_ms(pct(guard, .5))} ms · "
-            f"p95 {fmt_ms(pct(guard, .95))} ms · p99 {fmt_ms(pct(guard, .99))} ms — "
+        out(f"**Deterministic guard (playground dry run):** p50 {fmt_ms(pct(guard, .5))} ms | "
+            f"p95 {fmt_ms(pct(guard, .95))} ms | p99 {fmt_ms(pct(guard, .99))} ms - "
             "this is the cost of protection itself, excluding any model call.")
         out()
     out("## Throughput (mixed workload, requests/s)")

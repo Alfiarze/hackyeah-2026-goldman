@@ -1,4 +1,4 @@
-.PHONY: run up down logs ps test test-docker bench demo dashboard-dev landing venv db-shell clean sample-pdfs
+.PHONY: run up down logs ps test test-docker bench redteam redteam-live demo dashboard-dev landing venv db-shell clean sample-pdfs
 
 ADMIN ?= dev-admin-key
 GW ?= http://localhost:8000
@@ -38,6 +38,16 @@ bench:
 	docker compose up -d db
 	docker compose run --rm --no-deps -e TEST_DATABASE_URL_BASE=postgresql://goldman:goldman@db:5432 gateway python -m aegis.bench > docs/bench-report.md
 	@echo "Report written to docs/bench-report.md"
+
+# Red-team corpus: adversarial probes (OWASP LLM / agentic techniques) through the live pipeline.
+# Deterministic (no model server needed) — runnable by the jury on any running stack.
+redteam:
+	docker compose up -d
+	$(MAKE) redteam-live
+
+# Same corpus against a stack already running (e.g. localhost) — for the live demo.
+redteam-live:
+	.venv/bin/python tests/redteam.py $(GW) $(ADMIN) 2>/dev/null || python tests/redteam.py $(GW) $(ADMIN)
 
 # Run every scripted scenario against the running stack
 demo:

@@ -5,7 +5,7 @@ import yaml
 
 from conftest import ADMIN
 
-CASES = yaml.safe_load((Path(__file__).parent / "cases" / "content.yaml").read_text())
+CASES = yaml.safe_load((Path(__file__).parent / "cases" / "content.yaml").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("case", CASES, ids=[c["id"] for c in CASES])

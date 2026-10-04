@@ -75,12 +75,17 @@ class Escrow:
             if res is None:
                 return
             # actual usage is charged even if it exceeds the estimate (bounded by max_tokens)
-            await conn.execute(
-                """UPDATE budgets SET reserved = reserved - $2, spent = spent + $3,
-                          active_calls = active_calls - 1
-                   WHERE scope_id = ANY($1)""",
-                res["scope_ids"], res["amount"], actual_tokens,
-            )
+            # actual usage is charged even if it exceeds the estimate (bounded by max_tokens).
+            # Rows are locked one by one in canonical (sorted) order — the same order `reserve`
+            # uses. A single UPDATE ... WHERE scope_id = ANY(...) visits rows in plan order,
+            # which can differ between two concurrent transactions and deadlock them.
+            for scope_id in sorted(res["scope_ids"]):
+                await conn.execute(
+                    """UPDATE budgets SET reserved = reserved - $2, spent = spent + $3,
+                              active_calls = active_calls - 1
+                     WHERE scope_id = $1""",
+                    scope_id, res["amount"], actual_tokens,
+                )
 
     async def mark_uncertain(self, res_id: str) -> None:
         """Provider outcome unknown (timeout): keep the tokens reserved until reconciled, free the slot."""
@@ -89,9 +94,11 @@ class Escrow:
                 "UPDATE reservations SET status='uncertain' WHERE id=$1 AND status='active' RETURNING scope_ids",
                 res_id,
             )
-            if res:
+            if res is None:
+                return
+            for scope_id in sorted(res["scope_ids"]):  # canonical lock order, see settle()
                 await conn.execute(
-                    "UPDATE budgets SET active_calls = active_calls - 1 WHERE scope_id = ANY($1)", res["scope_ids"]
+                    "UPDATE budgets SET active_calls = active_calls - 1 WHERE scope_id = $1", scope_id
                 )
 
     async def reconcile(self, res_id: str, actual_tokens: int) -> bool:
@@ -103,10 +110,11 @@ class Escrow:
             )
             if res is None:
                 return False
-            await conn.execute(
-                "UPDATE budgets SET reserved = reserved - $2, spent = spent + $3 WHERE scope_id = ANY($1)",
-                res["scope_ids"], res["amount"], actual_tokens,
-            )
+            for scope_id in sorted(res["scope_ids"]):  # canonical lock order, see settle()
+                await conn.execute(
+                    "UPDATE budgets SET reserved = reserved - $2, spent = spent + $3 WHERE scope_id = $1",
+                    scope_id, res["amount"], actual_tokens,
+                )
             return True
 
 

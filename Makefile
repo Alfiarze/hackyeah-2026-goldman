@@ -1,4 +1,4 @@
-.PHONY: run up down logs ps test test-docker demo dashboard-dev landing venv db-shell clean sample-pdfs
+.PHONY: run up down logs ps test test-docker bench demo dashboard-dev landing venv db-shell clean sample-pdfs
 
 ADMIN ?= dev-admin-key
 GW ?= http://localhost:8000
@@ -31,6 +31,13 @@ test:
 test-docker:
 	docker compose up -d db
 	docker compose run --rm --no-deps -e TEST_DATABASE_URL_BASE=postgresql://goldman:goldman@db:5432 gateway pytest -q
+
+# Performance telemetry on demand: p50/p95/p99 per workload and pipeline stage + throughput.
+# Runs the real gateway in-process (mock model, heuristic semantic backend) and writes docs/bench-report.md.
+bench:
+	docker compose up -d db
+	docker compose run --rm --no-deps -e TEST_DATABASE_URL_BASE=postgresql://goldman:goldman@db:5432 gateway python -m aegis.bench > docs/bench-report.md
+	@echo "Report written to docs/bench-report.md"
 
 # Run every scripted scenario against the running stack
 demo:

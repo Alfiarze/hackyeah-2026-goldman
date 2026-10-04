@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
 import { t, human } from "./i18n.js";
-import { Id, Level, Mark, Rosette, clock, describe, num } from "./ui.jsx";
+import { Id, Level, Mark, Rosette, clock, describe, num, Markdown } from "./ui.jsx";
 import Icon from "./icons.jsx";
 
 const EXAMPLES = [
@@ -64,7 +64,7 @@ function Bubble({ m, onSelectTurn }) {
   return (
     <div className={`lc-msg ${mine ? "user" : "ai"}`}>
       <div className="lc-bubble">
-        <p className="lc-text">{mine ? m.text : (shown || "")}{!mine && !done && <span className="lc-caret" />}</p>
+        {mine ? <p className="lc-text">{m.text}</p> : <div className="lc-text"><Markdown text={shown || ""} />{!done && <span className="lc-caret" />}</div>}
         {m.redactedNote && <p className="lc-redacted-note">{t("A value in this message was redacted before the model saw it.")} <button className="link" onClick={() => onSelectTurn(m.turnId)}>{t("See what")}</button></p>}
       </div>
     </div>

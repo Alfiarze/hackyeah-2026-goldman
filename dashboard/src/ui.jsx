@@ -107,3 +107,53 @@ export function ApprovalButtons({ id, onDone }) {
   );
 }
 
+
+// Minimal Markdown for model answers: headings, lists, code blocks, bold, italic, inline code, links.
+// Builds React elements only (never innerHTML), so model output cannot inject markup.
+function inline(text, key = "i") {
+  const out = [];
+  const re = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*|_[^_\s][^_]*_|\[[^\]]+\]\((https?:\/\/[^)\s]+)\))/g;
+  let last = 0, m, n = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const tok = m[0], k = `${key}-${n++}`;
+    if (tok.startsWith("`")) out.push(<code key={k}>{tok.slice(1, -1)}</code>);
+    else if (tok.startsWith("**") || tok.startsWith("__")) out.push(<strong key={k}>{inline(tok.slice(2, -2), k)}</strong>);
+    else if (tok.startsWith("[")) out.push(<a key={k} href={m[2]} target="_blank" rel="noopener noreferrer">{tok.slice(1, tok.indexOf("]"))}</a>);
+    else out.push(<em key={k}>{inline(tok.slice(1, -1), k)}</em>);
+    last = m.index + tok.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+export function Markdown({ text }) {
+  const lines = String(text || "").split("\n");
+  const blocks = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      const code = [];
+      for (i++; i < lines.length && !lines[i].trim().startsWith("```"); i++) code.push(lines[i]);
+      i++;
+      blocks.push(<pre key={blocks.length} className="md-pre"><code>{code.join("\n")}</code></pre>);
+      continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { const Tag = `h${Math.min(6, h[1].length + 2)}`; blocks.push(<Tag key={blocks.length} className="md-h">{inline(h[2])}</Tag>); i++; continue; }
+    if (/^\s*([-*+]|\d+[.)])\s+/.test(line)) {
+      const ordered = /^\s*\d+[.)]\s+/.test(line);
+      const items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+[.)])\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*([-*+]|\d+[.)])\s+/, "")); i++; }
+      const List = ordered ? "ol" : "ul";
+      blocks.push(<List key={blocks.length} className="md-list">{items.map((it, j) => <li key={j}>{inline(it, `l${j}`)}</li>)}</List>);
+      continue;
+    }
+    if (!line.trim()) { i++; continue; }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|```|\s*([-*+]|\d+[.)])\s+)/.test(lines[i])) { para.push(lines[i]); i++; }
+    blocks.push(<p key={blocks.length}>{para.flatMap((p, j) => (j ? [<br key={`b${j}`} />, ...inline(p, `p${j}`)] : inline(p, `p${j}`)))}</p>);
+  }
+  return <div className="md">{blocks}</div>;
+}

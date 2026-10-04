@@ -1148,3 +1148,14 @@ details.more[open] { display: flex; flex-direction: column; gap: 14px; }
 .lc-sanitized { display: flex; flex-direction: column; gap: 6px; }
 .lc-san { margin: 0; padding: 9px 11px; border-radius: 8px; background: color-mix(in srgb, var(--redact) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--redact) 45%, transparent); font-family: var(--mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .lc-san mark { background: var(--redact-tint); color: var(--redact); border-radius: 3px; padding: 0 3px; font-weight: 600; }
+
+/* model answers rendered as Markdown */
+.md > * + * { margin-top: .55em; }
+.md p { margin: 0; }
+.md .md-h { margin: .4em 0 0; font-size: 1.02em; font-weight: 700; }
+.md .md-list { margin: 0; padding-left: 1.3em; }
+.md .md-list li + li { margin-top: .2em; }
+.md code { font-family: var(--mono, monospace); font-size: .9em; background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 4px; }
+.md .md-pre { margin: 0; padding: 10px 12px; background: rgba(0,0,0,.35); border-radius: 8px; overflow-x: auto; }
+.md .md-pre code { background: none; padding: 0; }
+.md a { color: inherit; text-decoration: underline; }

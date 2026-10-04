@@ -322,16 +322,16 @@ Jeśli demo padnie: nagranie (backup) + screenshoty w appendixie.
 | Budget & resources | Escrow: tokens, calls, time, concurrency; task/user/global | B-01…07 |
 | Historical attacks | pickle opcode scan, `trust_remote_code`, CVE-2024-34359, typosquat, MCP tool poisoning | A-01…10 |
 | Reporting & audit | Live dashboard, SSE, JSONL/CSV export, no secrets in logs | R-01…04 |
-| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 306 tests |
+| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 323 tests |
 
-`make test-docker` → **306 collected · 304 passed · 2 skipped** (live-model tests, `-m live`) · 100 content cases from YAML, 24 detector unit tests, 10× control-degradation matrix, 7 property-based fuzz tests
+`make test-docker` → **323 collected · all green in the image** (2 OCR tests skip only on a host without tesseract) · 100 content cases + 17 red-team probes from YAML, 24 detector unit tests, 10× control-degradation matrix, 7 property-based fuzz tests
 
 <!--
 NOTATKI (~35 s):
 Każdy z sześciu wymogów zadania ma moduł i parę testów: pozytywny i negatywny.
 Oczekiwane wyniki są spisane w YAML-u niezależnie od implementacji — test nie sprawdza
-sam siebie. Liczby pochodzą z ostatniego pełnego przebiegu `make test-docker` (306 zebrane,
-304 zielone, 2 pominięte bo wymagają modelu na żywo). Możecie to odpalić jednym poleceniem.
+sam siebie. Liczby pochodzą z ostatniego pełnego przebiegu make test-docker (323 zebrane,
+wszystkie zielone w obrazie). Możecie to odpalić jednym poleceniem.
 -->
 
 ---
@@ -357,10 +357,10 @@ overspend with 30 parallel agents
 </div>
 <div class="card">
 
-<div class="big">≈ 11 ms</div>
+<div class="big">≈ 1.3 ms</div>
 
-p95 deterministic pipeline
-<span class="muted">semantic (DeepSeek V4.1 Flash): ~1.9 s median · measured on an M2 laptop in Docker, model via OpenRouter; re-measure on GB10</span>
+p95 deterministic guard
+<span class="muted">p99 3.5 ms · `make bench` → docs/bench-report.md (p50/p95/p99 per stage, throughput) · semantic (DeepSeek V4.1 Flash on GB10): ~1.5–2.5 s per review, runs only on untrusted content</span>
 
 </div>
 </div>
@@ -373,7 +373,7 @@ NOTATKI (~35 s):
 Trzy liczby. Zero — tyle wywołań backendu po blokadzie. To licznik po stronie narzędzia,
 nie wpis w logu, który mógłby kłamać. Zero dolarów — overspend przy 30 równoległych agentach,
 także na czterech workerach, bo atomowość jest w Postgresie.
-I p95 — mierzone, z opisem sprzętu. [UZUPEŁNIĆ z make bench]
+I p95 1.3 ms — mierzone (make bench, raport w docs/bench-report.md, pełna metodologia i sprzęt w raporcie).
 Security dostaje pełny ślad decyzji, management — kafelki i koszty, łącznie z kosztem samej ochrony.
 -->
 

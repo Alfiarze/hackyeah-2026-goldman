@@ -81,7 +81,7 @@ Krótko i na temat. Liczby pochodzą z kodu i z pomiarów, linki do źródeł s�
 |---|---|
 | Ocena AI jednego dokumentu (~1–2 tys. tokenów wejścia, ~50 tokenów odpowiedzi) | ~1,5–2,5 s |
 | Odpowiedź agenta, ~300 tokenów | ~7–8 s |
-| Kontrole deterministyczne całej bramki (bez modelu) | ~11 ms p95, zmierzone |
+| Kontrole deterministyczne całej bramki (bez modelu) | **p95 1,3 ms** (`make bench`, raport: docs/bench-report.md) |
 | Piaskownica: jedno uruchomienie kodu | ~0,3–0,5 s, zmierzone |
 
 **Uczciwie:** GB10 to maszyna "pojemnościowa", a nie "szybka". Generowanie ogranicza przepustowość pamięci. Do agentów prawniczych to wystarcza, ale do czatu na żywo dla setek osób już nie.
@@ -180,7 +180,7 @@ Bramka jest bezstanowa, a stan trzyma Postgres, więc można postawić wiele ins
 W dashboardzie (Kontrole / Plik polityki) albo edycją `policy/policy.yaml`. Zmiana działa w około sekundę, a każda wersja jest zapisywana.
 
 **Jak to testujecie?**
-Są 104 testy automatyczne na prawdziwej bazie: przypadek pozytywny i negatywny dla każdej kontroli. Komenda: `make test-docker`.
+Jest **323 testów automatycznych** na prawdziwej bazie: przypadek pozytywny i negatywny dla każdej kontroli, 100 przypadków treściowych z YAML pisanych niezależnie od implementacji, 17 prób red-team z taksonomią OWASP (`make redteam`), macierz degradacji (każda kontrola wyłączana po kolei) i testy fuzzingowe (hypothesis). Komenda: `make test-docker`. Telemetria wydajności na żądanie: `make bench` (raport w `docs/bench-report.md`).
 
 ### Regulamin
 
@@ -204,7 +204,7 @@ Tak, i dlatego jest to osobna, mała usługa z jednym zadaniem. Bramka nigdy nie
 Model nie podejmuje decyzji o uprawnieniach. Najgorszy przypadek: przepuści coś, co i tak zatrzymają reguły, albo zablokuje coś niewinnego.
 
 **"Testy wykrywania sekretów?"**
-Detektor sekretów działa, ale nie ma jeszcze automatycznych testów z przykładowymi kluczami. To znana luka do uzupełnienia.
+Są: 18 przypadków w YAML pokrywa wszystkie 9 typów (klucze AWS ASIA/AKIA, klucze prywatne PEM, JWT, tokeny GitHub i Slack, klucze API sk-/AIza, connection stringi, hasła w treści PL/EN) plus negatywne look-aliki (klucz publiczny, za krótki token, JWT bez podpisu, URI bez hasła). Do tego testy jednostkowe każdego regexu i fuzzing sum kontrolnych.
 
 **"Nie testowaliście tego na prawdziwych danych klientów."**
 Zgadza się, demo działa na syntetycznych dokumentach. Mechanizmy działają tak samo na prawdziwych danych.

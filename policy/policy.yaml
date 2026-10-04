@@ -47,7 +47,8 @@ controls:
   model_allowlist: {enabled: true}
   pii:
     enabled: true
-    entities: [PESEL, CREDIT_CARD, IBAN, EMAIL, PHONE, NIP, ID_CARD, PASSPORT, ADDRESS]
+    entities: [PESEL, CREDIT_CARD, IBAN, EMAIL, PHONE, NIP, ID_CARD, PASSPORT, 
+          ADDRESS]
   secrets: {enabled: true, mode: block}
   attack_signatures: {enabled: true, mode: block}   # rules live in feeds/attacks.yaml
   injection_heuristics: {enabled: true}   # mode comes from the profile (strict = block)
@@ -88,7 +89,8 @@ task_profiles:
   contract_review:
     description: Analyse a client contract and write an internal risk memo
     resources: ["/clients/{client}/*", "/public/*"]
-    tools: [doc.read, legal_db.search, notes.write, memory.read, memory.write, mail.send]
+    tools: [doc.read, legal_db.search, notes.write, memory.read, memory.write, 
+          mail.send]
     recipients_allow: ["*@lawfirm.example", "*@client-{client}.example"]
     budget: {tokens: 20000, calls: 30, concurrency: 3}
     ttl_seconds: 900

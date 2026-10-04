@@ -21,6 +21,16 @@ ROOT = Path(__file__).parents[1]
 ADMIN_KEY_HEADER = {"X-Admin-Key": ""}
 EVALUATE = "/admin/playground/evaluate"
 
+# Minimum-enforcement semantics: expect is the level the DETERMINISTIC layer alone must reach.
+# The semantic guard may only tighten REDACT -> BLOCK when a real model is active; ALLOW must be exact.
+SEVERITY = {"ALLOW": 0, "REDACT": 1, "BLOCK": 2}
+
+
+def met_expectation(action: str, expect: str) -> bool:
+    if expect == "ALLOW":
+        return action == "ALLOW"
+    return SEVERITY.get(action, -1) >= SEVERITY[expect]
+
 
 async def main(base_url: str, admin_key: str) -> int:
     cases = yaml.safe_load((ROOT / "tests" / "cases" / "redteam.yaml").read_text(encoding="utf-8"))
@@ -31,9 +41,13 @@ async def main(base_url: str, admin_key: str) -> int:
     async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
         r = await client.get("/health")
         r.raise_for_status()
+        # Pin the profile so results are reproducible no matter what was toggled in the dashboard before.
+        r = await client.put("/admin/policy/profile", headers=headers, json={"profile": "balanced"})
+        r.raise_for_status()
+        print("profile pinned to 'balanced' for reproducible results\n")
         for case in cases:
             body = {"text": case["text"], "target": case.get("target", "user_input")}
-            for key in ("sink", "classification"):
+            for key in ("sink", "classification", "tool"):
                 if key in case:
                     body[key] = case[key]
             r = await client.post(EVALUATE, headers=headers, json=body)
@@ -43,14 +57,16 @@ async def main(base_url: str, admin_key: str) -> int:
             action, rule = decision["action"], decision.get("rule_id", "")
             rules = {f["rule_id"] for f in decision.get("findings", [])}
             expect_action, expect_rule = case["expect"], case.get("rule")
-            ok = action == expect_action and (expect_rule is None or expect_rule in rules)
+            ok = met_expectation(action, expect_action) and (expect_rule is None or expect_rule in rules)
             by_action[action] += 1
+            tightened = ok and expect_action == "REDACT" and action == "BLOCK"
             status = "PASS" if ok else "FAIL"
             if not ok:
                 failures.append(case["id"])
+            note = "  [semantic tightened REDACT->BLOCK]" if tightened else ""
             print(f"{status}  {case['id']:6} {case.get('technique', '')[:44]:44} "
                   f"-> {action:6} (want {expect_action}"
-                  f"{', ' + expect_rule if expect_rule else ''})  got rules {sorted(rules) or '-'}")
+                  f"{', ' + expect_rule if expect_rule else ''})  got rules {sorted(rules) or '-'}{note}")
 
     total = len(cases)
     print(f"\n{total - len(failures)}/{total} probes met the expectation "

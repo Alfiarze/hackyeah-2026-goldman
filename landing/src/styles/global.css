@@ -767,3 +767,54 @@ footer { border-top: 1px solid var(--rule); }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------------ benchmark */
+.bench { margin-top: 34px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 26px 26px 14px; position: relative; }
+.bench-axis { position: relative; height: 18px; margin-left: calc(32% + 16px); margin-right: calc(140px + 16px); }
+.bench-axis span { position: absolute; transform: translateX(-50%); font: 12px var(--mono); color: var(--ink-3); white-space: nowrap; }
+.bench-rows { list-style: none; margin: 8px 0 0; padding: 0; }
+.bench-row { display: grid; grid-template-columns: 32% 1fr 140px; gap: 16px; align-items: center; padding: 11px 0; border-top: 1px solid var(--rule); }
+.bench-name b { display: block; font-weight: 600; font-size: 15.5px; color: var(--ink); }
+.bench-name span { display: block; font-size: 13px; color: var(--ink-3); line-height: 1.35; margin-top: 2px; }
+.bench-row.ours .bench-name b { color: var(--intaglio); }
+.bench-track { position: relative; height: 26px; }
+.bench-track .tick { position: absolute; top: -4px; bottom: -4px; width: 1px; background: color-mix(in srgb, var(--rule) 70%, transparent); }
+.bench-bar { position: absolute; top: 7px; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--ink-3) 70%, transparent); transform-origin: left center; }
+.bench-bar.range { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink-3) 75%, transparent) 0 6px, color-mix(in srgb, var(--ink-3) 35%, transparent) 6px 12px); }
+.bench-row.ours .bench-bar { background: var(--intaglio); box-shadow: 0 0 18px color-mix(in srgb, var(--intaglio) 45%, transparent); }
+.bench-val { position: absolute; top: 3px; margin-left: 10px; font: 500 13.5px var(--mono); color: var(--ink-2); white-space: nowrap; }
+.bench-row.ours .bench-val { color: var(--ink); font-weight: 600; }
+.bench-src { font-size: 12.5px; text-align: right; }
+.bench-src a { color: var(--ink-3); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.bench-src a:hover { color: var(--ink); }
+.ours-tag { font: 12px var(--mono); color: var(--intaglio); }
+.motion .bench-row .bench-bar { transform: scaleX(0); transition: transform 1.1s var(--ease-ink, cubic-bezier(.2,.7,.2,1)); transition-delay: calc(var(--i, 0) * 90ms + 200ms); }
+.motion .bench-row.is-in .bench-bar { transform: scaleX(1); }
+
+.bench-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; margin-top: 22px; }
+.stages { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 9px; }
+.stages li { display: grid; grid-template-columns: 190px 1fr 70px; gap: 12px; align-items: center; font-size: 14px; }
+.st-name { color: var(--ink-2); }
+.st-bar { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--rule) 70%, transparent); overflow: hidden; }
+.st-bar i { display: block; height: 100%; background: var(--intaglio); border-radius: 4px; }
+.st-ms { font: 500 13px var(--mono); color: var(--ink); text-align: right; }
+.bench-grid .sample { margin-top: 16px; font-size: 14px; color: var(--ink-2); border-top: 1px dashed var(--rule); padding-top: 12px; }
+.bench-facts { margin: 14px 0 0; display: grid; grid-template-columns: auto 1fr; column-gap: 18px; }
+.bench-facts dt, .bench-facts dd { padding: 11px 0; border-top: 1px solid var(--rule); margin: 0; }
+.bench-facts dt { font: 400 26px/1.1 var(--serif); color: var(--intaglio); white-space: nowrap; }
+.bench-facts dd { font-size: 14.5px; color: var(--ink-2); align-self: center; }
+.bench-notes { margin-top: 22px; max-width: 92ch; font-size: 14.5px; color: var(--ink-2); line-height: 1.6; }
+.bench-notes b { color: var(--ink); }
+.bench-repro { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+.bench-repro a { color: var(--ink-2); }
+
+@media (max-width: 860px) {
+  .bench { padding: 18px 16px 10px; }
+  .bench-axis { margin: 0 84px 0 18px; }
+  .bench-track { margin-right: 84px; }
+  .bench-row { grid-template-columns: 1fr; gap: 6px; }
+  .bench-src { text-align: left; }
+  .bench-val { font-size: 12.5px; }
+  .bench-grid { grid-template-columns: 1fr; }
+  .stages li { grid-template-columns: 130px 1fr 62px; }
+}

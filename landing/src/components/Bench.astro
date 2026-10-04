@@ -1,0 +1,115 @@
+---
+import L from "./L.astro";
+
+// Latency added per check, on a log scale from 0.1 ms to 1 s. Aegis rows come from `make bench`
+// (docs/bench-report.md); the others are published figures, each with its source. Ranges draw as a span.
+const SCALE = [0.1, 1, 10, 100, 1000];
+const pos = (ms: number) => Math.max(0, Math.min(100, ((Math.log10(ms) + 1) / 4) * 100));
+
+type Row = { name: string; en: string; pl: string; lo: number; hi?: number; label: string; ours?: boolean; src?: [string, string] };
+const rows: Row[] = [
+  { name: "Aegis", en: "content checks: signatures, PII, secrets, injection, AI review (heuristic)", pl: "kontrole treści: sygnatury, PII, sekrety, injection, ocena AI (heurystyka)", lo: 0.36, label: "0.36 ms", ours: true },
+  { name: "Aegis", en: "full decision on a blocked tool call: mandate, checks, data flow, audit", pl: "pełna decyzja dla zablokowanego narzędzia: mandat, kontrole, przepływ danych, audyt", lo: 2.33, label: "2.3 ms", ours: true },
+  { name: "Aegis", en: "allowed tool call end to end, incl. Postgres budget escrow and the tool itself", pl: "przepuszczone wywołanie od początku do końca, z rezerwacją budżetu w Postgresie i samym narzędziem", lo: 7.05, label: "7.1 ms", ours: true },
+  { name: "Protect AI classifier v2", en: "DeBERTa prompt-injection model, GPU V100", pl: "model DeBERTa do prompt injection, GPU V100", lo: 18.4, label: "18 ms", src: ["arXiv 2502.15427", "https://arxiv.org/abs/2502.15427"] },
+  { name: "Lakera Guard", en: "SaaS API, 1,000-character input", pl: "API SaaS, wejście 1000 znaków", lo: 20, label: "< 20 ms", src: ["Lakera docs", "https://docs.lakera.ai/docs/latency-benchmark"] },
+  { name: "LLM Guard", en: "open source scanners, depends on which are on", pl: "skanery open source, zależnie od włączonych", lo: 30, hi: 200, label: "30–200 ms", src: ["Protect AI", "https://protectai.com/llm-guard"] },
+  { name: "Azure Prompt Shields", en: "cloud API, per prompt", pl: "API w chmurze, na prompt", lo: 100, hi: 300, label: "100–300 ms", src: ["TrueFoundry docs", "https://www.truefoundry.com/docs/ai-gateway/azure-prompt-shield"] },
+  { name: "NeMo Guardrails", en: "LLM rails (Vicuna-13B), GPU V100, per sample", pl: "szyny LLM (Vicuna-13B), GPU V100, na próbkę", lo: 491, label: "491 ms", src: ["arXiv 2502.15427", "https://arxiv.org/abs/2502.15427"] },
+  { name: "Llama Guard 3 8B", en: "as a gateway guardrail, per request", pl: "jako guardrail w bramce, na żądanie", lo: 500, label: "~500 ms", src: ["Cloudflare docs", "https://developers.cloudflare.com/ai-gateway/guardrails/usage-considerations/"] },
+];
+
+const stages = [
+  ["mandate", "mandat", 0.20], ["signatures", "sygnatury", 0.09], ["patterns", "wzorce", 0.20],
+  ["data flow", "przepływ danych", 0.02], ["AI review*", "ocena AI*", 0.02], ["budget escrow (Postgres)", "rezerwacja budżetu (Postgres)", 3.16],
+] as const;
+const maxStage = 3.16;
+---
+<section class="section" id="benchmark">
+  <div class="wrap">
+    <h2 class="display" data-reveal><L en="How much does a check cost?" pl="Ile kosztuje jedna kontrola?" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
+      <L
+        en="Latency added per check, median, on a log scale. Our rows are measured on a 4-vCPU cloud container with the real pipeline and a real Postgres; the others are published figures with their sources."
+        pl="Opóźnienie dodane przez kontrolę, mediana, w skali logarytmicznej. Nasze wiersze zmierzyliśmy w kontenerze z 4 vCPU, na prawdziwym pipeline i prawdziwym Postgresie; pozostałe to opublikowane wyniki ze źródłami."
+      />
+    </p>
+
+    <div class="bench" data-reveal-group>
+      <div class="bench-axis" aria-hidden="true">
+        {SCALE.map((v) => <span style={`left:${pos(v)}%`}>{v >= 1000 ? "1 s" : `${v} ms`}</span>)}
+      </div>
+      <ol class="bench-rows">
+        {rows.map((r) => (
+          <li class:list={["bench-row", { ours: r.ours }]} data-reveal>
+            <div class="bench-name">
+              <b>{r.name}</b>
+              <span><L en={r.en} pl={r.pl} /></span>
+            </div>
+            <div class="bench-track">
+              {SCALE.map((v) => <i class="tick" style={`left:${pos(v)}%`} />)}
+              <div
+                class:list={["bench-bar", { range: r.hi }]}
+                style={r.hi ? `left:${pos(r.lo)}%; width:${pos(r.hi) - pos(r.lo)}%` : `left:0; width:${pos(r.lo)}%`}
+              />
+              <span class="bench-val" style={`left:${pos(r.hi ?? r.lo)}%`}>{r.label}</span>
+            </div>
+            <div class="bench-src">
+              {r.src ? <a href={r.src[1]} target="_blank" rel="noopener">{r.src[0]}</a> : <span class="ours-tag"><L en="measured · make bench" pl="zmierzone · make bench" /></span>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <div class="bench-grid" data-reveal-group>
+      <article class="sheet" data-reveal>
+        <h3><L en="Where the milliseconds go" pl="Gdzie idą milisekundy" /></h3>
+        <p class="sheet-lede"><L en="Median per pipeline stage, across 900 measured decisions." pl="Mediana na etap pipeline, z 900 zmierzonych decyzji." /></p>
+        <ul class="stages">
+          {stages.map(([en, pl, ms]) => (
+            <li>
+              <span class="st-name"><L en={en} pl={pl} /></span>
+              <span class="st-bar"><i style={`width:${Math.max(2, (ms / maxStage) * 100)}%`} /></span>
+              <span class="st-ms">{ms.toFixed(2)} ms</span>
+            </li>
+          ))}
+        </ul>
+        <p class="sample">
+          <L
+            en="The checks themselves are sub-millisecond. The biggest cost is the atomic budget reservation in Postgres — the price of never going over budget, even with 30 agents at once."
+            pl="Same kontrole trwają ułamek milisekundy. Największy koszt to atomowa rezerwacja budżetu w Postgresie — cena tego, że budżet nie zostaje przekroczony nawet przy 30 agentach naraz."
+          />
+        </p>
+      </article>
+
+      <article class="sheet" data-reveal>
+        <h3><L en="Under load" pl="Pod obciążeniem" /></h3>
+        <dl class="bench-facts">
+          <dt><span class="count" data-count="195">195</span> req/s</dt>
+          <dd><L en="mixed workload, 16 concurrent, one 4-vCPU container" pl="mieszany ruch, 16 równolegle, jeden kontener 4 vCPU" /></dd>
+          <dt>0.67 ms</dt>
+          <dd><L en="p99 of the content checks" pl="p99 kontroli treści" /></dd>
+          <dt><span class="count" data-count="0">0</span></dt>
+          <dd><L en="tokens over budget with 30 agents racing for one pool" pl="tokenów ponad budżet przy 30 agentach walczących o jedną pulę" /></dd>
+          <dt><span class="count" data-count="0">0</span></dt>
+          <dd><L en="calls to an external service: no API round trip, nothing leaves the building" pl="wywołań zewnętrznych usług: bez podróży do API, nic nie wychodzi z budynku" /></dd>
+        </dl>
+      </article>
+    </div>
+
+    <div class="bench-notes" data-reveal>
+      <p>
+        <L
+          en="<b>Read this fairly.</b> Methods and hardware differ, and the other figures are not ours. Classifier and LLM guards answer one question — is this text malicious? — and generalise better to new phrasings. Aegis answers that in under a millisecond with rules and also decides what classifiers can't: is this agent allowed this tool, this file, this recipient, this budget. With a local model plugged in, the AI review adds that model's latency, and it can only tighten a decision, never loosen one."
+          pl="<b>Uczciwie.</b> Metody i sprzęt się różnią, a cudze wyniki nie są nasze. Klasyfikatory i strażnicy LLM odpowiadają na jedno pytanie — czy ten tekst jest złośliwy? — i lepiej uogólniają na nowe sformułowania. Aegis odpowiada na nie regułami w ułamku milisekundy, a do tego rozstrzyga to, czego klasyfikator nie rozstrzygnie: czy ten agent może użyć tego narzędzia, tego pliku, tego odbiorcy, tego budżetu. Po podłączeniu lokalnego modelu ocena AI dodaje jego czas i może decyzję tylko zaostrzyć, nigdy złagodzić."
+        />
+      </p>
+      <p class="bench-repro">
+        <L en="* heuristic backend; reproduce:" pl="* backend heurystyczny; odtwórz:" /> <span class="id">make bench</span> ·
+        <a href="https://github.com/Alfiarze/hackyeah-2026-goldman/blob/main/docs/bench-report.md" target="_blank" rel="noopener"><L en="full report" pl="pełny raport" /></a> ·
+        <a href="https://github.com/Alfiarze/hackyeah-2026-goldman/blob/main/docs/benchmarks.md" target="_blank" rel="noopener"><L en="sources and method" pl="źródła i metoda" /></a>
+      </p>
+    </div>
+  </div>
+</section>

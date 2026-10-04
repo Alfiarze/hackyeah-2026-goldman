@@ -1,4 +1,4 @@
-.PHONY: run up down logs ps test test-docker bench redteam redteam-live demo dashboard-dev landing venv db-shell clean sample-pdfs
+.PHONY: run up down logs ps test test-docker bench redteam redteam-live demo dashboard-dev landing venv db-shell clean sample-pdfs film3
 
 ADMIN ?= hackyeah
 GW ?= http://localhost:8000

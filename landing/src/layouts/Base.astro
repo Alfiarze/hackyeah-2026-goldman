@@ -12,7 +12,7 @@ import "../styles/global.css";
 interface Props { title?: string; description?: string }
 const {
   title = "Aegis: control gateway for AI agents",
-  description = "Aegis sits between AI agents and everything they touch. Every task gets a short-lived mandate, every call passes ten checks in about 0.3 ms: Polish PII, injection, documents, attack signatures, human approval and budget escrow. Code runs in a sandbox and the model runs on-prem on GB10.",
+  description = "Aegis sits between AI agents and everything they touch. Every task gets a short-lived mandate, every call passes ten checks in about 0.3 ms: Polish PII, injection, documents, attack signatures, human approval and budget escrow. Code runs in a sandbox and the model runs on-prem on two GB10s.",
 } = Astro.props;
 
 const baseUrl = import.meta.env.BASE_URL;

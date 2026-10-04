@@ -47,7 +47,7 @@ Zasada: **każdy slajd kończy się zdaniem, które prowadzi do następnego.**
 ## 2. Scenariusz demo (≈5 min)
 
 **Przygotowanie (przed wejściem na scenę):**
-- [ ] `make run` uruchomione, `/health` = ok i `"semantic_backend":"main"`; `.env` wskazuje na GB10 (DeepSeek V4.1 Flash), model rozgrzany jednym zapytaniem w Playground
+- [ ] `make run` uruchomione, `/health` = ok i `"semantic_backend":"main"`; `.env` wskazuje na GB10-ki (DeepSeek V4.1 Flash), model rozgrzany jednym zapytaniem w Playground
 - [ ] Dashboard otwarty na `/dashboard`, zakładka "Na żywo"; w drugiej karcie "Bądź agentem"
 - [ ] Terminal z dużą czcionką, przygotowane komendy w historii (`↑`)
 - [ ] `policy/policy.yaml` otwarty w edytorze, profil `balanced`
@@ -103,7 +103,7 @@ Zasada: **każdy slajd kończy się zdaniem, które prowadzi do następnego.**
 | Model na GB10 wolny / niedostępny | To feature: "widzicie fail-closed na żywo". Pokaż BLOCK `SEM-ERR` (ocena AI niedostępna); deterministyczne reguły dalej blokują |
 | Gateway nie wstaje | Nagranie demo od razu, bez tłumaczenia się dłużej niż 1 zdanie |
 | Juror wpisuje prompt, który przechodzi | Nie bronić się. "Dziękujemy — dopisujemy sygnaturę na żywo" → scena ④.2 |
-| Brak internetu | Wszystko działa w naszej sieci: gateway w Dockerze, model na GB10. Warto to powiedzieć głośno |
+| Brak internetu | Wszystko działa w naszej sieci: gateway w Dockerze, model na dwóch GB10. Warto to powiedzieć głośno |
 
 ---
 

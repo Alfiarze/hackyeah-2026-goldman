@@ -192,10 +192,10 @@ przed wywołaniem modelu.
                          │
         ┌────────────────▼──────────────── PIPELINE (cheap → expensive, first BLOCK wins) ─┐
         │ 0 policy snapshot  1 mandate/lease  2 allowlist  3 attack signatures            │
-        │ 4 PII + secrets    5 taint / IFC    6 semantic (LLM on GB10, only TIGHTENS)     │
+        │ 4 PII + secrets    5 taint / IFC    6 semantic (LLM on 2× GB10, only TIGHTENS)     │
         │ 7 budget escrow ── execute ── POST: re-scan model output + tool results         │
         └────────────────┬─────────────────────────────────────────────────────────────────┘
-          DeepSeek V4.1 Flash on our GB10 · tool backends (secret only gateway knows) · Postgres audit
+          DeepSeek V4.1 Flash on our two GB10s · tool backends (secret only gateway knows) · Postgres audit
                          ▼
           Dashboard · /metrics p50/p95 · audit export JSONL/CSV
 ```
@@ -223,7 +223,7 @@ bo tam siedzi pośredni prompt injection.
 ```yaml
 profile: balanced    # strict | balanced | permissive
 models:
-  allow: ["main/*"]   # model server from .env: our GB10 (DeepSeek V4.1 Flash)
+  allow: ["main/*"]   # model server from .env: our two GB10s (DeepSeek V4.1 Flash)
 controls:
   pii:     {enabled: true, mode: redact}
   secrets: {enabled: true, mode: block}
@@ -318,7 +318,7 @@ Jeśli demo padnie: nagranie (backup) + screenshoty w appendixie.
 |---|---|---|
 | Centralized policy engine | `policy.yaml`, 3 profiles, hot-reload, rollback | P-01…06 |
 | Deterministic controls | PII (PESEL, Luhn, IBAN), secrets (AWS, JWT, keys), mandate auth | D-01…10 |
-| Semantic controls | DeepSeek V4.1 Flash on GB10 as classifier, JSON risk, tighten-only, fail-closed | S-01…04 |
+| Semantic controls | DeepSeek V4.1 Flash on 2× GB10 as classifier, JSON risk, tighten-only, fail-closed | S-01…04 |
 | Budget & resources | Escrow: tokens, calls, time, concurrency; task/user/global | B-01…07 |
 | Historical attacks | pickle opcode scan, `trust_remote_code`, CVE-2024-34359, typosquat, MCP tool poisoning | A-01…10 |
 | Reporting & audit | Live dashboard, SSE, JSONL/CSV export, no secrets in logs | R-01…04 |
@@ -360,7 +360,7 @@ overspend with 30 parallel agents
 <div class="big">≈ 1.3 ms</div>
 
 p95 deterministic guard
-<span class="muted">p99 3.5 ms · `make bench` → docs/bench-report.md (p50/p95/p99 per stage, throughput) · semantic (DeepSeek V4.1 Flash on GB10): ~1.5–2.5 s per review, runs only on untrusted content</span>
+<span class="muted">p99 3.5 ms · `make bench` → docs/bench-report.md (p50/p95/p99 per stage, throughput) · semantic (DeepSeek V4.1 Flash on 2× GB10): ~1.5–2.5 s per review, runs only on untrusted content</span>
 
 </div>
 </div>
@@ -388,7 +388,7 @@ Security dostaje pełny ślad decyzji, management — kafelki i koszty, łączni
 - OpenAI-compatible endpoint → change `base_url`
 - MCP proxy → point the agent at `/mcp`
 - Python SDK: `pip install ./sdk` → `task.chat()`, `task.call()` — sync + async
-- `cp .env.example .env && make run` — Docker Compose, Postgres; model server = our GB10 (OpenAI-compatible)
+- `cp .env.example .env && make run` — Docker Compose, Postgres; model server = our two GB10s (OpenAI-compatible)
 
 **Scales out**
 - Stateless gateway, state in Postgres

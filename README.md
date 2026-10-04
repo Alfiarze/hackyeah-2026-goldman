@@ -38,15 +38,15 @@ first use; the default is `hackyeah` (see `.env.example`).
 
 **Model server.** The agent console and the AI review use one OpenAI-compatible model server, configured in `.env`:
 
-| Variable | Testing (now) | Production (team's GB10) |
+| Variable | Testing (now) | Production (team's two GB10s) |
 |---|---|---|
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | `http://<gb10-host>:8000/v1` (vLLM / SGLang / llama.cpp) |
 | `LLM_API_KEY` | OpenRouter key | server key, or empty |
-| `LLM_MODEL` | `deepseek/deepseek-v4.1-flash` | the id the GB10 serves |
+| `LLM_MODEL` | `deepseek/deepseek-v4.1-flash` | the id the GB10s serve |
 | `LLM_LOCATION` | `onprem` (behaves as production) | `onprem` |
 | `LLM_EXTRA_BODY` | `{"reasoning": {"enabled": false}}` | server-specific, or empty |
 
-Switching to the GB10 means changing these values and nothing else. `LLM_LOCATION` tells the data-flow rule where the
+Switching to the GB10s means changing these values and nothing else. `LLM_LOCATION` tells the data-flow rule where the
 server lives: `onprem` may receive confidential data, `cloud` only public data. While testing through OpenRouter,
 prompts really leave the machine, so use only the synthetic demo documents. Without a configured server the AI review falls back to a local heuristic scorer and the console uses the
 `mock/echo` test model.
@@ -85,7 +85,7 @@ flowchart LR
     B --> X[Execute]
     X --> P[Post-checks on the response<br/>output filter, taint update]
   end
-  GW --> LLM[Model server: GB10 / OpenRouter for tests]
+  GW --> LLM[Model server: 2× GB10 / OpenRouter for tests]
   GW -- "backend secret" --> Tools[Tool backends / MCP server<br/>counters = proof]
   GW -- "sandbox secret" --> Sbx[Sandbox runner<br/>isolated throw-away containers]
   GW --> PG[(PostgreSQL<br/>tasks, budgets, audit, versions)]

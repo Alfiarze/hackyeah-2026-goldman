@@ -18,6 +18,17 @@ Fonty overlayów jak w decku: **Libre Caslon Display** (hasła), **Schibsted Gro
 (kody reguł). Pliki fontów: `docs/pitch/fonts/`. Logo: rozeta `docs/pitch/img/rosette.svg`. Obraz referencyjny
 stylu: `landing/public/art/engraving-hero-dark.webp`.
 
+## Wersja zrobiona bez Higgsfield (gotowa)
+
+`docs/pitch/aegis-film.mp4`, 60 s, 1080p, 30 fps, napisy po polsku i podkład muzyczny. Animacja w stylu
+grawerunku z landingu, ta sama historia co w tym briefie: agent działa → zatruta umowa → agent posłuchał →
+Aegis (10 kontroli) → ZABLOKOWANE · MANDATE-RCPT · 0,7 ms → licznik maili 0 (prawdziwy zrzut z dashboardu) →
+30 agentów, 0 tokenów ponad budżet, zmiana polityki → finał z hasłem.
+
+Źródła w `docs/pitch/video/`: `index.html` (cała animacja, `render(t)` rysuje klatkę dla sekundy t; podgląd
+w czasie rzeczywistym: otwórz `index.html?play`), `score.py` (podkład), `render.cjs` (klatki → ffmpeg).
+Przebudowa: `make film`. Brief poniżej zostaje na wypadek wersji fotorealistycznej z Higgsfield.
+
 ---
 
 ## CZĘŚĆ A — PROMPT DO WKLEJENIA W CLAUDE (z włączonymi Higgsfield skills)

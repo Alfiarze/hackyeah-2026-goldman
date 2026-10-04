@@ -8,3 +8,4 @@ __pycache__/
 policy/.*.tmp
 feeds/.*.tmp
 landing/.astro/
+docs/pitch/video/score.wav

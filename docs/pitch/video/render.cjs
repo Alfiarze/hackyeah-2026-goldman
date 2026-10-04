@@ -21,7 +21,7 @@ const path = require("path");
     const out = args[0] || "aegis-film.mp4", fps = Number(args[1] || 30), total = 60 * fps;
     const audio = path.join(__dirname, "score.wav");
     const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "-",
-      "-i", audio, "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
+      "-i", audio, "-c:v", "libx264", "-preset", "slow", "-crf", "30", "-tune", "grain", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
       "-shortest", "-movflags", "+faststart", out], { stdio: ["pipe", "inherit", "inherit"] });
     for (let f = 0; f < total; f++) {
       await page.evaluate((x) => window.render(x), f / fps);

@@ -47,6 +47,7 @@ prompts really leave the machine, so use only the synthetic demo documents. With
 | `make logs` / `make ps` | follow the gateway log / show containers |
 | `make test-docker` | run the full test suite inside the image |
 | `make venv && make test` | same suite on the host |
+| `make bench` | performance telemetry report → `docs/bench-report.md` (p50/p95/p99 per stage, throughput) |
 | `make demo` | run every scripted scenario against the running stack |
 | `make dashboard-dev` | Vite dev server for the dashboard |
 | `make landing` | build and start the landing page as its own nginx container on :8080 |
@@ -278,25 +279,37 @@ with aegis.create_task(principal="lawyer_anna", agent_id="demo-agent",
 ## Tests
 
 `make test-docker` runs the full suite against a real Postgres (`goldman_test`), the real gateway and the real tool
-backends: **89 collected cases across 75 test functions**, plus a table-driven content suite.
+backends: **306 collected cases — 304 passed, 2 skipped** (the two need a live model server, `-m live`).
 
-* `tests/cases/content.yaml`: expected decisions for content controls, written independently of the code and run
-  through the Playground API (PII validators, injection, signatures, data flow).
+* `tests/cases/content.yaml`: **100 expected decisions** for content controls, written independently of the
+  code and run through the Playground API — PII checksum validators (PESEL, NIP, ID card, passport, Luhn,
+  IBAN), **every secret type** (cloud keys, private keys, JWT, GitHub/Slack tokens, API keys, connection
+  strings, passwords in plain words), injection (EN/PL, base64, leetspeak, zero-width), attack signatures,
+  data flow, XSS/SQLi/SSRF — each with look-alikes that must pass.
+* `tests/test_detectors.py`: unit tests pinning every detector regex (positive + negative per type).
+* `tests/test_degradation.py`: **the jury drill, automated** — every one of the 10 controls is disabled in
+  turn; the matrix proves the disable takes effect, the remaining controls still enforce, the change is
+  audited (`POLICY_CHANGED` + `disabled_controls`) and re-enabling restores the decision.
+* `tests/test_fuzz.py`: property-based tests (hypothesis) — every checksum-valid identifier constructed from
+  first principles is detected and every corrupted one is not; injection probes survive arbitrary
+  zero-width/leetspeak rewriting; the detectors never crash on arbitrary input.
 * Positive and negative cases for every control: mandate, impersonation and forged leases, lifecycle, delegation
   escalation, taint, memory isolation, MCP listing/call/quarantine, output filter, budget (over-limit, concurrency,
-  runaway loop, uncertain reservations), model allowlist and provider data flow, hot reload, last-known-good,
-  rollback, admin auth (401/403/422), append-only audit, exports without raw content, the agent console and every
-  demo scenario.
+  runaway loop, uncertain reservations, **cross-instance-safe lock ordering in the escrow**), model allowlist and
+  provider data flow, hot reload, last-known-good, rollback, admin auth (401/403/422), append-only audit,
+  exports without raw content, the agent console and every demo scenario.
 * The semantic guard runs on the deterministic local scorer in CI; the model server is not required. Tests are
   async and use an in-process ASGI transport for both the gateway and the tool backends.
 
 ## Performance telemetry
 
+`make bench` produces `docs/bench-report.md` on demand: p50/p95/p99 per pipeline stage, end-to-end
+decision latency per workload and throughput at several concurrency levels, together with the machine
+description and methodology (real pipeline, `mock/echo` model, heuristic semantic backend). At runtime
 `GET /admin/metrics`, `GET /admin/stats` and the dashboard report p50, p95 and p99 per stage (`mandate`,
-`signatures`, `deterministic`, `data_flow`, `semantic`, `budget`, `execute`, `model_call`) and for the full decision.
-Simulator traffic is tagged `synthetic` and excluded from these figures by default. Figures depend on hardware and
-model; report them together with the machine and the model. The guard has its own budget, so the cost of protection
-itself is visible.
+`signatures`, `deterministic`, `data_flow`, `semantic`, `budget`, `execute`, `model_call`) and for the
+full decision. Simulator traffic is tagged `synthetic` and excluded from these figures by default. The
+guard has its own budget, so the cost of protection itself is visible.
 
 ## Known limits (deliberate)
 
@@ -307,7 +320,7 @@ itself is visible.
   sandbox runner is the only service with Docker access. A container shares the host kernel, so production would
   use gVisor or Firecracker; we state this openly.
 * The heuristic semantic scorer is a fallback, not a replacement for the model; we report which backend is active.
-* Not built in this MVP: multi-instance policy push (`LISTEN/NOTIFY`), automated tests for the secret detectors.
+* Not built in this MVP: multi-instance policy push (`LISTEN/NOTIFY`), per-sentence provenance.
   Redis is the path for very high request rates.
 
 ## Landing page

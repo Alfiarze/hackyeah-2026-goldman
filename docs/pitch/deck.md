@@ -322,17 +322,16 @@ Jeśli demo padnie: nagranie (backup) + screenshoty w appendixie.
 | Budget & resources | Escrow: tokens, calls, time, concurrency; task/user/global | B-01…07 |
 | Historical attacks | pickle opcode scan, `trust_remote_code`, CVE-2024-34359, typosquat, MCP tool poisoning | A-01…10 |
 | Reporting & audit | Live dashboard, SSE, JSONL/CSV export, no secrets in logs | R-01…04 |
-| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 89 tests |
+| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 306 tests |
 
-`make test-docker` → **89 passed** · deterministic in CI, semantic checked live against the GB10 model
+`make test-docker` → **306 collected · 304 passed · 2 skipped** (live-model tests, `-m live`) · 100 content cases from YAML, 24 detector unit tests, 10× control-degradation matrix, 7 property-based fuzz tests
 
 <!--
 NOTATKI (~35 s):
 Każdy z sześciu wymogów zadania ma moduł i parę testów: pozytywny i negatywny.
 Oczekiwane wyniki są spisane w YAML-u niezależnie od implementacji — test nie sprawdza
-sam siebie. Testy deterministyczne są stabilne; semantyczne mają mock w CI i osobny tryb live.
-Możecie to odpalić jednym poleceniem: make test.
-[UZUPEŁNIĆ liczby przed submitem — z wyniku make test, nie z głowy]
+sam siebie. Liczby pochodzą z ostatniego pełnego przebiegu `make test-docker` (306 zebrane,
+304 zielone, 2 pominięte bo wymagają modelu na żywo). Możecie to odpalić jednym poleceniem.
 -->
 
 ---
@@ -388,7 +387,7 @@ Security dostaje pełny ślad decyzji, management — kafelki i koszty, łączni
 **Drop-in for developers**
 - OpenAI-compatible endpoint → change `base_url`
 - MCP proxy → point the agent at `/mcp`
-- Python SDK: `mandate_sdk.govern(tool)`
+- Python SDK: `pip install ./sdk` → `task.chat()`, `task.call()` — sync + async
 - `cp .env.example .env && make run` — Docker Compose, Postgres; model server = our GB10 (OpenAI-compatible)
 
 **Scales out**

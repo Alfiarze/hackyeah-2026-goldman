@@ -45,11 +45,35 @@ async def test_concurrent_agents_never_overspend(client, gw):
     assert 0 < s["executed"] < 30
 
 
-async def test_parallel_requests_on_one_task(client, new_task, gw):
+async def test_parallel_requests_on_one_task(client, new_task, gw, monkeypatch):
     t = await new_task()
     await gw.pool.execute("UPDATE budgets SET token_limit=3000, concurrency_limit=100 WHERE scope_id=$1",
                           f"task:{t['task_id']}")
-    results = await asyncio.gather(*(chat(client, t, max_tokens=900) for _ in range(10)))
+    # Deterministic overlap: the model call holds each request until the gate opens, so all 10
+    # reservations are live at the same time regardless of machine speed.
+    gate = asyncio.Event()
+
+    async def hold_complete(*args, **kwargs):
+        await gate.wait()
+        from aegis.llm import complete as real_complete
+        return await real_complete(*args, **kwargs)
+
+    import aegis.engine
+    monkeypatch.setattr(aegis.engine, "complete", hold_complete)
+
+    async def release_when_exhausted():
+        # poll the escrow; when the 4th reservation cannot fit, the limit is proven live
+        for _ in range(500):
+            row = await gw.pool.fetchrow("SELECT spent + reserved AS used FROM budgets WHERE scope_id=$1",
+                                         f"task:{t['task_id']}")
+            if row and row["used"] >= 3000:
+                break
+            await asyncio.sleep(0.01)
+        gate.set()
+
+    outcome = await asyncio.gather(
+        *(chat(client, t, max_tokens=900) for _ in range(10)), release_when_exhausted())
+    results = outcome[:10]
     ok = sum(r.status_code == 200 for r in results)
     row = await gw.pool.fetchrow("SELECT * FROM budgets WHERE scope_id=$1", f"task:{t['task_id']}")
     assert ok == 3 and row["spent"] + row["reserved"] <= 3000 and row["active_calls"] == 0

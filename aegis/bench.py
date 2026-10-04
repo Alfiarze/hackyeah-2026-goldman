@@ -201,15 +201,15 @@ async def run(args) -> None:
 
                 t0 = time.perf_counter()
                 await asyncio.gather(*(one(fn) for fn in mixed))
-                elapsed = time.perf_counter() - t0
-                rps_rows.append((c, len(mixed) / elapsed, elapsed))
+                wall = time.perf_counter() - t0
+                rps_rows.append((c, len(mixed) / wall, wall))
 
     # ---------------- report
     out(f"# Aegis performance report")
     out()
     out(f"* generated: `{dt.datetime.now().isoformat(timespec='seconds')}` by `make bench`")
-    out(f"* machine: {platform.platform()} · {platform.processor() or 'cpu'} · "
-        f"{__import__('os').cpu_count()} logical cores · Python {platform.python_version()}")
+    out(f"* machine: {platform.platform()} | {platform.processor() or 'cpu'} | "
+        f"{__import__('os').cpu_count()} logical cores | Python {platform.python_version()}")
     out(f"* run: {args.n} measured requests per workload (+{args.warmup} warm-up, excluded), "
         f"{len(mixed)} mixed requests per concurrency level")
     out()
@@ -240,8 +240,8 @@ async def run(args) -> None:
     out()
     guard = per_workload.get("guard only: playground", [])
     if guard:
-        out(f"**Deterministic guard (playground dry run):** p50 {fmt_ms(pct(guard, .5))} ms · "
-            f"p95 {fmt_ms(pct(guard, .95))} ms · p99 {fmt_ms(pct(guard, .99))} ms — "
+        out(f"**Deterministic guard (playground dry run):** p50 {fmt_ms(pct(guard, .5))} ms | "
+            f"p95 {fmt_ms(pct(guard, .95))} ms | p99 {fmt_ms(pct(guard, .99))} ms - "
             "this is the cost of protection itself, excluding any model call.")
         out()
     out("## Throughput (mixed workload, requests/s)")
@@ -254,6 +254,8 @@ async def run(args) -> None:
     out("Reproduce: `make bench` (writes `docs/bench-report.md`). Figures describe the machine "
         "listed above; on hardware with a model server the `model_call` stage is the model's latency.")
 
+    if args.out:  # written here as UTF-8: a shell redirect on Windows PowerShell would produce UTF-16
+        Path(args.out).write_text("\n".join(report) + "\n", encoding="utf-8")
     shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -266,6 +268,7 @@ def main() -> None:
                    help="requests per workload at each concurrency level")
     p.add_argument("--conc", default="1,4,16")
     p.add_argument("--db", default=None, help="base DSN (default TEST_DATABASE_URL_BASE or localhost)")
+    p.add_argument("--out", default=None, help="also write the Markdown report to this file (UTF-8)")
     args = p.parse_args()
     args.conc = [int(c) for c in args.conc.split(",")]
     BASE_DSN = args.db or __import__("os").environ.get(

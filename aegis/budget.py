@@ -74,7 +74,6 @@ class Escrow:
             )
             if res is None:
                 return
-            # actual usage is charged even if it exceeds the estimate (bounded by max_tokens)
             # actual usage is charged even if it exceeds the estimate (bounded by max_tokens).
             # Rows are locked one by one in canonical (sorted) order — the same order `reserve`
             # uses. A single UPDATE ... WHERE scope_id = ANY(...) visits rows in plan order,

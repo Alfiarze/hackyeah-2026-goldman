@@ -473,7 +473,7 @@ the value redacted BEFORE the model saw it, with per-stage timings, tokens and c
 
 <div class="grid g2" style="margin-top:22px; align-items:center">
 <div class="callout"><b>Agents get a mandate. Not a master key.</b></div>
-<p class="muted" style="text-align:right; font-size:17px">Try it: dashboard → <b style="color:var(--ink)">Start here</b></p>
+<div style="display:flex; align-items:center; justify-content:flex-end; gap:18px"><div class="muted" style="text-align:right; font-size:17px"><b style="color:var(--ink); font-size:20px">aegis.alfaguys.com</b><br>live demo · docs · dashboard</div><img src="img/qr-aegis.svg" style="width:150px; height:150px; border-radius:10px"></div>
 </div>
 
 <!--

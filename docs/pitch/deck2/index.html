@@ -173,6 +173,11 @@ h1 em { font-style: normal; color: var(--accent); }
 .tagline p em { font-style: normal; color: var(--accent); }
 .tagline .run { text-align: right; font: 500 28px/1.6 "Mono"; color: var(--ink2); }
 .tagline .run b { color: var(--allow); font-weight: 500; font-size: 36px; }
+.tagline p { font-size: 84px !important; white-space: nowrap; }
+.tagline .qr { display: flex; align-items: center; gap: 28px; font: 500 26px/1.6 "Mono"; color: var(--ink2); position: relative; z-index: 2; }
+.tagline .qr img { width: 250px; height: 250px; border-radius: 14px; display: block; box-shadow: 0 0 0 8px rgba(143,176,232,.12); }
+.tagline .qr b { color: var(--ink); font-size: 32px; font-weight: 500; }
+.tagline .qr span { color: var(--allow); }
 </style>
 </head>
 <body>
@@ -405,7 +410,7 @@ h1 em { font-style: normal; color: var(--accent); }
 
 <!-- 10 CLOSE -->
 <section class="slide s10">
-  <svg class="ros" data-r="400" data-op=".2" style="right:-170px; bottom:-150px; width:800px; height:800px"></svg>
+  <svg class="ros" data-r="400" data-op=".2" style="right:-260px; top:-260px; width:800px; height:800px"></svg>
   <div class="kick">Drop-in integration</div>
   <h1>No agent rewrite.</h1>
   <div class="ints">
@@ -420,8 +425,8 @@ tool hash pin
 + quarantine</pre></div>
   </div>
   <div class="tagline">
-    <p>The agent gets a <em>mandate</em> —<br>not a master key.</p>
-    <div class="run"><b>$ make run</b><br>aegis.alfaguys.com/docs</div>
+    <p>The agent gets a <em>mandate</em><br>— not a master key.</p>
+    <div class="qr"><img src="../img/qr-aegis.svg" alt="QR code: aegis.alfaguys.com"><div><b>aegis.alfaguys.com</b><br>live demo · docs · dashboard<br><span>$ make run</span></div></div>
   </div>
   <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>10 / 10</span></div>
 </section>

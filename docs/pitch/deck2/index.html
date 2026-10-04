@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aegis Pitch Deck</title>
+<meta name="viewport" content="width=1920">
+<style>
+@font-face { font-family: "Caslon"; src: url("../fonts/libre-caslon-display-latin-400-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Caslon"; src: url("../fonts/libre-caslon-display-latin-ext-400-normal.woff2"); unicode-range: U+0100-024F; }
+@font-face { font-family: "Grotesk"; font-weight: 400; src: url("../fonts/schibsted-grotesk-latin-400-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Grotesk"; font-weight: 400; src: url("../fonts/schibsted-grotesk-latin-ext-400-normal.woff2"); unicode-range: U+0100-024F; }
+@font-face { font-family: "Grotesk"; font-weight: 600; src: url("../fonts/schibsted-grotesk-latin-600-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Grotesk"; font-weight: 600; src: url("../fonts/schibsted-grotesk-latin-ext-600-normal.woff2"); unicode-range: U+0100-024F; }
+@font-face { font-family: "Grotesk"; font-weight: 800; src: url("../fonts/schibsted-grotesk-latin-800-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Grotesk"; font-weight: 800; src: url("../fonts/schibsted-grotesk-latin-ext-800-normal.woff2"); unicode-range: U+0100-024F; }
+@font-face { font-family: "Mono"; font-weight: 400; src: url("../fonts/ibm-plex-mono-latin-400-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Mono"; font-weight: 400; src: url("../fonts/ibm-plex-mono-latin-ext-400-normal.woff2"); unicode-range: U+0100-024F; }
+@font-face { font-family: "Mono"; font-weight: 500; src: url("../fonts/ibm-plex-mono-latin-500-normal.woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "Mono"; font-weight: 500; src: url("../fonts/ibm-plex-mono-latin-ext-500-normal.woff2"); unicode-range: U+0100-024F; }
+
+:root {
+  --bg: #0d1219; --sheet: #151d27; --sheet2: #1b2532; --rule: #283544;
+  --ink: #e6ebe4; --ink2: #aab4bf; --ink3: #6f7c8a;
+  --accent: #8fb0e8; --block: #ef7a6d; --allow: #71bf96; --redact: #e5b05a; --ai: #c3a6f0;
+}
+@page { size: 1920px 1080px; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
+body { color: var(--ink); font: 400 30px/1.35 "Grotesk", Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+.slide {
+  width: 1920px; height: 1080px; position: relative; overflow: hidden;
+  page-break-after: always; break-after: page;
+  padding: 92px 112px 0;
+  background:
+    radial-gradient(1400px 800px at 100% 0%, rgba(143,176,232,.07), transparent 62%),
+    repeating-linear-gradient(115deg, transparent 0 13px, rgba(255,255,255,.016) 13px 14px),
+    var(--bg);
+}
+.slide:last-child { page-break-after: auto; break-after: auto; }
+/* intaglio frame */
+.slide::before { content: ""; position: absolute; inset: 34px; border: 1px solid var(--rule); pointer-events: none; }
+.slide::after { content: ""; position: absolute; inset: 42px; border: 1px solid rgba(40,53,68,.45); pointer-events: none; }
+.foot { position: absolute; left: 112px; right: 112px; bottom: 54px; display: flex; justify-content: space-between;
+  font: 500 17px "Mono", monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); z-index: 5; }
+.foot b { color: var(--ink2); font-weight: 500; }
+
+.kick { font: 500 22px "Mono", monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: flex; gap: 18px; align-items: center; margin-bottom: 26px; }
+.kick::before { content: ""; width: 56px; height: 2px; background: var(--accent); }
+h1 { font: 400 104px/1.0 "Caslon", Georgia, serif; margin: 0; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--accent); }
+.mono { font-family: "Mono", monospace; }
+.muted { color: var(--ink2); } .dim { color: var(--ink3); }
+.c-block { color: var(--block); } .c-allow { color: var(--allow); } .c-redact { color: var(--redact); } .c-ai { color: var(--ai); } .c-acc { color: var(--accent); }
+.ros { position: absolute; pointer-events: none; }
+
+/* stamps */
+.stamp { display: inline-flex; flex-direction: column; align-items: center; padding: 10px 26px 12px; border: 4px double currentColor; border-radius: 8px; transform: rotate(-4deg); font: 800 38px/1 "Grotesk"; letter-spacing: .02em; }
+.stamp small { font: 500 20px "Mono"; letter-spacing: .1em; margin-top: 6px; }
+
+/* ---------- S1 title ---------- */
+.s1 .hero { position: absolute; right: -60px; top: 50%; width: 1020px; height: 1020px; transform: translateY(-50%);
+  background: url("../img/engraving-hero-dark.webp") center/cover; mix-blend-mode: screen; opacity: .9;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 38%, transparent 70%); mask-image: radial-gradient(circle at 50% 50%, #000 38%, transparent 70%); }
+.s1 .title { position: relative; z-index: 2; margin-top: 60px; }
+.s1 .word { font: 400 340px/0.86 "Caslon", Georgia, serif; letter-spacing: -.02em; margin: 0 0 0 -12px; }
+.s1 .sub { font: 600 58px/1.1 "Grotesk"; margin-top: 120px; }
+.s1 .claim { position: absolute; left: 112px; bottom: 150px; z-index: 2; width: 1100px; border-top: 1px solid var(--rule); padding-top: 34px; }
+.s1 .claim p { margin: 0; font: 400 44px/1.25 "Caslon", Georgia, serif; }
+.s1 .claim p + p { color: var(--ink); margin-top: 6px; }
+.s1 .claim p:first-child { color: var(--ink2); }
+.s1 .claim u { text-decoration: none; color: var(--accent); border-bottom: 3px solid var(--accent); }
+
+/* ---------- S2 problem ---------- */
+.verbs { display: flex; gap: 12px; margin: 36px 0 0; flex-wrap: wrap; }
+.verb { font: 500 26px "Mono"; padding: 10px 20px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; color: var(--ink); }
+.verb.k { color: var(--redact); border-color: rgba(229,176,90,.5); background: rgba(229,176,90,.07); }
+.chain { display: grid; grid-template-columns: 1fr 70px 1fr 70px 1fr 70px 1fr; align-items: stretch; margin-top: 100px; }
+.node { background: var(--sheet); border: 1px solid var(--rule); border-radius: 18px; padding: 28px 30px; position: relative; }
+.node .n { font: 500 20px "Mono"; color: var(--ink3); letter-spacing: .14em; }
+.node .t { font: 600 36px/1.12 "Grotesk"; margin-top: 12px; }
+.node .t span { display: block; font: 400 24px "Mono"; color: var(--ink2); margin-top: 10px; }
+.node.bad { border-color: var(--block); background: linear-gradient(180deg, rgba(239,122,109,.14), var(--sheet)); }
+.node.bad .t { color: var(--block); }
+.arrow { display: grid; place-items: center; }
+.arrow svg { width: 56px; height: 30px; }
+.threats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 90px; }
+.thr { border-top: 3px solid var(--block); padding-top: 20px; }
+.thr b { font: 500 26px "Mono"; color: var(--block); letter-spacing: .06em; display: block; }
+.thr span { font: 600 38px/1.1 "Grotesk"; display: block; margin-top: 8px; }
+
+/* ---------- S3 mandate ---------- */
+.s3 .stage { position: absolute; left: 112px; right: 112px; top: 360px; height: 560px; }
+.actor { position: absolute; border-radius: 22px; background: var(--sheet); border: 2px solid var(--rule); padding: 30px 34px; }
+.actor h3 { margin: 0; font: 600 44px "Grotesk"; }
+.actor p { margin: 8px 0 0; font: 400 25px "Mono"; color: var(--ink2); }
+.lease { position: absolute; left: 380px; top: 0; width: 560px; height: 420px; border-radius: 10px; padding: 34px 40px;
+  background: linear-gradient(160deg, #1b2636, #121a24); border: 2px solid var(--redact); overflow: hidden; }
+.lease .ttl { font: 400 52px/1 "Caslon"; color: var(--redact); }
+.lease .ttl small { display: block; font: 500 20px "Mono"; letter-spacing: .2em; color: var(--ink2); margin-top: 12px; }
+.lease dl { margin: 26px 0 0; display: grid; grid-template-columns: 190px 1fr; row-gap: 10px; font: 400 26px "Mono"; position: relative; z-index: 2; }
+.lease dt { color: var(--ink3); } .lease dd { margin: 0; color: var(--ink); }
+.lease .seal { position: absolute; right: -40px; bottom: -40px; width: 230px; height: 230px; opacity: .55; }
+.lease .sig { position: absolute; right: 34px; top: 34px; font: 500 20px "Mono"; color: var(--redact); border: 2px solid var(--redact); padding: 6px 12px; border-radius: 6px; letter-spacing: .1em; }
+
+/* ---------- S4 pipeline ---------- */
+.pipe { position: relative; margin-top: 130px; display: grid; grid-template-columns: repeat(10, 1fr); }
+.pipe::before { content: ""; position: absolute; left: 5%; right: 5%; top: 47px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--allow)); opacity: .55; }
+.st { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 6px; position: relative; }
+.st i { font-style: normal; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; background: var(--bg);
+  border: 3px solid var(--accent); color: var(--accent); font: 500 34px "Mono"; }
+.st b { font: 600 30px/1.1 "Grotesk"; margin-top: 22px; display: block; min-height: 66px; }
+.st span { font: 400 21px/1.3 "Mono"; color: var(--ink2); margin-top: 8px; display: block; }
+.st.h i { border-color: var(--redact); color: var(--redact); } .st.ai i { border-color: var(--ai); color: var(--ai); } .st.x i { border-color: var(--allow); color: var(--allow); }
+.cheap { display: flex; justify-content: space-between; margin: 60px 0 0; font: 500 21px "Mono"; letter-spacing: .16em; color: var(--ink3); text-transform: uppercase; }
+.cheap span:nth-child(2) { flex: 1; margin: 12px 30px 0; height: 1px; background: repeating-linear-gradient(90deg, var(--ink3) 0 8px, transparent 8px 16px); }
+.outcomes { display: flex; gap: 56px; margin-top: 90px; justify-content: center; align-items: center; }
+.outcomes .stamp { font-size: 46px; padding: 14px 34px 16px; }
+.outcomes .stamp small { font-size: 24px; }
+
+/* ---------- S5 grid ---------- */
+.vgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
+.vc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 26px 22px; min-height: 196px; position: relative; }
+.vc::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 4px; border-radius: 2px; background: var(--c, var(--accent)); }
+.vc h3 { margin: 0; font: 600 33px/1.1 "Grotesk"; color: var(--ink); }
+.vc p { margin: 12px 0 0; font: 400 21px/1.42 "Mono"; color: var(--ink2); }
+
+/* ---------- S6 proof ---------- */
+.s6 .shotA { position: absolute; left: 112px; top: 330px; width: 1170px; border-radius: 16px; border: 1px solid var(--rule); box-shadow: 0 40px 80px -30px #000; }
+.s6 .shotB { position: absolute; left: 1390px; top: 330px; width: 362px; border-radius: 14px; border: 1px solid var(--rule); box-shadow: 0 40px 80px -30px #000; transform: scale(1.1); transform-origin: top left; }
+.s6 .band { position: absolute; left: 112px; right: 112px; top: 845px; display: flex; align-items: center; gap: 28px;
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 16px; padding: 22px 32px; }
+.s6 .band .t { font: 600 34px/1.2 "Grotesk"; }
+.s6 .band .tag { font: 500 24px "Mono"; padding: 6px 14px; border-radius: 6px; }
+
+/* ---------- S7 sandbox ---------- */
+.box { position: absolute; left: 112px; top: 340px; width: 840px; height: 590px; }
+.mis { position: absolute; left: 1040px; top: 340px; width: 768px; }
+.mis .row { display: grid; grid-template-columns: 1fr 50px 1.25fr; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+.mis .row:first-child { border-top: 1px solid var(--rule); }
+.mis .a { font: 600 36px "Grotesk"; }
+.mis .r { font: 500 28px "Mono"; color: var(--allow); }
+.mis .head { font: 500 20px "Mono"; letter-spacing: .18em; color: var(--ink3); text-transform: uppercase; margin-bottom: 14px; display: flex; justify-content: space-between; }
+
+/* ---------- S8 speed ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 54px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.kpi { padding: 26px 28px 24px; border-left: 1px solid var(--rule); }
+.kpi:first-child { border-left: 0; padding-left: 0; }
+.kpi b { display: block; font: 400 104px/1 "Caslon"; color: var(--allow); letter-spacing: -.02em; }
+.kpi b small { font: 600 38px "Grotesk"; color: var(--ink2); margin-left: 8px; letter-spacing: 0; }
+.kpi span { display: block; font: 400 25px/1.3 "Grotesk"; color: var(--ink2); margin-top: 10px; }
+
+/* ---------- S9 bank ---------- */
+.gb { position: absolute; left: 112px; top: 330px; width: 940px; height: 380px; }
+.tests { position: absolute; left: 1120px; top: 330px; right: 112px; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.tests div { padding: 14px 0 18px; border-top: 1px solid var(--rule); }
+.tests b { display: block; font: 400 84px/1 "Caslon"; color: var(--ink); }
+.tests span { font: 400 23px "Mono"; color: var(--ink2); }
+.race { position: absolute; left: 1120px; top: 690px; width: 640px; border-radius: 14px; border: 1px solid var(--rule); box-shadow: 0 30px 60px -30px #000; }
+.bankpts { position: absolute; left: 112px; top: 760px; width: 940px; display: grid; gap: 16px; }
+.bankpts div { display: flex; gap: 20px; align-items: baseline; font: 600 34px/1.2 "Grotesk"; }
+.bankpts div i { font-style: normal; font: 500 22px "Mono"; color: var(--ink3); width: 40px; flex: none; }
+
+/* ---------- S10 close ---------- */
+.ints { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 54px; position: relative; z-index: 2; }
+.int { background: rgba(21,29,39,.92); border: 1px solid var(--rule); border-radius: 18px; padding: 28px 32px; }
+.int .k { font: 500 20px "Mono"; letter-spacing: .18em; color: var(--accent); text-transform: uppercase; }
+.int h3 { margin: 10px 0 18px; font: 600 40px "Grotesk"; }
+.int pre { margin: 0; font: 400 22px/1.5 "Mono"; color: var(--ink2); white-space: pre; background: var(--bg); border-radius: 10px; padding: 16px 18px; border: 1px solid var(--rule); }
+.int pre em { font-style: normal; color: var(--allow); } .int pre s { text-decoration: none; color: var(--block); } .int pre u { text-decoration: none; color: var(--redact); }
+.tagline { position: absolute; left: 112px; right: 112px; bottom: 150px; z-index: 2; display: flex; justify-content: space-between; align-items: flex-end; }
+.tagline p { margin: 0; font: 400 100px/1.04 "Caslon"; }
+.tagline p em { font-style: normal; color: var(--accent); }
+.tagline .run { text-align: right; font: 500 28px/1.6 "Mono"; color: var(--ink2); }
+.tagline .run b { color: var(--allow); font-weight: 500; font-size: 36px; }
+</style>
+</head>
+<body>
+
+<!-- 1 TITLE -->
+<section class="slide s1">
+  <div class="hero"></div>
+  <svg class="ros" data-r="470" data-op=".22" style="right:-20px; top:50%; transform:translateY(-50%); width:940px; height:940px"></svg>
+  <div class="title">
+    <div class="kick">HackYeah 2026 · Goldman Sachs — AI Control Layer</div>
+    <div class="word">Aegis</div>
+    <div class="sub">The control gateway for AI&nbsp;agents</div>
+  </div>
+  <div class="claim">
+    <p>Other guardrails ask if an action <em style="font-style:italic">looks dangerous.</em></p>
+    <p>Aegis asks if the agent was <u>authorized.</u></p>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>01 / 10</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide s2">
+  <div class="kick">The problem</div>
+  <h1>Agents don't just talk. <em>They act.</em></h1>
+  <div class="verbs">
+    <span class="verb">read contracts</span><span class="verb">call tools</span><span class="verb">send mail</span><span class="verb">call MCP</span><span class="verb">spawn agents</span><span class="verb k">with real permissions</span>
+  </div>
+  <div class="chain">
+    <div class="node"><div class="n">01</div><div class="t">Clean-looking PDF<span>contract.pdf</span></div></div>
+    <div class="arrow"><svg viewBox="0 0 56 30"><path d="M2 15h46M38 5l12 10-12 10" fill="none" stroke="#6f7c8a" stroke-width="3"/></svg></div>
+    <div class="node"><div class="n">02</div><div class="t">Hidden sentence<span>in metadata</span></div></div>
+    <div class="arrow"><svg viewBox="0 0 56 30"><path d="M2 15h46M38 5l12 10-12 10" fill="none" stroke="#6f7c8a" stroke-width="3"/></svg></div>
+    <div class="node"><div class="n">03</div><div class="t">Agent obeys<span>mail.send(...)</span></div></div>
+    <div class="arrow"><svg viewBox="0 0 56 30"><path d="M2 15h46M38 5l12 10-12 10" fill="none" stroke="#ef7a6d" stroke-width="3"/></svg></div>
+    <div class="node bad"><div class="n">04</div><div class="t">Confidential mail leaves<span>→ attacker</span></div></div>
+  </div>
+  <div class="threats">
+    <div class="thr"><b>LLM01</b><span>Prompt injection</span></div>
+    <div class="thr"><b>LLM06</b><span>Excessive agency</span></div>
+    <div class="thr"><b>LLM10</b><span>Unbounded consumption</span></div>
+    <div class="thr"><b>LLM03</b><span>Supply chain</span></div>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>02 / 10 · OWASP Top 10 for LLM</span></div>
+</section>
+
+<!-- 3 MANDATE -->
+<section class="slide s3">
+  <div class="kick">The insight</div>
+  <h1>Every task gets a <em>mandate.</em></h1>
+  <div class="muted" style="font-size:36px; margin-top:22px">Short-lived · HMAC-signed · the agent never holds credentials</div>
+  <div class="stage">
+    <svg style="position:absolute; inset:0; width:100%; height:100%; overflow:visible" viewBox="0 0 1696 560">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8fb0e8"/></marker>
+        <marker id="ahb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ef7a6d"/></marker>
+      </defs>
+      <!-- agent -> lease -->
+      <path d="M300 160 H372" stroke="#e5b05a" stroke-width="3" stroke-dasharray="8 7" fill="none"/>
+      <!-- lease -> gateway -->
+      <path d="M944 160 H1040" stroke="#8fb0e8" stroke-width="3" fill="none" marker-end="url(#ah)"/>
+      <!-- gateway -> tools -->
+      <path d="M1380 160 H1440" stroke="#8fb0e8" stroke-width="3" fill="none" marker-end="url(#ah)"/>
+      <!-- bypass -->
+      <path d="M150 260 V500 H1572 V250" stroke="#ef7a6d" stroke-width="3" stroke-dasharray="10 9" fill="none" marker-end="url(#ahb)"/>
+    </svg>
+    <div class="actor" style="left:0; top:60px; width:300px; border-color:var(--ai)"><h3 class="c-ai">Agent</h3><p>no keys</p></div>
+    <div class="lease">
+      <div class="sig">HMAC</div>
+      <div class="ttl">Mandate<small>TASK LEASE</small></div>
+      <dl>
+        <dt>documents</dt><dd>contract.pdf</dd>
+        <dt>tools</dt><dd>doc.read, …</dd>
+        <dt>recipients</dt><dd>allow-list</dd>
+        <dt>budget</dt><dd>tokens</dd>
+        <dt>TTL</dt><dd>short-lived</dd>
+      </dl>
+      <svg class="seal" data-r="115" data-op=".7" data-col="#e5b05a" data-n="10" viewBox="0 0 230 230"></svg>
+    </div>
+    <div class="actor" style="left:1048px; top:40px; width:330px; border-color:var(--accent); background:linear-gradient(180deg,rgba(143,176,232,.14),var(--sheet))"><h3 class="c-acc">Gateway</h3><p style="font-size:23px">holds credentials<br>checks every call</p></div>
+    <div class="actor" style="left:1448px; top:40px; width:248px"><h3>Tools</h3><p>models<br>mail · MCP</p></div>
+    <div style="position:absolute; left:640px; top:452px; background:var(--bg); padding:4px 22px; display:flex; gap:22px; align-items:center">
+      <span class="stamp c-block" style="font-size:44px">401</span>
+      <span style="font:600 34px Grotesk" class="c-block">bypass the gateway → no access</span>
+    </div>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>03 / 10</span></div>
+</section>
+
+<!-- 4 PIPELINE -->
+<section class="slide s4">
+  <div class="kick">One request, verified</div>
+  <h1 style="font-size:84px">10 checks. Cheapest first. <em>First BLOCK ends it.</em></h1>
+  <div class="pipe">
+    <div class="st"><i>01</i><b>Rate limit</b></div>
+    <div class="st"><i>02</i><b>Mandate</b><span>signed lease</span></div>
+    <div class="st"><i>03</i><b>Known attacks</b><span>13 signatures</span></div>
+    <div class="st"><i>04</i><b>Patterns</b><span>PII<br>secrets<br>injection</span></div>
+    <div class="st"><i>05</i><b>Data flow</b><span>IFC</span></div>
+    <div class="st h"><i>06</i><b>Human approval</b></div>
+    <div class="st ai"><i>07</i><b>AI review</b><span>local model<br>only tightens</span></div>
+    <div class="st"><i>08</i><b>Budget escrow</b></div>
+    <div class="st x"><i>09</i><b>Execution</b><span>sandbox</span></div>
+    <div class="st x"><i>10</i><b>Output check</b><span>DLP</span></div>
+  </div>
+  <div class="cheap"><span>fast · deterministic</span><span></span><span>expensive · model</span></div>
+  <div class="outcomes">
+    <span class="stamp c-allow">ALLOW<small>200</small></span>
+    <span class="stamp c-redact">REDACT<small>200</small></span>
+    <span class="stamp c-block">BLOCK<small>403</small></span>
+    <span class="stamp c-acc">SANDBOX<small>code.run</small></span>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>04 / 10</span></div>
+</section>
+
+<!-- 5 WHAT WE VERIFY -->
+<section class="slide s5">
+  <div class="kick">Coverage</div>
+  <h1>What we <em>verify.</em></h1>
+  <div class="vgrid">
+    <div class="vc"><h3>Identity &amp; mandate</h3><p>signed lease · tools · recipients · TTL</p></div>
+    <div class="vc" style="--c:var(--redact)"><h3>Polish PII</h3><p>PESEL · NIP · ID card · passport · IBAN · card (Luhn) — checksums</p></div>
+    <div class="vc" style="--c:var(--block)"><h3>Secrets</h3><p>passwords in a sentence · API keys · connection strings</p></div>
+    <div class="vc" style="--c:var(--block)"><h3>Prompt injection</h3><p>EN + PL · base64 · leet · zero-width · multi-turn</p></div>
+    <div class="vc"><h3>Documents</h3><p>PDF DOCX XLSX PPTX legacy · metadata/XMP/hidden · JS/macros/DDE · OCR</p></div>
+    <div class="vc"><h3>Data flow</h3><p>information-flow control (IFC)</p></div>
+    <div class="vc" style="--c:var(--block)"><h3>Supply chain</h3><p>model &amp; LoRA sha256 pins · pickle · CVEs · typosquats · MCP tool hash pin + quarantine</p></div>
+    <div class="vc" style="--c:var(--ai)"><h3>Model output</h3><p>XSS · SQLi · SSRF · rm -rf</p></div>
+    <div class="vc" style="--c:var(--allow)"><h3>Cost</h3><p>token budget · escrow</p></div>
+    <div class="vc" style="--c:var(--redact)"><h3>People</h3><p>human approvals</p></div>
+    <div class="vc" style="--c:var(--allow)"><h3>Sandbox</h3><p>code.run in a throw-away container</p></div>
+    <div class="vc"><h3>Evidence</h3><p>append-only audit</p></div>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>05 / 10</span></div>
+</section>
+
+<!-- 6 PROOF -->
+<section class="slide s6">
+  <div class="kick">Proof · poisoned contract</div>
+  <h1>The mail never left. <em class="c-block" style="color:var(--block)">Tool never called.</em></h1>
+  <img class="shotA" src="../img/trace-block-en.png" alt="Blocked mail.send trace">
+  <img class="shotB" src="../video3/mail-counter.png" alt="0 e-mails delivered">
+  <div class="band">
+    <span class="tag" style="background:rgba(195,166,240,.14); color:var(--ai)">AI detector forced to miss</span>
+    <svg viewBox="0 0 56 30" style="width:56px;height:30px"><path d="M2 15h46M38 5l12 10-12 10" fill="none" stroke="#aab4bf" stroke-width="3"/></svg>
+    <span class="t">data-flow rule <span class="mono c-block">IFC-001</span> still blocks</span>
+    <span style="flex:1"></span>
+    <span class="stamp c-block" style="font-size:30px; padding:8px 20px 10px">BLOCK<small style="font-size:17px">IFC-001</small></span>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>06 / 10</span></div>
+</section>
+
+<!-- 7 SANDBOX -->
+<section class="slide s7">
+  <div class="kick">Sandbox</div>
+  <h1><span class="mono" style="font-size:88px; color:var(--allow)">code.run</span> in a throw-away box.</h1>
+  <svg class="box" viewBox="0 0 840 590">
+    <defs><pattern id="hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="12" stroke="#283544" stroke-width="2"/></pattern></defs>
+    <rect x="4" y="4" width="832" height="582" rx="22" fill="url(#hatch)" stroke="#71bf96" stroke-width="3" stroke-dasharray="14 10"/>
+    <rect x="44" y="44" width="752" height="502" rx="16" fill="#0d1219" stroke="#283544" stroke-width="2"/>
+    <g font-family="Mono" font-size="27" fill="#e6ebe4">
+      <text x="80" y="110" fill="#71bf96" font-size="22" letter-spacing="4">CONTAINER · REMOVED AFTER EVERY RUN</text>
+      <text x="80" y="175">--network none</text>
+      <text x="80" y="225">read-only root</text>
+      <text x="80" y="275">/tmp 16 MB noexec</text>
+      <text x="80" y="325">no mounts · code via stdin</text>
+      <text x="80" y="375">user nobody</text>
+      <text x="80" y="425">all capabilities dropped</text>
+      <line x1="80" y1="460" x2="760" y2="460" stroke="#283544" stroke-width="2"/>
+      <text x="80" y="510" fill="#8fb0e8">256 MB · 0.5 CPU · 64 proc · 10 s</text>
+    </g>
+  </svg>
+  <div class="mis">
+    <div class="head"><span>agent tries</span><span>what happens</span></div>
+    <div class="row"><span class="a">internet</span><span class="dim">→</span><span class="r">fails inside</span></div>
+    <div class="row"><span class="a">infinite loop</span><span class="dim">→</span><span class="r">killed at 10 s</span></div>
+    <div class="row"><span class="a">eat memory</span><span class="dim">→</span><span class="r">OOM</span></div>
+    <div class="row"><span class="a">fork bomb</span><span class="dim">→</span><span class="r">pids cap</span></div>
+    <div class="row"><span class="a">steal keys</span><span class="dim">→</span><span class="r">none inside</span></div>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>07 / 10</span></div>
+</section>
+
+<!-- 8 SPEED -->
+<section class="slide s8">
+  <div class="kick">Speed</div>
+  <h1>Milliseconds, <em>not hundreds of them.</em></h1>
+  <div class="kpis">
+    <div class="kpi"><b>0.36<small>ms</small></b><span>content checks · p50</span></div>
+    <div class="kpi"><b>2.3<small>ms</small></b><span>blocked tool call · full decision</span></div>
+    <div class="kpi"><b>7.1<small>ms</small></b><span>allowed tool call · end-to-end</span></div>
+    <div class="kpi"><b style="color:var(--accent)">195<small>req/s</small></b><span>16 concurrent · one 4-vCPU container</span></div>
+  </div>
+  <svg id="chart" viewBox="0 0 1696 400" style="width:1696px; height:400px; margin-top:34px; display:block"></svg>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>08 / 10 · others: published vendor figures</span></div>
+</section>
+
+<!-- 9 IN THE BANK -->
+<section class="slide s9">
+  <div class="kick">Runs inside the bank</div>
+  <h1>Your hardware. <em>Your data stays.</em></h1>
+  <svg class="gb" viewBox="0 0 940 380">
+    <g font-family="Grotesk">
+      <rect x="2" y="40" width="360" height="230" rx="18" fill="#151d27" stroke="#8fb0e8" stroke-width="2.5"/>
+      <rect x="578" y="40" width="360" height="230" rx="18" fill="#151d27" stroke="#8fb0e8" stroke-width="2.5"/>
+      <g fill="#e6ebe4" font-weight="600" font-size="42"><text x="34" y="110">NVIDIA GB10</text><text x="610" y="110">NVIDIA GB10</text></g>
+      <g fill="#aab4bf" font-family="Mono" font-size="24"><text x="34" y="150">DGX Spark</text><text x="610" y="150">DGX Spark</text></g>
+      <g fill="#8fb0e8" font-family="Mono" font-size="30"><text x="34" y="235">128 GB unified</text><text x="610" y="235">128 GB unified</text></g>
+      <line x1="362" y1="155" x2="578" y2="155" stroke="#71bf96" stroke-width="5"/>
+      <line x1="362" y1="171" x2="578" y2="171" stroke="#71bf96" stroke-width="2" opacity=".5"/>
+      <text x="470" y="138" text-anchor="middle" fill="#71bf96" font-family="Mono" font-size="26">200 Gb/s</text>
+      <path d="M182 270 V320 H758 V270" fill="none" stroke="#c3a6f0" stroke-width="2.5" stroke-dasharray="8 7"/>
+      <rect x="250" y="300" width="440" height="62" rx="31" fill="#0d1219" stroke="#c3a6f0" stroke-width="2.5"/>
+      <text x="470" y="341" text-anchor="middle" fill="#c3a6f0" font-family="Mono" font-size="25">vLLM · tensor parallel 2</text>
+    </g>
+  </svg>
+  <div class="bankpts">
+    <div><i>01</i><span>Fixed hardware cost, <span class="muted">not per-token bills</span></span></div>
+    <div><i>02</i><span>Every token <span class="c-allow">reserved &amp; logged</span></span></div>
+    <div><i>03</i><span>Confidential prompt → cloud model: <span class="c-block">BLOCKED</span></span></div>
+  </div>
+  <div class="tests">
+    <div><b>334</b><span>automated tests</span></div>
+    <div><b>106</b><span>YAML content cases</span></div>
+    <div><b>17</b><span>red-team probes</span></div>
+    <div><b>10</b><span>end-to-end scenarios</span></div>
+  </div>
+  <img class="race" src="../img/race-en.png" alt="30 agents racing one budget">
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>09 / 10 · 30 agents · one budget</span></div>
+</section>
+
+<!-- 10 CLOSE -->
+<section class="slide s10">
+  <svg class="ros" data-r="400" data-op=".2" style="right:-170px; bottom:-150px; width:800px; height:800px"></svg>
+  <div class="kick">Drop-in integration</div>
+  <h1>No agent rewrite.</h1>
+  <div class="ints">
+    <div class="int"><div class="k">OpenAI-compatible</div><h3>Swap base_url</h3><pre>OpenAI(
+  <em>base_url</em>="…/v1",
+  api_key=AGENT_KEY)</pre></div>
+    <div class="int"><div class="k">Python SDK</div><h3>Typed refusals</h3><pre>except <s>Blocked</s>
+except <u>ApprovalRequired</u>
+except <s>RateLimited</s></pre></div>
+    <div class="int"><div class="k">MCP</div><h3>MCP proxy</h3><pre>agent → <em>/mcp</em> → tools
+tool hash pin
++ quarantine</pre></div>
+  </div>
+  <div class="tagline">
+    <p>The agent gets a <em>mandate</em> —<br>not a master key.</p>
+    <div class="run"><b>$ make run</b><br>aegis.alfaguys.com/docs</div>
+  </div>
+  <div class="foot"><span><b>Aegis</b> · HackYeah 2026 · Goldman Sachs — AI Control Layer</span><span>10 / 10</span></div>
+</section>
+
+<script>
+// guilloché rosette: r(θ)=R*.72 + R*.2*sin(12θ+φ) + R*.08*cos(5θ−2φ), 18 phases
+document.querySelectorAll("svg.ros, svg.seal").forEach(svg => {
+  const R = +svg.dataset.r, op = svg.dataset.op || ".2", col = svg.dataset.col || "#8fb0e8", N = +(svg.dataset.n || 18);
+  svg.setAttribute("viewBox", `0 0 ${2*R} ${2*R}`);
+  let out = "";
+  for (let k = 0; k < N; k++) {
+    const ph = k * 2 * Math.PI / N; let d = "";
+    for (let i = 0; i <= 720; i++) {
+      const t = i / 720 * 2 * Math.PI;
+      const r = R*.72 + R*.2*Math.sin(12*t + ph) + R*.08*Math.cos(5*t - 2*ph);
+      d += (i ? "L" : "M") + (R + r*Math.cos(t)*.98).toFixed(1) + "," + (R + r*Math.sin(t)*.98).toFixed(1);
+    }
+    out += `<path d="${d}Z"/>`;
+  }
+  for (const f of [.3, .42]) {
+    let d = "";
+    for (let i = 0; i <= 360; i++) { const t = i/360*2*Math.PI, r = R*f + R*.03*Math.sin(24*t); d += (i?"L":"M")+(R+r*Math.cos(t)).toFixed(1)+","+(R+r*Math.sin(t)).toFixed(1); }
+    out += `<path d="${d}Z"/>`;
+  }
+  svg.innerHTML = `<g fill="none" stroke="${col}" stroke-width="${R>200?1.1:.8}" opacity="${op}">${out}</g>`;
+});
+
+// log-scale latency chart
+(function () {
+  const svg = document.getElementById("chart");
+  const L = 600, Rx = 1600, lo = Math.log10(0.1), hi = Math.log10(1000);
+  const x = v => L + (Math.log10(v) - lo) / (hi - lo) * (Rx - L);
+  const rows = [
+    ["Aegis · content checks p50", 0.36, null, "0.36 ms", "#71bf96", 1],
+    ["Aegis · blocked tool call", 2.3, null, "2.3 ms", "#71bf96", 1],
+    ["Aegis · allowed, end-to-end", 7.1, null, "7.1 ms", "#71bf96", 1],
+    ["Protect AI classifier v2", 18, null, "18 ms · GPU", "#6f7c8a", 0],
+    ["Lakera Guard", 20, null, "<20 ms · API, 1k chars", "#6f7c8a", 0],
+    ["LLM Guard", 30, 200, "30–200 ms", "#6f7c8a", 0],
+    ["Azure Prompt Shields", 100, 300, "100–300 ms", "#6f7c8a", 0],
+    ["NeMo Guardrails / Llama Guard 3 8B", 500, null, "~500 ms", "#6f7c8a", 0],
+  ];
+  const top = 6, rh = 42; let s = "";
+  [0.1, 1, 10, 100, 1000].forEach(v => {
+    s += `<line x1="${x(v)}" y1="${top-4}" x2="${x(v)}" y2="${top + rows.length*rh}" stroke="#283544" stroke-width="1.5"/>`;
+    s += `<text x="${x(v)}" y="${top + rows.length*rh + 30}" text-anchor="middle" fill="#6f7c8a" font-family="Mono" font-size="20">${v} ms</text>`;
+  });
+  rows.forEach((r, i) => {
+    const y = top + i*rh, cy = y + rh/2;
+    s += `<text x="${L-24}" y="${cy+8}" text-anchor="end" font-family="Grotesk" font-size="25" font-weight="${r[5]?600:400}" fill="${r[5]?'#e6ebe4':'#aab4bf'}">${r[0]}</text>`;
+    const x0 = x(0.1), x1 = x(r[1]);
+    if (r[2]) {
+      s += `<rect x="${x0}" y="${cy-11}" width="${x1-x0}" height="22" rx="3" fill="${r[4]}" opacity=".55"/>`;
+      s += `<rect x="${x1}" y="${cy-11}" width="${x(r[2])-x1}" height="22" rx="3" fill="${r[4]}" opacity=".25" stroke="${r[4]}" stroke-dasharray="4 3"/>`;
+    } else {
+      s += `<rect x="${x0}" y="${cy-11}" width="${x1-x0}" height="22" rx="3" fill="${r[4]}" opacity="${r[5]?1:.55}"/>`;
+    }
+    s += `<text x="${x(r[2]||r[1])+14}" y="${cy+8}" font-family="Mono" font-size="22" fill="${r[5]?'#71bf96':'#aab4bf'}">${r[3]}</text>`;
+  });
+  svg.innerHTML = s;
+})();
+</script>
+</body>
+</html>

@@ -322,6 +322,9 @@ Each slide answers one question a jury would ask.
 <!--
 (60 s, live in the dashboard: Run a scenario → Poisoned contract)
 The mail counter lives in the tool service, not the gateway. A blocked call never increments it.
+Alternative opener: the Live test tab — chat with the assistant exactly like a normal chat app
+(DeepSeek underneath), then paste a client's PESEL mid-conversation: the panel on the right shows
+the value redacted BEFORE the model saw it, with per-stage timings, tokens and cost per turn.
 -->
 
 ---

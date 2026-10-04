@@ -32,7 +32,7 @@ NIP, ID card, passport, IBAN, address; passwords written in sentences; API keys;
 base64, leetspeak, zero-width, multi-turn) → data flow (confidential data can't reach outside sinks) → human
 approval for risky tools → AI review (local model, can only tighten) → budget escrow (tokens reserved before the
 call) → execution (code runs in a network-less sandbox) → output check (DLP before the agent sees it).
-Decision in ~0.3 ms (p50); a full tool call in ~9 ms.
+Content checks take 0.36 ms (p50) and a full blocked decision 2.3 ms — 1–3 orders of magnitude faster than ML or LLM guardrails (18–500 ms), with no API round trip.
 
 It also reads what humans don't see in files: PDF, DOCX, XLSX, PPTX, legacy DOC/XLS/PPT, images (EXIF, GPS, XMP)
 and scans (OCR, Polish + English), and blocks active content (JavaScript, macros, DDE, remote templates). Model
@@ -55,10 +55,14 @@ Built from scratch during HackYeah 2026. Working end to end:
 - Document analysis for 10+ formats with hidden-content detection and OCR; sandbox for code; MCP proxy with
   tool hash pinning; model/LoRA hash pinning; supply-chain signatures (pickle, CVE, typosquat).
 - One policy file (strict / balanced / permissive profiles), hot reload, versions, rollback.
-- Dashboard: guided "Start here" in 3 steps, 10 live attack scenarios with the pipeline replayed step by step,
-  "Be the agent" console, content and file checker, approvals, budgets, audit, configuration.
-- Python SDK 0.3.0, landing page, 60 s promo film, 10-slide technical deck.
-- 250 automated tests (positive and negative for every control), 82 YAML content cases, 10 end-to-end scenarios.
+- Dashboard: "Start here → Live test" (a chat with the guard layer underneath, every message checked live), guided tour,
+  10 attack scenarios replayed stage by stage, "Be the agent" console, content and file checker, approvals, budgets,
+  audit, configuration.
+- Python SDK 0.3.0 (incl. admin client), API docs page, a Claude Code skill that tests the API, landing page with an
+  animated data-flow view, sandbox model and benchmark comparison, 60 s promo film, 10-slide technical deck.
+- Repo organised for assessment: `1-solution`, `2-architecture`, `3-reporting`, `4-testing`, `5-implementation`.
+- 334 automated tests (positive and negative for every control), 106 YAML content cases, 17 red-team probes,
+  10 end-to-end scenarios, a 12-case API probe.
   Proofs: poisoned contract → 0 e-mails reached the mail service; 30 agents racing for one budget → 0 tokens over.
 
 Goal: a control layer a bank could put in front of its agents tomorrow — deterministic rules decide permissions,
@@ -86,21 +90,26 @@ https://aegis.alfaguys.com
 https://github.com/Alfiarze/hackyeah-2026-goldman
 
 ## Instructions on how to open project
-**Live:** landing https://aegis.alfaguys.com · dashboard https://dashboardaegis.alfaguys.com (admin key in the
-top bar — we hand it to the jury) · API https://gatewayaegis.alfaguys.com (`/health`, `/docs`).
+**Live:** landing https://aegis.alfaguys.com · dashboard https://dashboardaegis.alfaguys.com (admin key `hackyeah`)
+· API https://gatewayaegis.alfaguys.com (`/health`, `/docs`) · API guide https://aegis.alfaguys.com/docs/
+
+**For assessment:** the repo has `1-solution` … `5-implementation` folders following the recommended template.
 
 **Locally** (needs Docker):
 ```
 git clone https://github.com/Alfiarze/hackyeah-2026-goldman && cd hackyeah-2026-goldman
 make run                      # Postgres + gateway + tool backends + sandbox
 open http://localhost:8000/dashboard/     # admin key: hackyeah
-make test-docker              # full test suite (250 tests)
+make test-docker              # full test suite (334 tests)
+make redteam-live             # 17 adversarial probes
 make demo                     # run every attack scenario against the running stack
 ```
-In the dashboard start with **"Start here"** (3 steps, ~3 minutes), then **Scenarios** → "Poisoned contract".
+In the dashboard start with **Start here → Live test** (try a PESEL, a password or "ignore previous instructions"), then
+**Run a scenario** → "Poisoned contract".
 Model: set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` in `.env` (any OpenAI-compatible server, e.g. vLLM on
-GB10); without it the AI review uses a local heuristic and the console a mock model — every control still works.
-Agent integration: point an OpenAI client at `http://localhost:8000/v1`, or `pip install ./sdk`.
+two GB10s); without it the AI review uses a local heuristic and the console a mock model — every control still works.
+Agent integration: point an OpenAI client at `http://localhost:8000/v1`, or `pip install ./sdk`. To let an agent test the
+API: download the Claude Code skill from https://aegis.alfaguys.com/docs/ and run `aegis_probe.py suite`.
 
 ## Team name
 Aegis

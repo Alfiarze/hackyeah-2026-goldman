@@ -80,3 +80,7 @@ clean:
 # (set CHROME_PATH to use an installed Chromium).
 film:
 	cd docs/pitch/video && python3 score.py && node render.cjs ../aegis-film.mp4 30
+
+# 3-minute caption-driven pitch film (docs/pitch/aegis-pitch-3min.mp4), same pipeline as `film`.
+film3:
+	cd docs/pitch/video3 && python3 score.py && node render.cjs ../aegis-pitch-3min.mp4 30

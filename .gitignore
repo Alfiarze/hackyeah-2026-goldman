@@ -9,3 +9,4 @@ policy/.*.tmp
 feeds/.*.tmp
 landing/.astro/
 docs/pitch/video/score.wav
+docs/pitch/video3/score.wav

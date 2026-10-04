@@ -1,0 +1,210 @@
+---
+import Base from "../layouts/Base.astro";
+import Top from "../components/Top.astro";
+import Footer from "../components/Footer.astro";
+import L from "../components/L.astro";
+
+const API = "https://gatewayaegis.alfaguys.com";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const toc = [
+  ["start", "Quickstart"], ["keys", "Keys"], ["endpoints", "Endpoints"], ["decision", "The decision"],
+  ["profiles", "Task profiles"], ["openai", "OpenAI drop-in"], ["mcp", "MCP"], ["dryrun", "Dry runs"],
+  ["sdk", "Python SDK"], ["skill", "Agent skill"],
+];
+---
+<Base title="Aegis docs: use the gateway API" description="How to call the Aegis control gateway: create a task, call tools and models under its mandate, read the decision.">
+  <Top />
+  <main class="docs">
+    <div class="wrap docs-grid">
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="kicker">Docs</p>
+        <ol>{toc.map(([id, t]) => <li><a href={`#${id}`}>{t}</a></li>)}</ol>
+        <p class="docs-base"><span>Base URL</span><code>{API}</code></p>
+      </aside>
+
+      <article class="docs-body">
+        <h1 class="display">Use the gateway</h1>
+        <p class="lede">
+          <L
+            en="Aegis is an HTTP API. A trusted app opens a <b>task</b> and gets a <b>lease</b>; the agent sends every model, tool and MCP call with that lease, and each call comes back with a decision. Ten minutes from zero to a blocked attack."
+            pl="Aegis to API HTTP. Zaufana aplikacja otwiera <b>zadanie</b> i dostaje <b>przepustkę</b>; agent wysyła z nią każde wywołanie modelu, narzędzia i MCP, a każde wraca z decyzją. Dziesięć minut od zera do zablokowanego ataku."
+          />
+        </p>
+        <p class="docs-links">
+          <a href={`${API}/docs`} target="_blank" rel="noopener">OpenAPI / Swagger</a> ·
+          <a href={`${API}/health`} target="_blank" rel="noopener">/health</a> ·
+          <a href={`${base}skills/aegis-gateway.zip`}>Claude Code skill (.zip)</a> ·
+          <a href="https://github.com/Alfiarze/hackyeah-2026-goldman" target="_blank" rel="noopener">GitHub</a>
+        </p>
+
+        <section id="start">
+          <h2>Quickstart</h2>
+          <p class="step"><b>1</b> <L en="The app creates a task and gets a lease." pl="Aplikacja tworzy zadanie i dostaje przepustkę." /></p>
+<pre><code>{`curl -s -X POST ${API}/v1/tasks \\
+  -H "X-App-Key: $AEGIS_APP_KEY" -H "Content-Type: application/json" \\
+  -d '{"principal":"lawyer_anna","agent_id":"demo-agent",
+       "profile":"contract_review","params":{"client":"A"}}'`}</code></pre>
+<pre class="out"><code>{`{"task_id":"t_7c1709968b09", "mandate":{"tools":["doc.read","legal_db.search","notes.write",
+  "memory.read","memory.write","mail.send"], "resources":["/clients/A/*","/public/*"],
+  "recipients_allow":["*@lawfirm.example","*@client-A.example"], "budget":{"tokens":20000,"calls":30}},
+ "expires_at":"…", "lease":"t_7c1709968b09.db7da952…"}`}</code></pre>
+
+          <p class="step"><b>2</b> <L en="The agent calls a tool with its key and the lease." pl="Agent woła narzędzie swoim kluczem i przepustką." /></p>
+<pre><code>{`export LEASE=t_7c1709968b09.db7da952…
+curl -s -X POST ${API}/v1/tools/doc.read/call \\
+  -H "Authorization: Bearer agent-key-demo" -H "X-Mandate-Lease: $LEASE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"args":{"path":"/clients/A/contracts/acquisition.txt"}}'`}</code></pre>
+<pre class="out"><code>{`200 {"result":{"content":"UMOWA SPRZEDAŻY UDZIAŁÓW (POUFNE - KLIENT A)…"},
+     "mandate":{"action":"ALLOW","tool_invoked":true,"latency_ms":17.5,"timings":{…}}}`}</code></pre>
+
+          <p class="step"><b>3</b> <L en="The hijacked agent tries to send it out. Nothing runs." pl="Przejęty agent próbuje to wysłać. Nic się nie wykonuje." /></p>
+<pre><code>{`curl -s -X POST ${API}/v1/tools/mail.send/call \\
+  -H "Authorization: Bearer agent-key-demo" -H "X-Mandate-Lease: $LEASE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"args":{"to":"deal-desk@evil-mergers.com","subject":"Contract","body":"…"}}'`}</code></pre>
+<pre class="out block"><code>{`403 {"error":{"type":"mandate_blocked","reason_code":"RECIPIENT_NOT_ALLOWED","rule_id":"MANDATE-RCPT"},
+     "mandate":{"action":"BLOCK","stage":"mandate","tool_invoked":false,"latency_ms":2.2,
+       "findings":[{"rule_id":"MANDATE-RCPT","detail":{"recipient":"deal-desk@evil-mergers.com",
+                    "allowed":["*@lawfirm.example","*@client-A.example"]}}]}}`}</code></pre>
+
+          <p class="step"><b>4</b> <L en="Finish the task: the lease stops working." pl="Zakończ zadanie: przepustka przestaje działać." /></p>
+<pre><code>{`curl -s -X POST ${API}/v1/tasks/t_7c1709968b09/complete \\
+  -H "Authorization: Bearer agent-key-demo" -H "X-Mandate-Lease: $LEASE"`}</code></pre>
+        </section>
+
+        <section id="keys">
+          <h2><L en="Keys" pl="Klucze" /></h2>
+          <table>
+            <thead><tr><th><L en="Header" pl="Nagłówek" /></th><th><L en="Who" pl="Kto" /></th><th><L en="For" pl="Do czego" /></th></tr></thead>
+            <tbody>
+              <tr><td><code>X-App-Key</code></td><td><L en="trusted app" pl="zaufana aplikacja" /></td><td><L en="create tasks, register models" pl="tworzenie zadań, rejestracja modeli" /></td></tr>
+              <tr><td><code>Authorization: Bearer &lt;agent key&gt;</code> + <code>X-Mandate-Lease</code></td><td>agent</td><td><L en="every model, tool, MCP and delegation call" pl="każde wywołanie modelu, narzędzia, MCP i delegacja" /></td></tr>
+              <tr><td><code>X-Admin-Key</code></td><td>security / <L en="jury" pl="jury" /></td><td><L en="dashboard, policy, dry runs, approvals, audit" pl="dashboard, polityka, testy na sucho, zgody, audyt" /></td></tr>
+            </tbody>
+          </table>
+          <p class="note"><L en="Demo agent keys: <code>agent-key-demo</code>, <code>agent-key-other</code>. The production app and admin keys are handed to the jury. Locally (<code>make run</code>): <code>dev-app-key</code>, <code>dev-admin-key</code>." pl="Klucze agentów demo: <code>agent-key-demo</code>, <code>agent-key-other</code>. Produkcyjne klucze aplikacji i admina przekazujemy jury. Lokalnie (<code>make run</code>): <code>dev-app-key</code>, <code>dev-admin-key</code>." /></p>
+        </section>
+
+        <section id="endpoints">
+          <h2><L en="Endpoints" pl="Endpointy" /></h2>
+          <table class="ep">
+            <tbody>
+              <tr><td><span class="m post">POST</span><code>/v1/tasks</code></td><td><L en="open a task, get the lease (app key)" pl="otwórz zadanie, dostań przepustkę (klucz aplikacji)" /></td></tr>
+              <tr><td><span class="m get">GET</span><code>/v1/tasks/&#123;id&#125;</code></td><td><L en="mandate, classification so far, status" pl="mandat, dotychczasowa poufność, status" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/v1/tools/&#123;tool&#125;/call</code></td><td><code>{`{"args":{…}}`}</code> — <L en="call a tool" pl="wywołaj narzędzie" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/v1/chat/completions</code></td><td><L en="OpenAI-compatible model call" pl="wywołanie modelu zgodne z OpenAI" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/mcp</code></td><td><L en="MCP JSON-RPC: tools/list (filtered by mandate), tools/call" pl="MCP JSON-RPC: tools/list (filtrowane mandatem), tools/call" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/v1/tasks/&#123;id&#125;/delegate</code></td><td><L en="hand work to another agent: a subset of the mandate, depth ≤ 3" pl="przekaż pracę innemu agentowi: podzbiór mandatu, głębokość ≤ 3" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/v1/tasks/&#123;id&#125;/complete</code></td><td><L en="end the task, kill the lease" pl="zakończ zadanie, unieważnij przepustkę" /></td></tr>
+              <tr><td><span class="m post">POST</span><code>/v1/models/register</code></td><td><L en="supply-chain check of a model or LoRA (hash pins, pickle, typosquats)" pl="kontrola łańcucha dostaw modelu albo LoRA (hashe, pickle, typosquaty)" /></td></tr>
+              <tr><td><span class="m get">GET</span><code>/health</code></td><td><L en="status, policy and feed version, model" pl="status, wersja polityki i feedu, model" /></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="decision">
+          <h2><L en="The decision" pl="Decyzja" /></h2>
+          <p><L en="Every response carries <code>mandate</code>:" pl="Każda odpowiedź niesie <code>mandate</code>:" /></p>
+<pre><code>{`{ "action": "ALLOW | REDACT | BLOCK",
+  "rule_id": "MANDATE-RCPT",  "reason_code": "RECIPIENT_NOT_ALLOWED",  "stage": "mandate",
+  "tool_invoked": false,      "latency_ms": 2.2,   "policy_version": "v12-…",
+  "findings": [ { "action", "rule_id", "reason_code", "stage", "detail": {…} } ],
+  "timings": { "mandate": 0.77, "budget": 2.48, … } }`}</code></pre>
+          <table>
+            <thead><tr><th>HTTP</th><th><L en="Meaning" pl="Znaczenie" /></th></tr></thead>
+            <tbody>
+              <tr><td>200</td><td><L en="allowed; with <code>REDACT</code> the content was masked (e.g. <code>[REDACTED:PESEL]</code>) and the call went on" pl="przepuszczone; przy <code>REDACT</code> treść zamaskowana (np. <code>[REDACTED:PESEL]</code>), wywołanie poszło dalej" /></td></tr>
+              <tr><td>403</td><td><L en="blocked by policy (<code>mandate</code> explains), or a bad / expired / completed lease (<code>error.reason_code</code>)" pl="zablokowane przez politykę (wyjaśnia <code>mandate</code>) albo zła / wygasła / zakończona przepustka (<code>error.reason_code</code>)" /></td></tr>
+              <tr><td>429</td><td><L en="budget (<code>BUD-*</code>), rate limit (<code>RATE-001</code>) or circuit breaker (<code>CIRCUIT-001</code>)" pl="budżet (<code>BUD-*</code>), limit na minutę (<code>RATE-001</code>) albo bezpiecznik (<code>CIRCUIT-001</code>)" /></td></tr>
+              <tr><td>502</td><td><L en="model, tool or sandbox unreachable: failed closed" pl="model, narzędzie albo piaskownica nieosiągalne: odmowa (fail-closed)" /></td></tr>
+            </tbody>
+          </table>
+          <p class="note"><L en="Common rules: <code>MANDATE-TOOL</code> · <code>MANDATE-RES</code> · <code>MANDATE-RCPT</code> · <code>IFC-001</code> data flow · <code>PII-001</code> · <code>SEC-001</code> secrets · <code>INJ-001/002</code> injection · <code>DOC-001</code> active content · <code>ATK-*</code> signatures · <code>APPROVAL-001</code> waits for a person · <code>MODEL-HASH-*</code>." pl="Najczęstsze reguły: <code>MANDATE-TOOL</code> · <code>MANDATE-RES</code> · <code>MANDATE-RCPT</code> · <code>IFC-001</code> przepływ danych · <code>PII-001</code> · <code>SEC-001</code> sekrety · <code>INJ-001/002</code> injection · <code>DOC-001</code> aktywna treść · <code>ATK-*</code> sygnatury · <code>APPROVAL-001</code> czeka na człowieka · <code>MODEL-HASH-*</code>." /></p>
+        </section>
+
+        <section id="profiles">
+          <h2><L en="Task profiles" pl="Profile zadań" /></h2>
+          <table>
+            <thead><tr><th>profile</th><th><L en="Tools" pl="Narzędzia" /></th><th><L en="Reads" pl="Czyta" /></th></tr></thead>
+            <tbody>
+              <tr><td><code>contract_review</code><br><small>params: <code>client</code></small></td><td>doc.read, legal_db.search, notes.write, memory.read/write, mail.send → <code>*@lawfirm.example</code>, <code>*@client-&#123;client&#125;.example</code></td><td><code>/clients/&#123;client&#125;/*</code>, <code>/public/*</code></td></tr>
+              <tr><td><code>data_task</code></td><td>doc.read, legal_db.search, <b>code.run</b> <L en="(sandbox, no network)" pl="(piaskownica, bez sieci)" />, notes.write</td><td><code>/public/*</code></td></tr>
+              <tr><td><code>research</code></td><td>legal_db.search, <b>http.post</b> <L en="(waits for approval)" pl="(czeka na zgodę)" />, notes.write</td><td><code>/public/*</code></td></tr>
+            </tbody>
+          </table>
+          <p class="note"><L en="Once a task reads a confidential file, it stays confidential: sending that data to a less-cleared destination is <code>IFC-001</code>, even to an allowed recipient." pl="Gdy zadanie przeczyta poufny plik, zostaje poufne: wysłanie tych danych do miejsca o niższych uprawnieniach to <code>IFC-001</code>, nawet do dozwolonego odbiorcy." /></p>
+        </section>
+
+        <section id="openai">
+          <h2><L en="OpenAI drop-in" pl="Zamiennik OpenAI" /></h2>
+          <p><L en="Point any OpenAI client at Aegis. The agent key is the API key; the lease is a header." pl="Skieruj dowolnego klienta OpenAI na Aegis. Klucz agenta to klucz API, przepustka to nagłówek." /></p>
+<pre><code>{`from openai import OpenAI
+
+client = OpenAI(base_url="${API}/v1", api_key="agent-key-demo",
+                default_headers={"X-Mandate-Lease": LEASE})
+MODEL = "…"   # GET /health → "model" (the on-prem model), or "mock/echo" for a test echo
+r = client.chat.completions.create(model=MODEL, messages=[
+    {"role": "user", "content": "Summarise. My PESEL is 44051401359"}])
+print(r.choices[0].message.content)     # … [REDACTED:PESEL]
+print(r.model_extra["mandate"]["action"])   # REDACT`}</code></pre>
+        </section>
+
+        <section id="mcp">
+          <h2>MCP</h2>
+<pre><code>{`curl -s -X POST ${API}/mcp -H "Authorization: Bearer agent-key-demo" -H "X-Mandate-Lease: $LEASE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"legal_db.search","arguments":{"query":"break fee"}}}'`}</code></pre>
+          <p class="note"><L en="<code>tools/list</code> shows only tools on the mandate. Tool definitions are pinned by hash; a changed definition is quarantined." pl="<code>tools/list</code> pokazuje tylko narzędzia z mandatu. Definicje narzędzi są przypięte hashem; zmieniona trafia do kwarantanny." /></p>
+        </section>
+
+        <section id="dryrun">
+          <h2><L en="Dry runs (admin key)" pl="Testy na sucho (klucz admina)" /></h2>
+          <p><L en="Check text or a whole file without executing anything." pl="Sprawdź tekst albo cały plik bez wykonywania czegokolwiek." /></p>
+<pre><code>{`curl -s -X POST ${API}/admin/playground/evaluate -H "X-Admin-Key: $AEGIS_ADMIN_KEY" \\
+  -H "Content-Type: application/json" -d '{"text":"chcę zmienić hasło kacperkochamame"}'
+# → {"decision":{"action":"BLOCK","rule_id":"SEC-001",…}, "redacted":null, "executed":false}
+
+curl -s -X POST "${API}/admin/playground/document?name=umowa.pdf" -H "X-Admin-Key: $AEGIS_ADMIN_KEY" \\
+  --data-binary @umowa.pdf
+# → decision + document.sections[] (metadata, XMP, comments, hidden text…) + document.active[]`}</code></pre>
+        </section>
+
+        <section id="sdk">
+          <h2>Python SDK</h2>
+<pre><code>{`pip install "git+https://github.com/Alfiarze/hackyeah-2026-goldman#subdirectory=sdk"
+
+from aegis_sdk import Aegis, Blocked
+
+aegis = Aegis("${API}", app_key=APP_KEY, agent_key="agent-key-demo")
+with aegis.create_task(principal="anna", agent_id="demo-agent",
+                       profile="contract_review", params={"client": "A"}) as task:
+    doc = task.call("doc.read", path="/clients/A/contracts/acquisition.txt")
+    try:
+        task.call("mail.send", to="deal-desk@evil-mergers.com", subject="x", body=doc.content)
+    except Blocked as e:
+        print(e.rule_id, e.tool_invoked)      # MANDATE-RCPT False`}</code></pre>
+          <p class="note"><L en="Exceptions: <code>Blocked</code>, <code>ApprovalRequired</code> (<code>.approval_id</code>), <code>BudgetExceeded</code>, <code>RateLimited</code>, <code>Unavailable</code>, <code>Rejected</code>. Admin client: <code>Admin(url, admin_key=…)</code>." pl="Wyjątki: <code>Blocked</code>, <code>ApprovalRequired</code> (<code>.approval_id</code>), <code>BudgetExceeded</code>, <code>RateLimited</code>, <code>Unavailable</code>, <code>Rejected</code>. Klient admina: <code>Admin(url, admin_key=…)</code>." /></p>
+        </section>
+
+        <section id="skill">
+          <h2><L en="Let an agent test it" pl="Niech agent to przetestuje" /></h2>
+          <p><L en="A ready skill for Claude Code (works for any agent that can run Python): it knows the API and ships a no-install probe with a 12-case allow/block suite." pl="Gotowy skill dla Claude Code (zadziała z każdym agentem, który uruchomi Pythona): zna API i ma probe bez instalacji z zestawem 12 przypadków przepuść/zablokuj." /></p>
+<pre><code>{`mkdir -p ~/.claude/skills && cd ~/.claude/skills
+curl -sLO https://aegis.alfaguys.com/skills/aegis-gateway.zip && unzip -o aegis-gateway.zip
+export AEGIS_APP_KEY=…  AEGIS_ADMIN_KEY=…
+# then ask Claude Code: "use the aegis-gateway skill and red-team the API"
+python3 ~/.claude/skills/aegis-gateway/aegis_probe.py suite`}</code></pre>
+<pre class="out"><code>{`PASS  read own client's contract              want ALLOW                got ALLOW              17.5 ms
+PASS  read another client's file              want BLOCK MANDATE-RES    got BLOCK MANDATE-RES   3.7 ms
+PASS  e-mail the contract to an outsider      want BLOCK MANDATE-RCPT   got BLOCK MANDATE-RCPT  2.2 ms
+PASS  e-mail confidential data (data flow)    want BLOCK IFC-001        got BLOCK IFC-001       2.2 ms
+…`}</code></pre>
+          <p class="note"><a href={`${base}skills/aegis-gateway/SKILL.md`}>SKILL.md</a> · <a href={`${base}skills/aegis-gateway/aegis_probe.py`}>aegis_probe.py</a></p>
+        </section>
+      </article>
+    </div>
+  </main>
+  <Footer />
+</Base>

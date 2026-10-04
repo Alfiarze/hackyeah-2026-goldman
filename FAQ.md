@@ -180,7 +180,7 @@ Bramka jest bezstanowa, a stan trzyma Postgres, więc można postawić wiele ins
 W dashboardzie (Kontrole / Plik polityki) albo edycją `policy/policy.yaml`. Zmiana działa w około sekundę, a każda wersja jest zapisywana.
 
 **Jak to testujecie?**
-Jest **328 testów automatycznych** na prawdziwej bazie: przypadek pozytywny i negatywny dla każdej kontroli, 100 przypadków treściowych z YAML pisanych niezależnie od implementacji, 17 prób red-team z taksonomią OWASP (`make redteam`), macierz degradacji (każda kontrola wyłączana po kolei) i testy fuzzingowe (hypothesis). Komenda: `make test-docker`. Telemetria wydajności na żądanie: `make bench` (raport w `docs/bench-report.md`).
+Jest **334 testów automatycznych** na prawdziwej bazie: przypadek pozytywny i negatywny dla każdej kontroli, ponad 100 przypadków treściowych z YAML pisanych niezależnie od implementacji, 17 prób red-team z taksonomią OWASP (`make redteam`), 5 tur czatu na żywo, macierz degradacji (każda kontrola wyłączana po kolei) i testy fuzzingowe (hypothesis). Komenda: `make test-docker`. Telemetria wydajności na żądanie: `make bench` (raport w `docs/bench-report.md`).
 
 ### Regulamin
 

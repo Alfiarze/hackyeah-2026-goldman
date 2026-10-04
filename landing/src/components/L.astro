@@ -1,4 +1,5 @@
 ---
-const { en, pl } = Astro.props;
+// English-only copy. `pl` is accepted and ignored so existing call sites keep working.
+const { en } = Astro.props;
 ---
-<span class="l l-en" lang="en" set:html={en} /><span class="l l-pl" lang="pl" set:html={pl} />
+<Fragment set:html={en} />

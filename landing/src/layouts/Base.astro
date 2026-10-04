@@ -34,13 +34,7 @@ const baseUrl = import.meta.env.BASE_URL;
     <script is:inline src={`${baseUrl}env.js`}></script>
     <script is:inline>
       (() => {
-        let lang = "en";
-        try {
-          const saved = localStorage.getItem("aegis-lang");
-          if (saved === "pl" || saved === "en") lang = saved; // English unless the person picked Polish
-        } catch { /* private mode */ }
-        document.documentElement.dataset.lang = lang;
-        document.documentElement.lang = lang;
+        document.documentElement.lang = "en";
         // Motion is opt-in: content is fully visible without JS or with reduced motion.
         try {
           if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { api } from "./api.js";
-import { getLang, human, t } from "./i18n.js";
+import { human, t } from "./i18n.js";
 export const LEVELS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET"];
 export const WORD = { ALLOW: "Allowed", REDACT: "Redacted", BLOCK: "Blocked", CONTAINED: "Contained", PENDING: "Awaiting approval" };
-export const locale = () => (getLang() === "pl" ? "pl-PL" : "en-GB");
+export const locale = () => "en-GB";
 export const num = (n, d = 0) => (n === null || n === undefined ? "—" : Number(n).toLocaleString(locale(), { maximumFractionDigits: d }));
 export const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString(locale()) : "");
 export const Id = ({ children }) => (children ? <span className="id">{children}</span> : null);

@@ -283,7 +283,7 @@ with aegis.create_task(principal="lawyer_anna", agent_id="demo-agent",
 ## Tests
 
 `make test-docker` runs the full suite against a real Postgres (`goldman_test`), the real gateway and the real tool
-backends: **328 collected — all green in the Docker image** (on a bare host without tesseract the two OCR tests
+backends: **334 collected — all green in the Docker image** (on a bare host without tesseract the two OCR tests
 skip; the image ships tesseract, so the canonical `make test-docker` run passes end to end).
 
 * `tests/cases/redteam.yaml` + `make redteam`: a **17-probe adversarial corpus** (direct/translated/

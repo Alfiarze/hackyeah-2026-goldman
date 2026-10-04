@@ -1,0 +1,97 @@
+---
+// The sandbox model, stated with the exact flags from aegis/sandbox.py: what the container can't do,
+// its life cycle, and what happens when agent code misbehaves.
+const walls = [
+  ["No network", "--network none: no internet, no internal hosts"],
+  ["Read-only disk", "--read-only root; /tmp is 16 MB and noexec"],
+  ["No host files", "code arrives on stdin; nothing is mounted"],
+  ["No privileges", "runs as nobody, all capabilities dropped, no-new-privileges"],
+  ["Hard limits", "256 MB memory, 0.5 CPU, 64 processes"],
+  ["10 s, then gone", "killed at the time limit, container removed after every run"],
+];
+const life = [
+  ["Checked", "Signatures see the code first: rm -rf, fork bombs, reverse shells never start."],
+  ["Created", "A fresh, empty container just for this call."],
+  ["Run", "Code piped in on stdin and executed inside the walls."],
+  ["Reported", "Exit code, output, timeout, out-of-memory, network attempt — back to the gateway."],
+  ["Destroyed", "The container is deleted. Nothing carries over to the next run."],
+];
+const tries = [
+  ["Calls the internet", "Connection fails inside the box; flagged network_attempted", "contained"],
+  ["Loops forever", "Killed at 10 s; status timeout", "contained"],
+  ["Eats all memory", "OOM-killed at 256 MB; status oom", "contained"],
+  ["Forks endlessly", "Stopped by the 64-process cap — or blocked before it runs", "contained"],
+  ["Writes to disk", "Root filesystem is read-only; /tmp can't hold executables", "contained"],
+  ["Looks for keys", "There are none inside: only the gateway holds credentials", "contained"],
+];
+---
+<section class="section" id="sandbox">
+  <div class="wrap">
+    <h2 class="display" data-reveal>Agent code runs in a sealed room</h2>
+    <p class="lede" data-reveal style="--i: 1">
+      When an agent wants to execute code (<span class="id">code.run</span>), the gateway never runs it on a server.
+      It goes into a throw-away, isolated container with no network, no files and hard limits — and the
+      container is destroyed afterwards. If the code is malicious, it fails inside the box.
+    </p>
+
+    <div class="sbx" data-reveal-group>
+      <figure class="sbx-figure" data-reveal aria-label="Isolation layers of the sandbox">
+        <svg viewBox="0 0 560 420" role="img">
+          <defs>
+            <pattern id="sbx-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="9" class="hatch" />
+            </pattern>
+          </defs>
+          <!-- host -->
+          <rect x="10" y="10" width="420" height="400" rx="18" class="l-host" />
+          <text x="30" y="40" class="lbl">Host server · untouched</text>
+          <!-- runner -->
+          <rect x="40" y="62" width="360" height="318" rx="14" class="l-runner" />
+          <text x="60" y="90" class="lbl dim">Sandbox runner · the only service with Docker</text>
+          <!-- container -->
+          <rect x="80" y="118" width="280" height="226" rx="12" class="l-box" />
+          <rect x="80" y="118" width="280" height="226" rx="12" fill="url(#sbx-hatch)" class="l-box-fill" />
+          <text x="220" y="150" class="lbl c">Throw-away container</text>
+          <text x="220" y="172" class="lbl c dim">python · user nobody · 10 s</text>
+          <rect x="150" y="196" width="140" height="86" rx="8" class="code" />
+          <text x="166" y="222" class="mono">import os</text>
+          <text x="166" y="244" class="mono">os.system(…)</text>
+          <text x="166" y="266" class="mono">urlopen(…)</text>
+          <text x="220" y="320" class="lbl c dim">256 MB · 0.5 CPU · 64 proc</text>
+          <!-- wall + internet -->
+          <line x1="470" y1="40" x2="470" y2="380" class="wall" />
+          <text x="500" y="30" class="lbl c red">--network none</text>
+          <text x="520" y="214" class="lbl c dim">internet</text>
+          <path d="M 290 236 L 462 236" class="probe-path" />
+          <circle cx="290" cy="236" r="7" class="probe" />
+          <text x="220" y="400" class="lbl c dim">gateway ⇄ runner: HTTP + secret · code on stdin</text>
+        </svg>
+      </figure>
+
+      <div class="sbx-walls" data-reveal>
+        <h3>Six walls</h3>
+        <ul>
+          {walls.map(([k, v]) => <li><b>{k}</b><span>{v}</span></li>)}
+        </ul>
+      </div>
+    </div>
+
+    <ol class="sbx-life" data-reveal-group>
+      {life.map(([k, v], i) => (
+        <li data-reveal><span class="n">{String(i + 1).padStart(2, "0")}</span><b>{k}</b><p>{v}</p></li>
+      ))}
+    </ol>
+
+    <div class="sbx-tries" data-reveal>
+      <h3>If the code misbehaves</h3>
+      <table>
+        <tbody>
+          {tries.map(([a, b]) => (
+            <tr><td>{a}</td><td>{b}</td><td><span class="tag">contained</span></td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="sbx-foot">Try it: dashboard → Run a scenario → <b>Sandbox</b>, or <span class="id">aegis_probe.py suite</span>. The result is evidence in the audit log, not a promise.</p>
+    </div>
+  </div>
+</section>

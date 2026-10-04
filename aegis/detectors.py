@@ -124,7 +124,10 @@ _PASSWORD_STRONG = re.compile(
     r"(?i)(?:\b(?:moje|mój|moim|twoje|nowe|stare|my|your|new|old)\s+(?:has(?:ł|l)(?:o|em)?|password|passwd|pin)"
     r"(?:\s+(?:to|jest|brzmi|is|was|=|:))?"
     r"|\b(?:has(?:ł|l)o|password|passwd|pin)\s*(?:to|jest|brzmi|is|was|[:=])"
-    r"|\b(?:has(?:ł|l)o|password)\s+(?:do|dla|for|to)\s+\S+\s*(?:to|jest|brzmi|is|[:=]))"
+    r"|\b(?:has(?:ł|l)o|password)\s+(?:do|dla|for|to)\s+\S+\s*(?:to|jest|brzmi|is|[:=])"
+    # "chcę zmienić hasło kacperkochamame", "change my password to hunter22"
+    r"|\b(?:zmienić|zmienic|zmień|zmien|zmieniam|ustawić|ustawic|ustaw|ustawiam|change|set|reset)\s+(?:(?:moje|swoje|my)\s+)?(?:has(?:ł|l)o|password)"
+    r"(?:\s+(?:na|to))?)"
     r"\s*[:=]?\s*[\"'“„`]?(?P<value>[^\s\"'”`,;.!?]{4,64})"
 )
 # words that commonly follow "hasło" in a question or a statement about a password, not a password value
@@ -139,6 +142,7 @@ konta konto banku bank poczty maila email e-mail wifi wi-fi komputera telefonu a
 the a an is was to for of my your and or not has have had expired expires reset change changed
 changing forgot forgotten lost wrong incorrect invalid doesnt doesn't does did must should will
 policy requirements rules manager strength length again please here there this that what how
+wczoraj przedwczoraj ostatnio dawno jutro dzisiaj teraz szybko natychmiast proszę prosze bo żeby zeby gdzie kiedy now today tomorrow soon asap
 """.split())
 
 

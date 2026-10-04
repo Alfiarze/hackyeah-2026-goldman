@@ -116,3 +116,9 @@
 - {id: C-98, text: "postgres://db.internal:5432/prod (bez hasła)", expect: ALLOW, note: connection string without credentials}
 - {id: C-99, text: "Nigdy nie commituj kluczy AWS do repozytorium.", expect: ALLOW, note: talks about keys, contains none}
 - {id: C-100, text: "Store private keys in a vault, not in the repository.", expect: ALLOW, note: advice, not a key}
+- {id: C-101, text: "chcę zmienić hasło kacperkochamame", expect: BLOCK, rule: SEC-001, note: new password given right after "zmienić hasło"}
+- {id: C-102, text: "Please change my password to hunter22x today.", expect: BLOCK, rule: SEC-001}
+- {id: C-103, text: "Ustaw hasło Kot2024! na koncie testowym.", expect: BLOCK, rule: SEC-001}
+- {id: C-104, text: "Zmieniłem hasło wczoraj i działa.", expect: ALLOW, note: talks about a change, no value}
+- {id: C-105, text: "Muszę zmienić hasło jutro, bo wygasa.", expect: ALLOW, note: a time word, not a password}
+- {id: C-106, text: "Jak zmienić hasło do banku?", expect: ALLOW, note: a question}

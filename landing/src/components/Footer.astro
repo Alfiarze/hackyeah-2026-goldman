@@ -2,6 +2,7 @@
 import { dashboardUrl } from "../config";
 import L from "./L.astro";
 import Rosette from "./Rosette.astro";
+const home = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 ---
@@ -26,11 +27,12 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
     </div>
     <nav class="foot-links" aria-label="Footer">
       <a href={`${dashboardUrl}`} data-dashboard=""><L en="Dashboard" pl="Dashboard" /></a>
-      <a href="#how"><L en="How it works" pl="Jak to działa" /></a>
-      <a href="#catches"><L en="What it catches" pl="Co wykrywa" /></a>
-      <a href="#benchmark"><L en="Benchmark" pl="Benchmark" /></a>
-      <a href="#tech"><L en="Under the hood" pl="Technologia" /></a>
-      <a href="#scenarios"><L en="Try it" pl="Wypróbuj" /></a>
+      <a href={`${home}#how`}><L en="How it works" pl="Jak to działa" /></a>
+      <a href={`${home}#catches`}><L en="What it catches" pl="Co wykrywa" /></a>
+      <a href={`${home}#benchmark`}><L en="Benchmark" pl="Benchmark" /></a>
+      <a href={`${home}#tech`}><L en="Under the hood" pl="Technologia" /></a>
+      <a href={`${home}#scenarios`}><L en="Try it" pl="Wypróbuj" /></a>
+      <a href={`${home}docs/`}><L en="Docs" pl="Docs" /></a>
     </nav>
   </div>
 </footer>

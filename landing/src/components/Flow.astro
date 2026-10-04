@@ -1,0 +1,253 @@
+---
+import L from "./L.astro";
+
+// One request at a time travels from the agent through the gate and takes one of four routes:
+// allowed to the model, masked then allowed, stopped at the gate, or run in the sandbox. Drawn in SVG,
+// animated by a small script; without motion the four routes are simply shown side by side.
+const cases = [
+  { id: "allow", en: "Allowed", pl: "Przepuszczone" },
+  { id: "redact", en: "Masked", pl: "Zamaskowane" },
+  { id: "block", en: "Blocked", pl: "Zablokowane" },
+  { id: "sandbox", en: "Sandboxed", pl: "W piaskownicy" },
+];
+---
+<section class="section rflow-section" id="flow">
+  <div class="wrap">
+    <h2 class="display" data-reveal><L en="Watch a request go through" pl="Zobacz, jak przechodzi zapytanie" /></h2>
+    <p class="lede" data-reveal style="--i: 1">
+      <L
+        en="Every prompt and tool call from the agent stops at the gate first. It is let through, masked, stopped or sent to the sandbox — and the answer is checked on the way back."
+        pl="Każdy prompt i każde wywołanie narzędzia najpierw zatrzymuje się na bramce. Zostaje przepuszczone, zamaskowane, zatrzymane albo wysłane do piaskownicy — a odpowiedź jest sprawdzana w drodze powrotnej."
+      />
+    </p>
+
+    <div class="rflow" data-flow data-reveal>
+      <div class="rflow-tabs" role="tablist">
+        {cases.map((c, i) => (
+          <button type="button" role="tab" class:list={["rflow-tab", `t-${c.id}`]} data-case={c.id} aria-selected={i === 0 ? "true" : "false"}>
+            <i /><L en={c.en} pl={c.pl} />
+          </button>
+        ))}
+      </div>
+
+      <svg class="rflow-svg" viewBox="0 0 1200 500" role="img" aria-label="Request flow through the Aegis gateway">
+        <defs>
+          <filter id="fglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" /></filter>
+          <pattern id="fhatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="2" opacity=".35" />
+          </pattern>
+        </defs>
+
+        <!-- lanes -->
+        <path class="lane" id="f-in" d="M 170 230 L 440 230" />
+        <path class="lane" id="f-model" d="M 560 230 L 820 230" />
+        <path class="lane" id="f-sbx" d="M 560 230 C 650 230 690 400 820 400" />
+        <path class="lane lane-back" id="f-back" d="M 820 262 L 560 262 L 170 262" />
+        <path class="lane lane-back" id="f-back-sbx" d="M 820 430 C 680 430 650 262 560 262 L 170 262" />
+        <path class="lane lane-back" id="f-back-block" d="M 440 262 L 170 262" />
+
+        <!-- agent -->
+        <g class="node n-agent">
+          <rect x="40" y="196" width="130" height="100" rx="14" />
+          <circle cx="105" cy="230" r="13" class="agent-dot" />
+          <text x="105" y="275" class="n-title">Agent</text>
+        </g>
+
+        <!-- gate -->
+        <g class="node n-gate" data-gate>
+          <rect x="440" y="60" width="120" height="380" rx="18" class="gate-body" />
+          {Array.from({ length: 10 }, (_, i) => (
+            <rect x="455" y={90 + i * 30} width="90" height="16" rx="4" class="notch" data-notch={i} />
+          ))}
+          <text x="500" y="44" class="n-title gate-title">AEGIS</text>
+          <text x="500" y="466" class="n-sub">10 checks · ~0.3 ms</text>
+        </g>
+
+        <!-- model / tools -->
+        <g class="node n-model" data-model>
+          <rect x="820" y="190" width="200" height="90" rx="14" />
+          <text x="935" y="228" class="n-title"><tspan class="l-en">Model · tools</tspan><tspan class="l-pl">Model · narzędzia</tspan></text>
+          <text x="935" y="254" class="n-sub">on-prem GB10 · MCP</text>
+        </g>
+
+        <!-- sandbox -->
+        <g class="node n-sbx" data-sbx>
+          <rect x="820" y="360" width="200" height="96" rx="14" class="sbx-body" />
+          <text x="935" y="398" class="n-title"><tspan class="l-en">Sandbox</tspan><tspan class="l-pl">Piaskownica</tspan></text>
+          <text x="935" y="424" class="n-sub"><tspan class="l-en">no network · 10 s</tspan><tspan class="l-pl">bez sieci · 10 s</tspan></text>
+          <line x1="1045" y1="356" x2="1045" y2="460" class="wall" />
+          <text x="1120" y="412" class="n-sub net">internet</text>
+        </g>
+
+        <!-- audit -->
+        <g class="node n-audit">
+          <rect x="820" y="64" width="200" height="74" rx="14" />
+          <text x="920" y="94" class="n-title"><tspan class="l-en">Audit log</tspan><tspan class="l-pl">Audyt</tspan></text>
+          <text x="920" y="119" class="n-sub" data-audit>append-only</text>
+        </g>
+        <path class="lane lane-audit" d="M 560 120 L 820 100" />
+
+        <!-- moving parts -->
+        <g data-packet class="packet">
+          <circle r="16" class="p-glow" filter="url(#fglow)" />
+          <circle r="10" class="p-core" />
+        </g>
+        <g data-burst class="burst"></g>
+        <circle data-audit-dot r="5" class="audit-dot" />
+      </svg>
+
+      <div class="rflow-caption" aria-live="polite">
+        <div class="fc-req"><span class="fc-label"><L en="The agent sends" pl="Agent wysyła" /></span><code data-req></code></div>
+        <div class="fc-out"><span class="fc-stamp" data-stamp></span><span data-why></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Case = { id: string; req: string; masked?: string; stamp: string; rule: string; en: string; pl: string };
+  const CASES: Case[] = [
+    { id: "allow", req: "chat: “Summarise the three biggest risks in the contract.”", stamp: "ALLOW", rule: "",
+      en: "On the mandate, nothing suspicious: the model answers and the reply is checked on the way back.",
+      pl: "Zgodne z mandatem, nic podejrzanego: model odpowiada, a odpowiedź jest sprawdzana w drodze powrotnej." },
+    { id: "redact", req: "chat: “Analyse it. Client PESEL 44051401359.”", masked: "chat: “Analyse it. Client PESEL [REDACTED:PESEL].”",
+      stamp: "REDACT", rule: "PII-001",
+      en: "Personal data is masked before the prompt leaves the gate. The model never sees the PESEL.",
+      pl: "Dane osobowe są maskowane, zanim prompt opuści bramkę. Model nigdy nie widzi numeru PESEL." },
+    { id: "block", req: "mail.send → deal-desk@evil-mergers.com", stamp: "BLOCK", rule: "MANDATE-RCPT",
+      en: "Recipient not on the task's mandate. Stopped in ~2 ms; the mail service never receives the call.",
+      pl: "Odbiorcy nie ma w mandacie zadania. Zatrzymane w ~2 ms; usługa pocztowa nie dostaje wywołania." },
+    { id: "sandbox", req: "code.run: urllib.request.urlopen(\"https://example.com\")", stamp: "SANDBOX", rule: "network blocked",
+      en: "Code runs in a throw-away container with no network. The connection fails inside; nothing leaves the machine.",
+      pl: "Kod działa w jednorazowym kontenerze bez sieci. Połączenie pada w środku; nic nie wychodzi z maszyny." },
+  ];
+  const COLORS: Record<string, string> = { allow: "var(--allow)", redact: "var(--redact)", block: "var(--block)", sandbox: "var(--intaglio)" };
+
+  const root = document.querySelector<HTMLElement>("[data-flow]");
+  if (root) {
+    const svg = root.querySelector("svg")!;
+    const packet = root.querySelector<SVGGElement>("[data-packet]")!;
+    const burst = root.querySelector<SVGGElement>("[data-burst]")!;
+    const auditDot = root.querySelector<SVGCircleElement>("[data-audit-dot]")!;
+    const notches = [...root.querySelectorAll<SVGRectElement>("[data-notch]")];
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>("[data-case]")];
+    const reqEl = root.querySelector<HTMLElement>("[data-req]")!;
+    const stampEl = root.querySelector<HTMLElement>("[data-stamp]")!;
+    const whyEl = root.querySelector<HTMLElement>("[data-why]")!;
+    const auditText = root.querySelector<SVGTextElement>("[data-audit]")!;
+    const path = (id: string) => svg.querySelector<SVGPathElement>(`#${id}`)!;
+    const lanes = { in: path("f-in"), model: path("f-model"), sbx: path("f-sbx"), back: path("f-back"),
+                    backSbx: path("f-back-sbx"), backBlock: path("f-back-block") };
+    const auditLane = svg.querySelector<SVGPathElement>(".lane-audit")!;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lang = () => document.documentElement.dataset.lang === "pl" ? "pl" : "en";
+
+    const clamp = (x: number) => Math.max(0, Math.min(1, x));
+    const ease = (x: number) => { x = clamp(x); return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
+    const seg = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
+    const at = (p: SVGPathElement, q: number) => p.getPointAtLength(ease(q) * p.getTotalLength());
+    const put = (pt: DOMPoint | { x: number; y: number }) => packet.setAttribute("transform", `translate(${pt.x} ${pt.y})`);
+
+    const DURATION = 6.2;
+    let current = 0, start = performance.now(), auto = true, visible = true;
+    const sparks = Array.from({ length: 18 }, (_, i) => {
+      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("r", String(2 + (i % 3)));
+      burst.appendChild(c);
+      const a = (i / 18) * Math.PI * 2;
+      return { c, vx: Math.cos(a) * (60 + (i * 37) % 60), vy: Math.sin(a) * (60 + (i * 53) % 60) };
+    });
+
+    function select(i: number, user = false) {
+      current = i; start = performance.now();
+      if (user) auto = false;
+      tabs.forEach((b, j) => b.setAttribute("aria-selected", String(j === i)));
+      const c = CASES[i];
+      root!.dataset.case = c.id;
+      reqEl.textContent = c.req;
+      stampEl.textContent = "";
+      whyEl.textContent = "";
+      root!.style.setProperty("--case", COLORS[c.id]);
+    }
+
+    function frame(now: number) {
+      const c = CASES[current];
+      let t = (now - start) / 1000;
+      if (t > DURATION) {
+        if (auto) select((current + 1) % CASES.length); else start = now;
+        t = 0;
+      }
+      const color = COLORS[c.id];
+      let fill = "var(--ink)";
+      // 0–1.4 s: agent → gate
+      if (t < 1.4) { put(at(lanes.in, seg(t, 0, 1.4))); }
+      // 1.4–2.4 s: inside the gate, the checks light up one after another
+      const scan = seg(t, 1.4, 2.4);
+      notches.forEach((n, i) => {
+        const lit = scan * 10 > i;
+        const stopHere = c.id === "block" && i === 1;
+        n.classList.toggle("lit", lit && !(c.id === "block" && i > 1));
+        n.classList.toggle("hit", lit && stopHere);
+        n.classList.toggle("mask", c.id === "redact" && lit && i === 3);
+      });
+      if (t >= 1.4 && t < 2.4) put({ x: 500, y: 230 });
+      const decided = t >= 2.4;
+      if (decided) {
+        stampEl.textContent = c.stamp + (c.rule ? ` · ${c.rule}` : "");
+        whyEl.textContent = c[lang()];
+        if (c.masked) reqEl.textContent = c.masked;
+      } else if (c.masked) reqEl.textContent = c.req;
+      packet.style.opacity = "1";
+      if (t >= 1.4) fill = c.id === "block" && decided ? color : c.id === "redact" && t > 2.0 ? color : "var(--ink)";
+
+      if (c.id === "block") {
+        if (decided) {
+          packet.style.opacity = "0";
+          const s = t - 2.4;
+          sparks.forEach((p) => { p.c.setAttribute("cx", String(500 + p.vx * s)); p.c.setAttribute("cy", String(230 + p.vy * s + 120 * s * s)); p.c.style.opacity = String(Math.max(0, 1 - s / 1.1)); });
+          if (t > 3.0) { packet.style.opacity = "1"; put(at(lanes.backBlock, seg(t, 3.0, 4.4))); fill = color; }
+        } else sparks.forEach((p) => (p.c.style.opacity = "0"));
+      } else {
+        sparks.forEach((p) => (p.c.style.opacity = "0"));
+        const out = c.id === "sandbox" ? lanes.sbx : lanes.model;
+        const back = c.id === "sandbox" ? lanes.backSbx : lanes.back;
+        if (decided && t < 3.6) put(at(out, seg(t, 2.4, 3.6)));
+        if (t >= 3.6 && t < 4.4) {
+          if (c.id === "sandbox") {
+            // tries to reach the internet, hits the wall, falls back
+            const q = seg(t, 3.6, 4.4), x = 842 + Math.sin(q * Math.PI) * 192;
+            put({ x, y: 400 }); fill = q > .45 && q < .75 ? "var(--block)" : color;
+          } else { put({ x: 842, y: 235 }); }
+        }
+        if (t >= 4.4) { put(at(back, seg(t, 4.4, 5.8))); fill = c.id === "redact" ? color : "var(--allow)"; }
+        if (t >= 5.8) packet.style.opacity = String(Math.max(0, 1 - (t - 5.8) / .3));
+      }
+      packet.style.setProperty("--fill", fill);
+      // every decision leaves a line in the audit log
+      const aq = seg(t, 2.4, 3.2);
+      auditDot.style.opacity = aq > 0 && aq < 1 ? "1" : "0";
+      if (aq > 0 && aq < 1) { const p = auditLane.getPointAtLength(aq * auditLane.getTotalLength()); auditDot.setAttribute("cx", String(p.x)); auditDot.setAttribute("cy", String(p.y)); }
+      if (decided) auditText.textContent = `${c.stamp}${c.rule ? " · " + c.rule : ""}`;
+      root!.classList.toggle("model-busy", c.id !== "block" && c.id !== "sandbox" && t >= 3.6 && t < 4.4);
+      root!.classList.toggle("sbx-busy", c.id === "sandbox" && t >= 3.6 && t < 4.4);
+      root!.classList.toggle("gate-hit", c.id === "block" && t >= 2.4 && t < 3.0);
+      if (visible) requestAnimationFrame(frame);
+    }
+
+    tabs.forEach((b, i) => b.addEventListener("click", () => select(i, true)));
+    select(0);
+    if (reduce) {
+      // no motion: show the decision of the selected case straight away
+      const show = (i: number) => { select(i, true); const c = CASES[i]; stampEl.textContent = c.stamp + (c.rule ? ` · ${c.rule}` : ""); whyEl.textContent = c[lang()]; if (c.masked) reqEl.textContent = c.masked; put({ x: 500, y: 230 }); };
+      tabs.forEach((b, i) => b.addEventListener("click", () => show(i)));
+      show(0);
+    } else {
+      const io = new IntersectionObserver(([e]) => {
+        const was = visible; visible = e.isIntersecting;
+        if (visible && !was) { start = performance.now(); requestAnimationFrame(frame); }
+      });
+      visible = false;
+      io.observe(root);
+    }
+  }
+</script>

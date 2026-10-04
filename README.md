@@ -121,8 +121,9 @@ and the first `BLOCK` short-circuits, so the semantic model never runs for a req
    be redacted or withheld.
 
 A decision carries `action`, `reason_code`, `rule_id`, `stage`, `policy_version`, `latency_ms`, `tool_invoked`,
-`task_id`, `findings` and per-stage `timings`. Blocked requests return `403`, budget denials `429`, an unavailable
-model/tool `502`, and auth failures `401`.
+`task_id`, `findings` and per-stage `timings`. Chat completions also return `sanitized`: the messages the guard
+changed (redacted PII, cut-out instructions) exactly as the model received them. Blocked requests return `403`,
+budget denials `429`, an unavailable model/tool `502`, and auth failures `401`.
 
 ## What makes it different
 
@@ -222,7 +223,9 @@ It has three groups:
 * **Configure** — `Controls` (profile, per-control toggles and block/redact, semantic thresholds), `Policy file`
   (YAML editor, validate, save as a new version, history with rollback), `Attack signatures` (CRUD and test a regex),
   `Tools` (MCP registry status, approve/quarantine).
-* **Prove** — `Be the agent` (drive a real task through the real pipeline from the browser), `Run a scenario`
+* **Prove** — `Live test` (a normal chat with the assistant, like any chat app; the panel on the right is the
+  guard layer live: per-stage timings, what was redacted before the model saw it, tokens and cost), `Be the agent`
+  (drive a real task through the real pipeline from the browser), `Run a scenario`
   (scripted end-to-end demos), `Test an input` (playground dry-run: decision, rule, evidence, redacted text, nothing
   executed), `Budget` (limits, reservations, spend).
 
@@ -280,7 +283,7 @@ with aegis.create_task(principal="lawyer_anna", agent_id="demo-agent",
 ## Tests
 
 `make test-docker` runs the full suite against a real Postgres (`goldman_test`), the real gateway and the real tool
-backends: **323 collected — all green in the Docker image** (on a bare host without tesseract the two OCR tests
+backends: **328 collected — all green in the Docker image** (on a bare host without tesseract the two OCR tests
 skip; the image ships tesseract, so the canonical `make test-docker` run passes end to end).
 
 * `tests/cases/redteam.yaml` + `make redteam`: a **17-probe adversarial corpus** (direct/translated/

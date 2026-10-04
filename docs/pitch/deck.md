@@ -322,9 +322,9 @@ Jeśli demo padnie: nagranie (backup) + screenshoty w appendixie.
 | Budget & resources | Escrow: tokens, calls, time, concurrency; task/user/global | B-01…07 |
 | Historical attacks | pickle opcode scan, `trust_remote_code`, CVE-2024-34359, typosquat, MCP tool poisoning | A-01…10 |
 | Reporting & audit | Live dashboard, SSE, JSONL/CSV export, no secrets in logs | R-01…04 |
-| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 323 tests |
+| Self-testing suite | expectations in `tests/cases/*.yaml`, written independently of code | 328 tests |
 
-`make test-docker` → **323 collected · all green in the image** (2 OCR tests skip only on a host without tesseract) · 100 content cases + 17 red-team probes from YAML, 24 detector unit tests, 10× control-degradation matrix, 7 property-based fuzz tests
+`make test-docker` → **328 collected · all green in the image** (2 OCR tests skip only on a host without tesseract) · 100 content cases + 17 red-team probes from YAML, 24 detector unit tests, 10× control-degradation matrix, 7 property-based fuzz tests, 5 live-chat turns
 
 <!--
 NOTATKI (~35 s):

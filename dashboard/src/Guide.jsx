@@ -546,6 +546,8 @@ export const PAGE_INFO = {
     try: ["Click “Simulate a silent change on the server” and watch the tool get quarantined.", "Approve the new text, or restore the server."], next: ["agent", "Be the agent"] },
   agent: { what: "You play the AI agent. Every click is a real request through the gateway, with a real task and a real lease.",
     try: ["Start a contract-review task, read client A's contract, then try to e-mail it outside.", "Read the contract with a hidden instruction and see what reaches you."], next: ["scenarios", "Run a scenario"] },
+  livechat: { what: "A normal chat with the assistant — and the guard layer underneath, live. Every message you send and every answer you get is checked, redacted or stopped; the right panel is the trace.",
+    try: ["Work normally: ask about the acquisition contract, then send client personal data — watch it get redacted before the model sees it.", "Try the password example or an instruction hijack: the turn is refused and nothing leaves the gateway."], next: ["live", "Live"] },
   scenarios: { what: "Scripted attacks that run end to end through the real gateway, database and tool service.",
     try: ["“Poisoned contract”: the mail counter must stay at 0.", "“The AI detector misses”: the AI review is forced to say safe and the data-flow rule still blocks."], next: ["live", "Live"] },
   playground: { what: "Check any text without running anything. You get the decision, the rule that fired and what the model would receive.",

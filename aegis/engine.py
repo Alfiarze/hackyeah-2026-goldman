@@ -223,6 +223,7 @@ class Gateway:
                               stage="mandate", detail={"model": model}))
             self.taint_check(d, policy, task, self.model_sink(policy, model))
         untrusted = []
+        sanitized: list[dict[str, Any]] = []  # messages changed by the guard: what the model actually receives
         if not d.blocked:
             for i, m in enumerate(messages):
                 role, content = m.get("role"), str(m.get("content", ""))
@@ -236,6 +237,8 @@ class Gateway:
                     d.add(f)
                 if sub.action == "REDACT":
                     messages[i]["content"] = detectors.redact(content, [s for f in sub.findings for s in f.spans])
+                    if messages[i]["content"] != content:
+                        sanitized.append({"index": i, "role": role, "content": messages[i]["content"]})
                 if role in ("user", "tool"):
                     untrusted.append(messages[i]["content"])
                 d.timings.update({k: d.timings.get(k, 0) + v for k, v in sub.timings.items()})
@@ -303,7 +306,7 @@ class Gateway:
         return 200, {
             "id": "chatcmpl-" + res_id[:12], "object": "chat.completion", "model": model,
             "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
-            "usage": usage, "mandate": d.public(),
+            "usage": usage, "mandate": d.public(), "sanitized": sanitized,
         }
 
     # ================================================================ agent <-> tool / MCP

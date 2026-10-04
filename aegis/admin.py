@@ -758,6 +758,43 @@ class ConsoleAction(BaseModel):
     model: str | None = None
 
 
+LIVE_SYSTEM_PROMPT = (
+    "You are the firm's legal-assistant chat. Help with contracts, deadlines and risk analysis: "
+    "answer in the language of the question, concise and concrete. You run behind the firm's security "
+    "gateway: some values in messages may arrive already redacted — work with what you receive and "
+    "never ask the user to resend or reveal a redacted value."
+)
+
+
+class LiveChatBody(BaseModel):
+    messages: list[dict[str, str]] = []  # conversation so far: [{role: user|assistant, content}]
+    model: str | None = None
+    max_tokens: int = 700
+
+
+@router.post("/console/tasks/{task_id}/chat")
+async def console_live_chat(request: Request, task_id: str, body: LiveChatBody):
+    """A normal multi-turn conversation, like any chat app. Every turn still goes through the whole
+    gateway: each message is checked (and redacted where needed), the joined history is checked for
+    instructions split across messages, the budget is reserved before the model is called and the
+    answer is filtered before it is shown. Returns the reply plus the full decision evidence."""
+    gw = _gw(request)
+    task = await _console_task(gw, task_id)
+    lease = gw.tasks.lease_for(task)
+    model = body.model or gw.default_model(gw.policy.active)
+    history = [m for m in body.messages
+               if m.get("role") in ("user", "assistant") and str(m.get("content", "")).strip()][-20:]
+    messages = [{"role": "system", "content": LIVE_SYSTEM_PROMPT}, *history]
+    try:
+        status, payload = await gw.chat(CONSOLE_AGENT, lease,
+                                        {"model": model, "max_tokens": body.max_tokens, "messages": messages})
+    except GatewayError as exc:  # the lease died, the task was revoked, …
+        status, payload = exc.status, {"error": {"reason_code": exc.reason_code, "message": exc.message}}
+    fresh = await gw.tasks.get(task_id)
+    return {"http_status": status, "response": payload, "model": model,
+            "task": fresh.view() if fresh else None}
+
+
 @router.post("/console/tasks/{task_id}/act")
 async def console_act(request: Request, task_id: str, body: ConsoleAction):
     gw = _gw(request)

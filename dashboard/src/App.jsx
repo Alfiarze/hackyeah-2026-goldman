@@ -3,13 +3,14 @@ import { api, download, getKey, setKey } from "./api.js";
 import { getLang, human, setLang, t } from "./i18n.js";
 import { ApprovalButtons, Id, LEVELS, Level, Mark, Rosette, Stamp, WORD, clock, describe, lvl, num, sandboxLine } from "./ui.jsx";
 import Agent from "./Agent.jsx";
+import LiveChat from "./LiveChat.jsx";
 import Icon from "./icons.jsx";
 import { TraceStep } from "./Trace.jsx";
 import { DisabledBanner, DocInput, ExampleChips, checkDocument, PAGE_INFO, PageHelp, Start, Verdict, markDone } from "./Guide.jsx";
 
 const NAV = [
   { group: "Guide", items: [["start", "Start here"]] },
-  { group: "Test it", items: [["playground", "Test an input"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
+  { group: "Test it", items: [["playground", "Test an input"], ["livechat", "Live test"], ["scenarios", "Run a scenario"], ["agent", "Be the agent"]] },
   { group: "Monitor", items: [["live", "Live"], ["approvals", "Approvals"], ["audit", "Audit log"], ["tasks", "Tasks"], ["budget", "Budget"]] },
   { group: "Configure", items: [["controls", "Controls"], ["policy", "Policy file"], ["signatures", "Attack signatures"], ["tools", "Tools"]] },
 ];
@@ -1055,7 +1056,7 @@ export default function App() {
   }, []);
   useEffect(() => { document.title = `${t(TITLES[view])} | Aegis`; }, [view, lang]);
   const switchLang = (l) => { setLang(l); setL(l); };
-  const Views = { start: Start, approvals: Approvals, agent: Agent, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
+  const Views = { start: Start, approvals: Approvals, agent: Agent, livechat: LiveChat, live: Live, scenarios: Scenarios, playground: Playground, controls: Controls, policy: Policy, signatures: Signatures, tasks: Tasks, tools: Tools, budget: Budget, audit: Audit };
   const View = Views[view] || Start;
   const info = PAGE_INFO[view];
   return (

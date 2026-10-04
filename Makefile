@@ -36,7 +36,7 @@ test-docker:
 # Runs the real gateway in-process (mock model, heuristic semantic backend) and writes docs/bench-report.md.
 bench:
 	docker compose up -d db
-	docker compose run --rm --no-deps -e TEST_DATABASE_URL_BASE=postgresql://goldman:goldman@db:5432 gateway python -m aegis.bench > docs/bench-report.md
+	docker compose run --rm --no-deps -v "$(CURDIR)/docs:/out" -e TEST_DATABASE_URL_BASE=postgresql://goldman:goldman@db:5432 gateway python -m aegis.bench --out /out/bench-report.md
 	@echo "Report written to docs/bench-report.md"
 
 # Red-team corpus: adversarial probes (OWASP LLM / agentic techniques) through the live pipeline.
